@@ -58,10 +58,11 @@ func TestDeleteGrantRound_OnlyDraft(t *testing.T) {
 
 func TestGetGrantRoundBudgetUsage(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
+	// Round 3 has 2 approved projects: award_amount 5000+3000=8000, award_credits 2000+1500=3500
 	usedAmount, usedCredits, err := hackforger_model.GetGrantRoundBudgetUsage(db.DefaultContext, 3)
 	require.NoError(t, err)
-	assert.Equal(t, float64(0), usedAmount)
-	assert.Equal(t, int64(0), usedCredits)
+	assert.Equal(t, float64(8000), usedAmount)
+	assert.Equal(t, int64(3500), usedCredits)
 }
 
 func TestListGrantRounds_FilterByStatus(t *testing.T) {
