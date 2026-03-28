@@ -16,10 +16,17 @@ func GetBalance(ctx *context.APIContext) {
 		ctx.JSON(http.StatusOK, map[string]int64{"balance": 0})
 		return
 	}
-	acct, err := hackforger_svc.GetOrCreateCreditAccount(ctx, ctx.Doer.ID)
+
+	userID := ctx.Doer.ID
+	// Admin can query other users' balance
+	if qUID := ctx.FormInt64("user_id"); qUID > 0 && ctx.Doer.IsAdmin {
+		userID = qUID
+	}
+
+	acct, err := hackforger_svc.GetOrCreateCreditAccount(ctx, userID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetOrCreateCreditAccount", err)
 		return
 	}
-	ctx.JSON(http.StatusOK, map[string]int64{"balance": acct.Balance})
+	ctx.JSON(http.StatusOK, map[string]int64{"balance": acct.Balance, "user_id": userID})
 }

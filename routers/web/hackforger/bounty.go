@@ -102,9 +102,17 @@ func NewBounty(ctx *context.Context) {
 
 // NewBountyPost handles the create bounty form submission.
 func NewBountyPost(ctx *context.Context) {
-	issueID := ctx.FormInt64("issue_id")
-	if issueID <= 0 {
+	issueIndex := ctx.FormInt64("issue_id")
+	if issueIndex <= 0 {
 		ctx.Flash.Error("Issue is required")
+		ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
+		return
+	}
+
+	// Resolve issue index to database ID
+	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, issueIndex)
+	if err != nil {
+		ctx.Flash.Error("Issue not found")
 		ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
 		return
 	}
@@ -114,7 +122,7 @@ func NewBountyPost(ctx *context.Context) {
 
 	bounty := &hackforger_model.Bounty{
 		RepoID:      ctx.Repo.Repository.ID,
-		IssueID:     issueID,
+		IssueID:     issue.ID, // DB ID, not index
 		PublisherID: ctx.Doer.ID,
 		Title:       ctx.FormString("title"),
 		Mode:        mode,
@@ -141,5 +149,5 @@ func NewBountyPost(ctx *context.Context) {
 	})
 
 	ctx.Flash.Success("Bounty created successfully")
-	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, bounty.IssueID))
+	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
 }

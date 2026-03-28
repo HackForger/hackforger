@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	hackforger_model "forgejo.org/models/hackforger"
+	issues_model "forgejo.org/models/issues"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/web"
@@ -106,9 +107,20 @@ func CreateBounty(ctx *context.APIContext) {
 
 	form := web.GetForm(ctx).(*CreateBountyForm)
 
+	// Resolve issue index to database ID
+	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, form.IssueID)
+	if err != nil {
+		if issues_model.IsErrIssueNotExist(err) {
+			ctx.Error(http.StatusNotFound, "GetIssueByIndex", err)
+			return
+		}
+		ctx.Error(http.StatusInternalServerError, "GetIssueByIndex", err)
+		return
+	}
+
 	bounty := &hackforger_model.Bounty{
 		RepoID:      ctx.Repo.Repository.ID,
-		IssueID:     form.IssueID,
+		IssueID:     issue.ID, // Use DB ID, not index
 		PublisherID: ctx.Doer.ID,
 		Title:       form.Title,
 		Mode:        hackforger_model.BountyMode(form.Mode),

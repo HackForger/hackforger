@@ -86,6 +86,8 @@ export default {
     async loadApplications() {
       const data = await this.apiCall('/applications', 'GET');
       if (data) this.applications = data;
+      // Clear error from initial load — auth errors are expected for non-API sessions
+      this.error = '';
     },
     async submitApplication() {
       const result = await this.apiCall('/applications', 'POST', {message: this.applyMessage});
