@@ -25,6 +25,7 @@ import (
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
+	hackforger_model "forgejo.org/models/hackforger"
 	access_model "forgejo.org/models/perm/access"
 	project_model "forgejo.org/models/project"
 	pull_model "forgejo.org/models/pull"
@@ -2101,6 +2102,17 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 	ctx.Data["Tags"] = tags
+
+	// Load HackForger Bounty data if linked to this issue
+	if bountyData, err := hackforger_model.GetBountyByIssueID(ctx, issue.ID); err == nil {
+		ctx.Data["BountyData"] = bountyData
+		if rewards, err := hackforger_model.ListBountyRewards(ctx, bountyData.ID); err == nil {
+			ctx.Data["BountyRewards"] = rewards
+		}
+	} else if !hackforger_model.IsErrBountyNotExist(err) {
+		ctx.ServerError("GetBountyByIssueID", err)
+		return
+	}
 
 	ctx.HTML(http.StatusOK, tplIssueView)
 }
