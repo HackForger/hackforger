@@ -16,13 +16,6 @@ func ExploreHackathons(ctx *context.Context) {
 	ctx.HTML(200, tplExplore)
 }
 
-// ExploreBounties renders the bounty explore page.
-func ExploreBounties(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("hackforger.explore.bounties")
-	ctx.Data["PageIsExploreBounties"] = true
-	ctx.HTML(200, tplExplore)
-}
-
 // ExploreGrants renders the grants explore page.
 func ExploreGrants(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("hackforger.explore.grants")
