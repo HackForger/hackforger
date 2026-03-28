@@ -2125,6 +2125,11 @@ func ViewIssue(ctx *context.Context) {
 		if rewards, err := hackforger_model.ListBountyRewards(ctx, bountyData.ID); err == nil {
 			ctx.Data["BountyRewards"] = rewards
 		}
+		if bountyData.ClaimerID > 0 {
+			if claimer, err := user_model.GetUserByID(ctx, bountyData.ClaimerID); err == nil {
+				ctx.Data["BountyClaimer"] = claimer
+			}
+		}
 	} else if !hackforger_model.IsErrBountyNotExist(err) {
 		ctx.ServerError("GetBountyByIssueID", err)
 		return

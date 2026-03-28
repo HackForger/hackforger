@@ -36,11 +36,10 @@
 	</div>
 	{{end}}
 
-	{{if and .BountyData.ClaimerID (gt .BountyData.ClaimerID 0)}}
+	{{if $.BountyClaimer}}
 	<div class="tw-mb-2">
 		<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.claimer"}}:</strong>
-		<!-- TODO: resolve full username via user model -->
-		User #{{.BountyData.ClaimerID}}
+		<a href="{{$.BountyClaimer.HomeLink}}">{{svg "octicon-person" 14}} {{$.BountyClaimer.Name}}</a>
 	</div>
 	{{end}}
 
