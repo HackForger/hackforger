@@ -34,17 +34,26 @@ Common: Open/Claimed → Expired (cron, deadline passed)
         Open/Claimed → Cancelled (publisher)
 ```
 
+**Breaking rename:** P0 code references `BountyStatusInProgress` — this becomes `BountyStatusClaimed`. All compile-time references in `models/hackforger/bounty.go` and `services/hackforger/notifier.go` must be updated.
+
 ### 1.2 BountyMode Correction (3 → 2 modes)
 
 ```go
 BountyModeExclusive   BountyMode = 0  // was FirstCome
-BountyModeCompetitive BountyMode = 1  // was Application
+BountyModeCompetitive BountyMode = 1  // was Application (semantic change!)
 // Invitation(2) removed
 ```
 
+**Note:** Value 1 changes meaning from "Application" to "Competitive". This is a semantic shift, not just a rename.
+
 ### 1.3 Migration
 
-Add a migration in `models/forgejo_migrations/` to remap old status value 3 (Cancelled) → 6. P0 tables have no real data, but the migration ensures correctness for any instance that ran P0.
+Add a migration in `models/forgejo_migrations/` that:
+1. Remaps `bounty.status` value 3 (old Cancelled) → 6 (new Cancelled)
+2. Remaps `bounty.mode` value 1 (old Application) → 1 (new Competitive) — same DB value, semantic change only; no data migration needed but document the intent
+3. Deletes any rows with `bounty.mode` = 2 (old Invitation, removed)
+
+P0 tables have no real data, but the migration ensures correctness for any instance that ran P0.
 
 ### 1.4 CRUD Completion
 
@@ -64,6 +73,7 @@ P0 left Application, Winner, and Reward models with only struct + error types. P
 - `CreateBountyReward(ctx, r) error`
 - `ListBountyRewards(ctx, bountyID) ([]*BountyReward, error)`
 - `DeleteBountyReward(ctx, id) error`
+- Add error type `ErrBountyRewardNotExist` (P0 omitted error types for this model)
 
 ---
 
@@ -110,6 +120,12 @@ CompleteBounty(ctx, bountyID, doerID) error
 
 RejectDelivery(ctx, bountyID, doerID) error
   - Exclusive only, InReview → Claimed
+  - Publish no event (internal state rollback)
+
+StartReview(ctx, bountyID, doerID) error
+  - Competitive only, doer == Publisher, Status == Open
+  - Bounty → InReview (closes applications, enters review phase)
+  - No feed event (internal transition, winners announcement is the public event)
 
 SelectWinners(ctx, bountyID, doerID, winners []WinnerInput) error
   - Competitive only, Status == InReview
@@ -125,6 +141,17 @@ CancelBounty(ctx, bountyID, doerID) error
 
 CheckExpiredBounties(ctx) error
   - Cron: batch process bounties past deadline
+
+UpdateBountyMeta(ctx, bountyID, doerID, title, deadline) error
+  - Only allowed when Status == Open
+  - Validate: doer == Publisher
+
+DeleteBounty(ctx, bountyID, doerID) error
+  - Only allowed when Status == Open AND no applications exist
+  - Validate: doer == Publisher
+
+GetBountyLeaderboard(ctx, opts) ([]*HunterStats, int64, error)
+  - Aggregates completed bounties per user, ranked by count/credits earned
 ```
 
 ### 2.2 MergePullRequest Hook
@@ -144,7 +171,9 @@ In `notifier.go`, flesh out `MergePullRequest`:
 
 ### 3.1 Bitmask AudienceType
 
-Replace P0's iota enum with bitmask for composability:
+**Breaking change from P0:** Replace P0's iota enum (0,1,2,3) with bitmask for composability. The `HackforgerActionOpts.AudienceType` field type stays the same (`AudienceType int`) but values change. P0's equality check (`opts.AudienceType == AudienceGlobal`) must be replaced with bitwise check (`opts.AudienceType & AudienceGlobal != 0`).
+
+P0 callers to update: currently only the `MergePullRequest` skeleton, which will be rewritten anyway.
 
 ```go
 type AudienceType int
@@ -155,6 +184,15 @@ const (
     AudienceOrgMembers   AudienceType = 1 << 2  // 4
     AudienceRepoWatchers AudienceType = 1 << 3  // 8
 )
+```
+
+Usage example with combined audiences:
+```go
+// Bounty created: global + repo watchers
+PublishHackforgerAction(ctx, &HackforgerActionOpts{
+    AudienceType: AudienceGlobal | AudienceRepoWatchers,
+    ...
+})
 ```
 
 ### 3.2 PublishHackforgerAction Enhancement
@@ -195,7 +233,7 @@ PublishHackforgerAction(ctx, opts):
 | Winners selected | 38 | `Global` |
 | Bounty expired | 52 | `RepoWatchers` |
 | Bounty cancelled | 53 | `RepoWatchers` |
-| Mark paid | — | No feed event |
+| Mark paid | (new: ActionBountyPaid) | `0` (actor only, entity feed) |
 
 ---
 
@@ -209,18 +247,25 @@ PublishHackforgerAction(ctx, opts):
 POST   /                          → CreateBounty
 GET    /                          → ListRepoBounties
 GET    /{id}                      → GetBounty
+PUT    /{id}                      → UpdateBounty (title, deadline; Open only)
+DELETE /{id}                      → DeleteBounty (Open + no applications only)
 POST   /{id}/rewards              → AddReward
 GET    /{id}/rewards              → ListRewards
 DELETE /{id}/rewards/{rid}        → DeleteReward
 POST   /{id}/applications         → ApplyForBounty
 GET    /{id}/applications         → ListApplications
 PUT    /{id}/applications/{aid}   → ReviewApplication
+POST   /{id}/start-review         → StartReview (Competitive: Open→InReview)
 POST   /{id}/complete             → CompleteBounty
+POST   /{id}/reject-delivery      → RejectDelivery (Exclusive: InReview→Claimed)
 POST   /{id}/pay                  → MarkPaid
 POST   /{id}/cancel               → CancelBounty
+POST   /{id}/expire               → ExpireBounty (admin/cron manual trigger)
 POST   /{id}/winners              → SelectWinners
 GET    /{id}/winners              → ListWinners
 ```
+
+**Note on `/expire`:** Primary expiry is via cron (`CheckExpiredBounties`). The API endpoint exists for admin manual trigger. Requires admin or publisher permission.
 
 **Global** (`/api/v1/hackforger/bounties`):
 
@@ -237,7 +282,9 @@ GET    /leaderboard               → HunterLeaderboard
 | GET list/detail | Optional | Public bounties readable without login |
 | POST create | Required | Repo Writer or Owner |
 | POST apply | Required | Any logged-in user |
-| PUT review / POST complete/pay/cancel/winners | Required | `doer.ID == bounty.PublisherID` |
+| PUT update / DELETE bounty | Required | Publisher, Bounty.Status == Open |
+| PUT review / POST complete/pay/cancel/start-review/reject-delivery/winners | Required | `doer.ID == bounty.PublisherID` |
+| POST expire | Required | Publisher or Admin |
 | DELETE reward | Required | Publisher, Bounty.Status == Open |
 
 ### 4.3 Conventions
@@ -259,10 +306,12 @@ Single file `routers/api/v1/hackforger/bounty.go` (~600 lines). Replace P0 skele
 ### 5.1 Web Routes
 
 ```
-/explore/bounties                    → ExploreBounties (replace P0 placeholder)
-/repos/{owner}/{repo}/bounties/new   → NewBounty (form page, GET)
-/repos/{owner}/{repo}/bounties/new   → NewBountyPost (form submit, POST)
+/explore/bounties                          → ExploreBounties (replace P0 placeholder)
+/:username/:reponame/bounties/new    GET   → NewBounty (form page)
+/:username/:reponame/bounties/new    POST  → NewBountyPost (form submit)
 ```
+
+Note: Web routes use Forgejo's `:param` style; API routes use `{param}` (Swagger convention).
 
 No standalone Bounty detail page — Bounty details live inside the Issue page via panel injection.
 
@@ -334,9 +383,18 @@ Mount: `panel.tmpl` renders `<div id="hackforger-bounty-panel" data-bounty-id=".
 
 Each Service function calls `PublishHackforgerAction` at the end. See Section 3.3 for the complete event → audience mapping.
 
-### 6.2 No Feed Event for MarkPaid
+**New action type needed:** `ActionBountyPaid` (assign value 43, next available in the 30-42 user behavior range). Add to `models/hackforger/action_types.go` and `HackforgerActionTypeName` map.
 
-Paid is an internal administrative state. No public feed event.
+### 6.2 MarkPaid — Entity Feed Only
+
+The test plan (§3.2 step 13) expects the entity feed to contain the full lifecycle including "paid". To support this while keeping Paid out of public audience feeds:
+
+- MarkPaid **does** call `PublishHackforgerAction` with `AudienceType: 0` (no audience bits set).
+- This inserts only the actor's own action record (step 2 of PublishHackforgerAction).
+- The event appears in entity feed queries (which filter by Content.entity_id, not by UserID audience).
+- It does NOT appear in any user's following/global feed.
+
+This resolves the contradiction: entity feed shows `created → claimed → delivered → completed → paid`, while public feeds stop at `completed`.
 
 ---
 
