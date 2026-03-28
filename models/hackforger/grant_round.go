@@ -18,12 +18,23 @@ import (
 type GrantRoundStatus int
 
 const (
-	GrantRoundStatusDraft    GrantRoundStatus = iota // 0
-	GrantRoundStatusOpen                             // 1
-	GrantRoundStatusReview                           // 2
-	GrantRoundStatusComplete                         // 3
-	GrantRoundStatusCancelled                        // 4
+	GrantRoundStatusDraft       GrantRoundStatus = iota // 0
+	GrantRoundStatusOpen                                // 1
+	GrantRoundStatusReview                              // 2
+	GrantRoundStatusFinalized                           // 3
+	GrantRoundStatusDistributed                         // 4
+	GrantRoundStatusCancelled                           // 5
 )
+
+// GrantRoundStatusNames maps status values to human-readable names.
+var GrantRoundStatusNames = map[GrantRoundStatus]string{
+	GrantRoundStatusDraft:       "draft",
+	GrantRoundStatusOpen:        "open",
+	GrantRoundStatusReview:      "review",
+	GrantRoundStatusFinalized:   "finalized",
+	GrantRoundStatusDistributed: "distributed",
+	GrantRoundStatusCancelled:   "cancelled",
+}
 
 // GrantRound represents a grant funding round.
 type GrantRound struct {
