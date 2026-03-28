@@ -9,9 +9,32 @@ import (
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	issues_model "forgejo.org/models/issues"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
+	issue_service "forgejo.org/services/issue"
 )
+
+// closeBountyIssue closes the Issue linked to a bounty when it completes.
+func closeBountyIssue(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64) {
+	issue, err := issues_model.GetIssueByID(ctx, bounty.IssueID)
+	if err != nil {
+		log.Error("closeBountyIssue: GetIssueByID(%d): %v", bounty.IssueID, err)
+		return
+	}
+	if issue.IsClosed {
+		return // already closed (e.g., by PR merge)
+	}
+	doer, err := user_model.GetUserByID(ctx, doerID)
+	if err != nil {
+		log.Error("closeBountyIssue: GetUserByID(%d): %v", doerID, err)
+		return
+	}
+	if err := issue_service.ChangeStatus(ctx, issue, doer, "", true); err != nil {
+		log.Error("closeBountyIssue: ChangeStatus(%d): %v", issue.ID, err)
+	}
+}
 
 // ErrInvalidBountyStatus is returned when a state transition is not allowed.
 type ErrInvalidBountyStatus struct {
@@ -307,6 +330,9 @@ func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {
 			log.Error("CompleteBounty: PublishHackforgerAction: %v", err)
 		}
 
+		// Close the linked Issue — bounty completion means task is done.
+		closeBountyIssue(ctx, bounty, doerID)
+
 		return nil
 	})
 }
@@ -426,6 +452,9 @@ func SelectWinners(ctx context.Context, bountyID, doerID int64, winners []Winner
 		}); err != nil {
 			log.Error("SelectWinners: PublishHackforgerAction: %v", err)
 		}
+
+		// Close the linked Issue — bounty completion means task is done.
+		closeBountyIssue(ctx, bounty, doerID)
 
 		return nil
 	})
