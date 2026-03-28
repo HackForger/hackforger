@@ -630,3 +630,125 @@ func DeleteBounty(ctx context.Context, bountyID, doerID int64) error {
 
 	return hackforger_model.DeleteBounty(ctx, bountyID)
 }
+
+// ExpireBounty expires a single bounty. It must be in Open or Claimed status.
+func ExpireBounty(ctx context.Context, bounty *hackforger_model.Bounty) error {
+	if bounty.Status != hackforger_model.BountyStatusOpen && bounty.Status != hackforger_model.BountyStatusClaimed {
+		return ErrInvalidBountyStatus{
+			BountyID: bounty.ID,
+			Current:  bounty.Status,
+			Expected: "Open or Claimed",
+		}
+	}
+
+	oldStatusStr := "open"
+	if bounty.Status == hackforger_model.BountyStatusClaimed {
+		oldStatusStr = "claimed"
+	}
+
+	bounty.Status = hackforger_model.BountyStatusExpired
+	if err := hackforger_model.UpdateBounty(ctx, bounty); err != nil {
+		return err
+	}
+
+	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
+		ActUserID:    bounty.PublisherID,
+		OpType:       hackforger_model.ActionBountyExpired,
+		RepoID:       bounty.RepoID,
+		AudienceType: AudienceRepoWatchers,
+		Content: &hackforger_model.HackforgerPhaseContent{
+			HackforgerActionContent: hackforger_model.HackforgerActionContent{
+				EntityType: "bounty",
+				EntityID:   bounty.ID,
+				EntityName: bounty.Title,
+			},
+			OldStatus: oldStatusStr,
+			NewStatus: "expired",
+		},
+	}); err != nil {
+		log.Error("ExpireBounty: PublishHackforgerAction(%d): %v", bounty.ID, err)
+	}
+
+	return nil
+}
+
+// BountyStatsResponse holds aggregate statistics for bounties.
+type BountyStatsResponse struct {
+	Total     int64 `json:"total"`
+	Open      int64 `json:"open"`
+	Claimed   int64 `json:"claimed"`
+	InReview  int64 `json:"in_review"`
+	Completed int64 `json:"completed"`
+	Paid      int64 `json:"paid"`
+	Expired   int64 `json:"expired"`
+	Cancelled int64 `json:"cancelled"`
+}
+
+// GetBountyStats returns aggregate bounty statistics.
+func GetBountyStats(ctx context.Context) (*BountyStatsResponse, error) {
+	stats := &BountyStatsResponse{}
+
+	statuses := []hackforger_model.BountyStatus{
+		hackforger_model.BountyStatusOpen,
+		hackforger_model.BountyStatusClaimed,
+		hackforger_model.BountyStatusInReview,
+		hackforger_model.BountyStatusCompleted,
+		hackforger_model.BountyStatusPaid,
+		hackforger_model.BountyStatusExpired,
+		hackforger_model.BountyStatusCancelled,
+	}
+
+	for _, s := range statuses {
+		status := s
+		_, count, err := hackforger_model.ListBounties(ctx, hackforger_model.ListBountiesOptions{
+			ListOptions: db.ListOptions{PageSize: 1},
+			Status:      &status,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		switch s {
+		case hackforger_model.BountyStatusOpen:
+			stats.Open = count
+		case hackforger_model.BountyStatusClaimed:
+			stats.Claimed = count
+		case hackforger_model.BountyStatusInReview:
+			stats.InReview = count
+		case hackforger_model.BountyStatusCompleted:
+			stats.Completed = count
+		case hackforger_model.BountyStatusPaid:
+			stats.Paid = count
+		case hackforger_model.BountyStatusExpired:
+			stats.Expired = count
+		case hackforger_model.BountyStatusCancelled:
+			stats.Cancelled = count
+		}
+		stats.Total += count
+	}
+
+	return stats, nil
+}
+
+// LeaderboardEntry represents one row in the bounty hunter leaderboard.
+type LeaderboardEntry struct {
+	UserID       int64 `json:"user_id"`
+	WinCount     int64 `json:"win_count"`
+	TotalCredits int64 `json:"total_credits"`
+}
+
+// GetBountyLeaderboard returns the top bounty hunters by win count.
+func GetBountyLeaderboard(ctx context.Context, limit int) ([]*LeaderboardEntry, error) {
+	var entries []*LeaderboardEntry
+	err := db.GetEngine(ctx).
+		Table("bounty_winner").
+		Select("user_id, COUNT(*) AS win_count, 0 AS total_credits").
+		GroupBy("user_id").
+		OrderBy("win_count DESC").
+		Limit(limit).
+		Find(&entries)
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
