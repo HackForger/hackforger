@@ -1,0 +1,23 @@
+*.inside.h2os.cloud {
+	tls {
+		dns alidns {
+			access_key_id {env.ALIDNS_ACCESS_KEY_ID}
+			access_key_secret {env.ALIDNS_ACCESS_KEY_SECRET}
+		}
+	}
+
+	@hackforger host hackforger.inside.h2os.cloud
+	handle @hackforger {
+		reverse_proxy host.docker.internal:3000
+	}
+
+	# Add more services here:
+	# @another host another.inside.h2os.cloud
+	# handle @another {
+	#     reverse_proxy host.docker.internal:8080
+	# }
+
+	handle {
+		respond "Service not configured" 404
+	}
+}
