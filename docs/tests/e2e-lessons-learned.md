@@ -30,5 +30,5 @@
 ## Testing Infrastructure
 
 - **Worktree needs `custom/conf/app.ini`** — Git worktrees don't include the gitignored `custom/` directory. Server shows install wizard without it. Copy from main repo before starting. See `docs/tests/local-testing-guide.md`.
-- **Shared SQLite database** — All worktrees point to the same DB at `/Users/h2oslabs/Workspace/hackforge/data/forgejo.db`. Clean test data between runs with targeted `DELETE FROM` statements, not by dropping the DB.
+- **Shared SQLite database** — All worktrees point to the same DB at `/Users/h2oslabs/Workspace/hackforger/data/forgejo.db`. Clean test data between runs with targeted `DELETE FROM` statements, not by dropping the DB.
 - **E2E should cover both UI and API** — API-only testing misses auth/CSRF issues that only manifest in browser context. Every state-changing flow should be verified via UI button clicks, not just curl.
