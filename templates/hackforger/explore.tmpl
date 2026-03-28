@@ -1,0 +1,9 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<h2>{{.Title}}</h2>
+		<p>{{ctx.Locale.Tr "hackforger.explore.coming_soon"}}</p>
+	</div>
+</div>
+{{template "base/footer" .}}

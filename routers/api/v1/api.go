@@ -89,6 +89,7 @@ import (
 	"forgejo.org/routers/api/shared"
 	"forgejo.org/routers/api/v1/activitypub"
 	"forgejo.org/routers/api/v1/admin"
+	hackforger_api "forgejo.org/routers/api/v1/hackforger"
 	"forgejo.org/routers/api/v1/misc"
 	"forgejo.org/routers/api/v1/notify"
 	"forgejo.org/routers/api/v1/org"
@@ -1734,6 +1735,15 @@ func Routes() *web.Route {
 		m.Group("/topics", func() {
 			m.Get("/search", repo.TopicSearch)
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryRepository))
+
+		// HackForger API routes
+		m.Group("/hackforger", func() {
+			m.Get("/hackathons", hackforger_api.ListHackathons)
+			m.Get("/bounties", hackforger_api.ListBounties)
+			m.Get("/grants/rounds", hackforger_api.ListGrantRounds)
+			m.Get("/credits/balance", hackforger_api.GetBalance)
+			m.Get("/feed", hackforger_api.GetFeed)
+		})
 	}, sudo())
 
 	return m

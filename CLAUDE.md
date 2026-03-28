@@ -12,13 +12,17 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 ## Architecture Rules
 - Forgejo uses strict layered architecture: routers -> services -> models -> modules
 - Upper layers may only call lower layers, never the reverse
+- CRUD data-access functions live in `models/`, not `services/` (matches Forgejo convention: models/issues/issue.go has GetIssueByID)
+- Web explore routes must be inside the existing `/explore` group in web.go to inherit `ignExploreSignIn` middleware
+- Use pointer types for optional enum filters in ListOptions (nil = no filter, avoids zero-value ambiguity)
+- NotifyWatchers only handles repo watchers; HackForger uses custom PublishHackforgerAction for 4 audience types
 - New Go package paths: `forgejo.org/models/hackforger/`, `forgejo.org/services/hackforger/`, etc.
 - Database: XORM ORM, define Go struct + tags for auto table creation
 - Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA)
 
 ## Directory Structure
-- `models/hackforger/` -- Data models (15 tables)
-- `services/hackforger/` -- Business logic
+- `models/hackforger/` -- Data models (16 tables) + CRUD data-access functions (Get/List/Create/Update/Delete)
+- `services/hackforger/` -- Business logic only (state machines, transactional operations like Deposit/Redeem)
 - `routers/api/v1/hackforger/` -- REST API
 - `routers/web/hackforger/` -- Web page routes
 - `templates/hackforger/` -- Go HTML templates
@@ -33,11 +37,12 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Vue components: PascalCase (BountyPanel.vue)
 
 ## Common Commands
-- `make backend` -- Compile backend
-- `make frontend` -- Compile frontend
+- `TAGS="bindata sqlite sqlite_unlock_notify" make backend` -- Compile backend (bindata embeds templates, sqlite enables SQLite3)
+- `make frontend` -- Compile frontend (required after JS/Vue changes)
 - `go test ./models/hackforger/... -v` -- Run model tests
 - `go test ./services/hackforger/... -v` -- Run service tests
 - `./gitea web` -- Start server (http://localhost:3000)
+- Restart server: kill old process, remove LevelDB lock (`rm -f data/queues/common/LOCK`), then start
 
 ## Important Constraints
 - Use `gh` CLI for GitHub operations (not `tea` -- that's for Codeberg/Forgejo)
@@ -56,6 +61,12 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `GITHUB_TOKEN` -- For gh CLI and GitHub API
 - `FORGEJO_TOKEN` -- For self-hosted HackForger instance API
 - `FORGEJO_URL` -- https://hackforger.inside.h2os.cloud
+
+## Internal Instance
+- Login: hackforger / admin1234
+- Caddy reverse proxy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
+- Caddy management: `launchctl load|unload ~/Library/LaunchAgents/com.h2os.caddy.plist`
+- Default branch: v0.1-dev/hackforger
 
 ## Git Remotes
 - `origin` -- git@github.com:HackForger/hackforger.git (our repo)
