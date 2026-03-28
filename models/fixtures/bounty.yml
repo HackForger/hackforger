@@ -1,1 +1,25 @@
-# HackForger test fixture: bounty
+-
+  id: 1
+  repo_id: 1
+  issue_id: 1
+  publisher_id: 2
+  claimer_id: 0
+  title: "Fix authentication bug"
+  status: 0
+  mode: 0
+  deadline: 1735689600
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 2
+  repo_id: 1
+  issue_id: 2
+  publisher_id: 2
+  claimer_id: 0
+  title: "Best CLI tool challenge"
+  status: 0
+  mode: 1
+  deadline: 1735689600
+  created_unix: 1672578100
+  updated_unix: 1672578100
