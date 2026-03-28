@@ -18,7 +18,7 @@
 
 | File | Responsibility |
 |------|---------------|
-| `models/forgejo_migrations/v14c_fix-bounty-status-mode.go` | Migration: remap BountyStatus 3→6, delete Mode=2 rows |
+| `models/forgejo_migrations/v14c_fix-bounty-status-mode.go` | Migration: remap BountyStatus 3→6, delete Mode=2 rows (runs after v14c_add-hackforger-tables due to alphabetical ordering) |
 | `models/hackforger/bounty_test.go` | Model CRUD unit tests + TestMain |
 | `models/hackforger/main_test.go` | TestMain for hackforger model package |
 | `models/fixtures/bounty.yml` | Test fixture data |
@@ -109,9 +109,9 @@ func TestMain(m *testing.M) {
   repo_id: 1
   issue_id: 2
   publisher_id: 2
-  claimer_id: 4
+  claimer_id: 0
   title: "Best CLI tool challenge"
-  status: 1  # Claimed
+  status: 0  # Open (Competitive has no Claimed state)
   mode: 1    # Competitive
   deadline: 1735689600
   created_unix: 1672578100
@@ -968,7 +968,7 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	// Followers: query user_follow table
 	if opts.AudienceType&AudienceFollowers != 0 {
 		var followerIDs []int64
-		err := db.GetEngine(ctx).Table("user_follow").
+		err := db.GetEngine(ctx).Table("follow").
 			Where("follow_id = ?", opts.ActUserID).
 			Cols("user_id").Find(&followerIDs)
 		if err != nil {
@@ -999,7 +999,7 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	if opts.AudienceType&AudienceRepoWatchers != 0 && opts.RepoID > 0 {
 		var watcherIDs []int64
 		err := db.GetEngine(ctx).Table("watch").
-			Where("repo_id = ? AND mode != ?", opts.RepoID, repo_model.WatchModeNone).
+			Where("repo_id = ? AND mode != ?", opts.RepoID, repo_model.WatchModeDont).
 			Cols("user_id").Find(&watcherIDs)
 		if err != nil {
 			log.Error("PublishHackforgerAction (watchers query): %v", err)
@@ -1838,7 +1838,6 @@ func ExploreBounties(ctx *context.Context) {
 
 	ctx.Data["Bounties"] = bounties
 	ctx.Data["Total"] = total
-	ctx.Data["Page"] = page
 	ctx.Data["StatusFilter"] = ctx.FormString("status")
 
 	pager := context.NewPagination(int(total), 20, page, 5)
@@ -2123,9 +2122,33 @@ Key features:
 
 Uses Vue 3 Options API, Fomantic UI classes, `tw-` Tailwind prefix.
 
-- [ ] **Step 2: Verify init.js already mounts it**
+- [ ] **Step 2: Update init.js to pass all required props**
 
-The P0 `web_src/js/features/hackforger/init.js` already has the lazy-load mount code for `#hackforger-bounty-panel`. Verify it passes all necessary props from data attributes.
+The P0 `init.js` only passes `bountyId`. Update to pass all data attributes:
+
+```javascript
+export function initHackforger() {
+  const bountyEl = document.getElementById('hackforger-bounty-panel');
+  if (bountyEl) {
+    (async () => {
+      const {default: BountyPanel} = await import(
+        /* webpackChunkName: "hackforger-bounty" */
+        '../../components/hackforger/BountyPanel.vue'
+      );
+      const {createApp} = await import('vue');
+      createApp(BountyPanel, {
+        bountyId: bountyEl.getAttribute('data-bounty-id'),
+        repoOwner: bountyEl.getAttribute('data-repo-owner'),
+        repoName: bountyEl.getAttribute('data-repo-name'),
+        status: Number(bountyEl.getAttribute('data-status')),
+        mode: Number(bountyEl.getAttribute('data-mode')),
+        isPublisher: bountyEl.getAttribute('data-is-publisher') === 'true',
+        claimerId: Number(bountyEl.getAttribute('data-claimer-id')),
+      }).mount(bountyEl);
+    })();
+  }
+}
+```
 
 - [ ] **Step 3: Build frontend**
 
@@ -2206,12 +2229,338 @@ git commit -m "docs: add Phase 1 Bounty manual E2E test prompt and report templa
 
 ---
 
+### Task 15: Add Missing Service Functions (Leaderboard, Stats)
+
+**Files:**
+- Modify: `services/hackforger/bounty.go`
+
+- [ ] **Step 1: Implement GetBountyLeaderboard**
+
+Append to `services/hackforger/bounty.go`:
+
+```go
+// HunterStats holds aggregated bounty stats for a user.
+type HunterStats struct {
+	UserID          int64 `json:"user_id"`
+	BountiesCompleted int  `json:"bounties_completed"`
+	TotalCredits    int64 `json:"total_credits"`
+}
+
+// GetBountyLeaderboard returns hunters ranked by completed bounties.
+func GetBountyLeaderboard(ctx context.Context, limit int) ([]*HunterStats, error) {
+	var stats []*HunterStats
+	err := db.GetEngine(ctx).SQL(
+		"SELECT claimer_id AS user_id, COUNT(*) AS bounties_completed "+
+			"FROM bounty WHERE status IN (?, ?) AND claimer_id > 0 "+
+			"GROUP BY claimer_id ORDER BY bounties_completed DESC LIMIT ?",
+		hackforger_model.BountyStatusCompleted, hackforger_model.BountyStatusPaid, limit,
+	).Find(&stats)
+	return stats, err
+}
+
+// BountyStatsResult holds platform-wide bounty statistics.
+type BountyStatsResult struct {
+	Total     int64 `json:"total"`
+	Open      int64 `json:"open"`
+	Completed int64 `json:"completed"`
+	Paid      int64 `json:"paid"`
+}
+
+// GetBountyStats returns platform-wide bounty statistics.
+func GetBountyStats(ctx context.Context) (*BountyStatsResult, error) {
+	total, err := db.GetEngine(ctx).Count(new(hackforger_model.Bounty))
+	if err != nil {
+		return nil, err
+	}
+	open, err := db.GetEngine(ctx).Where("status = ?", hackforger_model.BountyStatusOpen).Count(new(hackforger_model.Bounty))
+	if err != nil {
+		return nil, err
+	}
+	completed, err := db.GetEngine(ctx).Where("status = ?", hackforger_model.BountyStatusCompleted).Count(new(hackforger_model.Bounty))
+	if err != nil {
+		return nil, err
+	}
+	paid, err := db.GetEngine(ctx).Where("status = ?", hackforger_model.BountyStatusPaid).Count(new(hackforger_model.Bounty))
+	if err != nil {
+		return nil, err
+	}
+	return &BountyStatsResult{Total: total, Open: open, Completed: completed, Paid: paid}, nil
+}
+```
+
+- [ ] **Step 2: Add test for leaderboard**
+
+Append to `services/hackforger/bounty_test.go`:
+
+```go
+func TestGetBountyLeaderboard(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Complete a bounty first so leaderboard has data
+	b, _ := hackforger_model.GetBountyByID(db.DefaultContext, 1)
+	b.Status = hackforger_model.BountyStatusCompleted
+	b.ClaimerID = 4
+	require.NoError(t, hackforger_model.UpdateBounty(db.DefaultContext, b))
+
+	stats, err := GetBountyLeaderboard(db.DefaultContext, 10)
+	require.NoError(t, err)
+	assert.NotEmpty(t, stats)
+	assert.Equal(t, int64(4), stats[0].UserID)
+}
+```
+
+- [ ] **Step 3: Run test, commit**
+
+Run: `cd /Users/h2oslabs/Workspace/hackforger/.claude/worktrees/feat+phase1-bounty && go test ./services/hackforger/ -run TestGetBountyLeaderboard -v -count=1 -tags "bindata sqlite sqlite_unlock_notify"`
+
+```bash
+git add services/hackforger/bounty.go services/hackforger/bounty_test.go
+git commit -m "feat(bounty): add GetBountyLeaderboard and GetBountyStats functions"
+```
+
+---
+
+### Task 16: Add Missing Service Tests
+
+**Files:**
+- Modify: `services/hackforger/bounty_test.go`
+
+- [ ] **Step 1: Add comprehensive flow tests**
+
+Append to `services/hackforger/bounty_test.go`:
+
+```go
+func TestExclusiveBountyFlow_Happy(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Apply
+	require.NoError(t, ApplyForBounty(db.DefaultContext, 1, 5, "I can do it"))
+
+	// Accept → Claimed
+	pending := hackforger_model.ApplicationStatusPending
+	apps, _, _ := hackforger_model.ListBountyApplications(db.DefaultContext, hackforger_model.ListBountyApplicationsOptions{
+		BountyID: 1, UserID: 5, Status: &pending,
+	})
+	require.Len(t, apps, 1)
+	require.NoError(t, AcceptApplication(db.DefaultContext, apps[0].ID, 2))
+
+	b, _ := hackforger_model.GetBountyByID(db.DefaultContext, 1)
+	assert.Equal(t, hackforger_model.BountyStatusClaimed, b.Status)
+	assert.Equal(t, int64(5), b.ClaimerID)
+
+	// Simulate PR merge → InReview
+	b.Status = hackforger_model.BountyStatusInReview
+	require.NoError(t, hackforger_model.UpdateBounty(db.DefaultContext, b))
+
+	// Complete → credits deposited
+	require.NoError(t, CompleteBounty(db.DefaultContext, 1, 2))
+	b, _ = hackforger_model.GetBountyByID(db.DefaultContext, 1)
+	assert.Equal(t, hackforger_model.BountyStatusCompleted, b.Status)
+
+	// Mark paid
+	require.NoError(t, MarkPaid(db.DefaultContext, 1, 2))
+	b, _ = hackforger_model.GetBountyByID(db.DefaultContext, 1)
+	assert.Equal(t, hackforger_model.BountyStatusPaid, b.Status)
+}
+
+func TestCompetitiveBountyFlow_Happy(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Bounty 2 is competitive + open
+	require.NoError(t, ApplyForBounty(db.DefaultContext, 2, 4, "entry 1"))
+	require.NoError(t, ApplyForBounty(db.DefaultContext, 2, 5, "entry 2"))
+
+	// Start review
+	require.NoError(t, StartReview(db.DefaultContext, 2, 2))
+	b, _ := hackforger_model.GetBountyByID(db.DefaultContext, 2)
+	assert.Equal(t, hackforger_model.BountyStatusInReview, b.Status)
+
+	// Select winners
+	require.NoError(t, SelectWinners(db.DefaultContext, 2, 2, []WinnerInput{
+		{UserID: 4, Rank: 1},
+		{UserID: 5, Rank: 2},
+	}))
+	b, _ = hackforger_model.GetBountyByID(db.DefaultContext, 2)
+	assert.Equal(t, hackforger_model.BountyStatusCompleted, b.Status)
+
+	winners, _ := hackforger_model.ListBountyWinners(db.DefaultContext, 2)
+	assert.Len(t, winners, 2)
+}
+
+func TestBountyApplication_AcceptRejectsOthers(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Two applications for bounty 1
+	require.NoError(t, ApplyForBounty(db.DefaultContext, 1, 5, "me"))
+	require.NoError(t, ApplyForBounty(db.DefaultContext, 1, 6, "me too"))
+
+	// Accept user 5's application
+	pending := hackforger_model.ApplicationStatusPending
+	apps, _, _ := hackforger_model.ListBountyApplications(db.DefaultContext, hackforger_model.ListBountyApplicationsOptions{
+		BountyID: 1, UserID: 5, Status: &pending,
+	})
+	require.NoError(t, AcceptApplication(db.DefaultContext, apps[0].ID, 2))
+
+	// User 4's original fixture application + user 6 should be rejected
+	rejected := hackforger_model.ApplicationStatusRejected
+	rejectedApps, count, _ := hackforger_model.ListBountyApplications(db.DefaultContext, hackforger_model.ListBountyApplicationsOptions{
+		BountyID: 1, Status: &rejected,
+	})
+	assert.Equal(t, int64(2), count)
+	_ = rejectedApps
+}
+
+func TestCheckExpiredBounties(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Set bounty 1 deadline to past
+	b, _ := hackforger_model.GetBountyByID(db.DefaultContext, 1)
+	b.Deadline = 1 // Unix epoch + 1 second (far in the past)
+	require.NoError(t, hackforger_model.UpdateBounty(db.DefaultContext, b))
+
+	require.NoError(t, CheckExpiredBounties(db.DefaultContext))
+
+	b, _ = hackforger_model.GetBountyByID(db.DefaultContext, 1)
+	assert.Equal(t, hackforger_model.BountyStatusExpired, b.Status)
+}
+
+func TestCompleteBounty_NoCreditsReward(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Create a bounty with only money reward (no credits)
+	bounty := &hackforger_model.Bounty{
+		RepoID: 1, IssueID: 200, PublisherID: 2, ClaimerID: 4,
+		Title: "money only", Status: hackforger_model.BountyStatusInReview,
+		Mode: hackforger_model.BountyModeExclusive,
+	}
+	require.NoError(t, hackforger_model.CreateBounty(db.DefaultContext, bounty))
+	require.NoError(t, hackforger_model.CreateBountyReward(db.DefaultContext, &hackforger_model.BountyReward{
+		BountyID: bounty.ID, Type: hackforger_model.RewardTypeMoney, Amount: 100, Currency: "USD",
+	}))
+
+	// Get initial credit balance
+	acct, _ := GetOrCreateCreditAccount(db.DefaultContext, 4)
+	initialBalance := acct.Balance
+
+	require.NoError(t, CompleteBounty(db.DefaultContext, bounty.ID, 2))
+
+	acct, _ = GetOrCreateCreditAccount(db.DefaultContext, 4)
+	assert.Equal(t, initialBalance, acct.Balance, "balance should not change with money-only reward")
+}
+```
+
+- [ ] **Step 2: Run all service tests**
+
+Run: `cd /Users/h2oslabs/Workspace/hackforger/.claude/worktrees/feat+phase1-bounty && go test ./services/hackforger/ -v -count=1 -tags "bindata sqlite sqlite_unlock_notify"`
+
+Expected: ALL PASS
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add services/hackforger/bounty_test.go
+git commit -m "test(bounty): add comprehensive flow tests per test plan
+
+Covers: ExclusiveBountyFlow_Happy, CompetitiveBountyFlow_Happy,
+AcceptRejectsOthers, CheckExpiredBounties, NoCreditsReward."
+```
+
+---
+
+### Task 17: Add NewBounty Web Handler and Template
+
+**Files:**
+- Modify: `routers/web/hackforger/bounty.go`
+- Create: `templates/hackforger/bounty/new.tmpl`
+- Modify: `routers/web/web.go`
+
+- [ ] **Step 1: Add NewBounty and NewBountyPost handlers**
+
+Append to `routers/web/hackforger/bounty.go`:
+
+```go
+// NewBounty renders the create bounty form.
+func NewBounty(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("hackforger.bounty.new.title")
+	ctx.HTML(http.StatusOK, tplBountyNew)
+}
+
+// NewBountyPost handles the create bounty form submission.
+func NewBountyPost(ctx *context.Context) {
+	issueID := ctx.FormInt64("issue_id")
+	if issueID <= 0 {
+		ctx.Flash.Error("Issue is required")
+		ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
+		return
+	}
+
+	mode := hackforger_model.BountyMode(ctx.FormInt("mode"))
+	deadline := timeutil.TimeStamp(ctx.FormInt64("deadline"))
+
+	bounty := &hackforger_model.Bounty{
+		RepoID:      ctx.Repo.Repository.ID,
+		IssueID:     issueID,
+		PublisherID: ctx.Doer.ID,
+		Title:       ctx.FormString("title"),
+		Mode:        mode,
+		Deadline:    deadline,
+	}
+
+	if err := hackforger_model.CreateBounty(ctx, bounty); err != nil {
+		if hackforger_model.IsErrBountyAlreadyExists(err) {
+			ctx.Flash.Error("A bounty already exists for this issue")
+			ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
+			return
+		}
+		ctx.ServerError("CreateBounty", err)
+		return
+	}
+
+	// Publish feed event
+	_ = hackforger_svc.PublishHackforgerAction(ctx, &hackforger_svc.HackforgerActionOpts{
+		ActUserID:    ctx.Doer.ID,
+		OpType:       hackforger_model.ActionBountyCreated,
+		RepoID:       bounty.RepoID,
+		Content:      &hackforger_model.HackforgerActionContent{EntityType: "bounty", EntityID: bounty.ID, EntityName: bounty.Title},
+		AudienceType: hackforger_svc.AudienceGlobal | hackforger_svc.AudienceRepoWatchers,
+	})
+
+	ctx.Flash.Success("Bounty created successfully")
+	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, bounty.IssueID))
+}
+```
+
+- [ ] **Step 2: Create new.tmpl**
+
+Create `templates/hackforger/bounty/new.tmpl` with a form containing: issue selector dropdown, mode radio buttons (Exclusive/Competitive), title input, deadline date picker, submit button. Uses Fomantic UI form classes and i18n keys.
+
+- [ ] **Step 3: Register web routes**
+
+In `routers/web/web.go`, add inside the repo group:
+
+```go
+// HackForger Bounty web routes
+m.Group("/bounties", func() {
+    m.Combo("/new").Get(hackforger_web.NewBounty).
+        Post(web.Bind(forms.CreateIssueForm{}), hackforger_web.NewBountyPost)
+}, reqSignIn, context.RepoMustNotBeArchived(), reqRepoIssueWriter)
+```
+
+- [ ] **Step 4: Verify compilation, commit**
+
+```bash
+git add routers/web/hackforger/bounty.go templates/hackforger/bounty/new.tmpl routers/web/web.go
+git commit -m "feat(bounty): add NewBounty web form for creating bounties from repo UI"
+```
+
+---
+
 ## Summary
 
 | Chunk | Tasks | Key Deliverables |
 |-------|-------|-----------------|
 | 1: Model | Tasks 1-6 | Fixtures, BountyStatus 7-state, BountyMode 2-mode, migration, CRUD for Application/Reward/Winner, ActionBountyPaid |
-| 2: Service | Tasks 7-8 | Notifier bitmask rewrite (shared infra), MergePullRequest hook, Bounty state machine (12 functions) |
+| 2: Service | Tasks 7-8, 15-16 | Notifier bitmask rewrite (shared infra), MergePullRequest hook, Bounty state machine (14 functions), Leaderboard, Stats, comprehensive flow tests |
 | 3: API | Task 9 | 20 REST endpoints with Swagger annotations |
-| 4: Web+Frontend | Tasks 10-12 | Explore page, Issue panel injection, Issue badge injection, BountyPanel.vue |
+| 4: Web+Frontend | Tasks 10-12, 17 | Explore page, NewBounty form, Issue panel injection, Issue badge injection, BountyPanel.vue |
 | 5: Testing+E2E | Tasks 13-14 | Full test suite run, manual E2E prompt/report |
