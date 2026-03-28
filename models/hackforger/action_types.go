@@ -24,6 +24,7 @@ const (
 	ActionGrantProjectSubmitted activities_model.ActionType = 40
 	ActionGrantAwarded          activities_model.ActionType = 41
 	ActionCreditsRedeemed       activities_model.ActionType = 42
+	ActionBountyPaid            activities_model.ActionType = 43
 
 	// Entity lifecycle events (50-56)
 	ActionHackathonPhaseChanged activities_model.ActionType = 50
@@ -53,6 +54,7 @@ var HackforgerActionTypeName = map[activities_model.ActionType]string{
 	ActionGrantProjectSubmitted: "grant_project_submitted",
 	ActionGrantAwarded:          "grant_awarded",
 	ActionCreditsRedeemed:       "credits_redeemed",
+	ActionBountyPaid:            "bounty_paid",
 	ActionHackathonPhaseChanged: "hackathon_phase_changed",
 	ActionHackathonFinalized:    "hackathon_finalized",
 	ActionBountyExpired:         "bounty_expired",
