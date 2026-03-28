@@ -2,7 +2,35 @@
 
 ## Prerequisites
 
+### Environment Setup (if running in a git worktree)
+
+See [docs/tests/local-testing-guide.md](../local-testing-guide.md) for full details.
+
+```bash
+# 1. Copy config from main repo (worktrees don't have custom/)
+mkdir -p custom/conf
+cp /Users/h2oslabs/Workspace/hackforger/custom/conf/app.ini custom/conf/app.ini
+
+# 2. Build backend (embeds templates + assets)
+TAGS="bindata sqlite sqlite_unlock_notify" make build
+
+# 3. Build frontend (if JS/Vue files changed)
+make frontend
+
+# 4. Re-embed after frontend build
+TAGS="bindata sqlite sqlite_unlock_notify" make build
+
+# 5. Remove stale LevelDB lock
+rm -f data/queues/common/LOCK
+
+# 6. Start server
+./gitea web
+```
+
+### Checklist
+
 - [ ] HackForger server running at http://localhost:3000 (or https://hackforger.inside.h2os.cloud)
+- [ ] `custom/conf/app.ini` exists in the worktree (copied from main repo)
 - [ ] Admin account available (hackforger / admin1234)
 - [ ] A second "hacker" account available (create one if needed)
 - [ ] Database migrated (all hackforger tables exist)
