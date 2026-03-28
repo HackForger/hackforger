@@ -4,6 +4,7 @@
 package hackforger
 
 import (
+	"context"
 	"fmt"
 
 	"forgejo.org/models/db"
@@ -44,4 +45,48 @@ func (err ErrOutOfStock) Error() string {
 
 func (err ErrOutOfStock) Unwrap() error {
 	return util.ErrInvalidArgument
+}
+
+// ErrRedeemOptionNotExist represents a "RedeemOptionNotExist" kind of error.
+type ErrRedeemOptionNotExist struct {
+	ID int64
+}
+
+// IsErrRedeemOptionNotExist checks if an error is a ErrRedeemOptionNotExist.
+func IsErrRedeemOptionNotExist(err error) bool {
+	_, ok := err.(ErrRedeemOptionNotExist)
+	return ok
+}
+
+func (err ErrRedeemOptionNotExist) Error() string {
+	return fmt.Sprintf("redeem option does not exist [id: %d]", err.ID)
+}
+
+func (err ErrRedeemOptionNotExist) Unwrap() error {
+	return util.ErrNotExist
+}
+
+// CreateRedeemOption creates a new redeem option.
+func CreateRedeemOption(ctx context.Context, opt *RedeemOption) error {
+	_, err := db.GetEngine(ctx).Insert(opt)
+	return err
+}
+
+// GetRedeemOptionByID returns a redeem option by its ID.
+func GetRedeemOptionByID(ctx context.Context, id int64) (*RedeemOption, error) {
+	opt := new(RedeemOption)
+	has, err := db.GetEngine(ctx).ID(id).Get(opt)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrRedeemOptionNotExist{ID: id}
+	}
+	return opt, nil
+}
+
+// UpdateRedeemOption updates an existing redeem option.
+func UpdateRedeemOption(ctx context.Context, opt *RedeemOption) error {
+	_, err := db.GetEngine(ctx).ID(opt.ID).AllCols().Update(opt)
+	return err
 }

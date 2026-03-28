@@ -4,11 +4,14 @@
 package hackforger
 
 import (
+	"context"
 	"fmt"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
+
+	"xorm.io/builder"
 )
 
 // CreditAccount represents a user's credit balance.
@@ -42,4 +45,31 @@ func (err ErrInsufficientCredits) Error() string {
 
 func (err ErrInsufficientCredits) Unwrap() error {
 	return util.ErrInvalidArgument
+}
+
+// GetCreditAccount returns a user's credit account, or nil if not found.
+func GetCreditAccount(ctx context.Context, userID int64) (*CreditAccount, error) {
+	a := new(CreditAccount)
+	has, err := db.GetEngine(ctx).Where("user_id = ?", userID).Get(a)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, nil
+	}
+	return a, nil
+}
+
+// ListCreditAccountsOptions holds options for listing credit accounts.
+type ListCreditAccountsOptions struct {
+	db.ListOptions
+}
+
+func (opts ListCreditAccountsOptions) ToConds() builder.Cond {
+	return builder.NewCond()
+}
+
+// ListCreditAccounts returns credit accounts matching the given options.
+func ListCreditAccounts(ctx context.Context, opts ListCreditAccountsOptions) ([]*CreditAccount, int64, error) {
+	return db.FindAndCount[CreditAccount](ctx, opts)
 }
