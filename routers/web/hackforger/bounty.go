@@ -229,7 +229,7 @@ func BountySelectWinners(ctx *context.Context) {
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// BountyListApplications returns applications as JSON for the Vue component.
+// BountyListApplications returns applications as JSON for the Vue component, with resolved usernames.
 func BountyListApplications(ctx *context.Context) {
 	bountyID := ctx.ParamsInt64("bounty_id")
 	apps, _, err := hackforger_model.ListBountyApplications(ctx, hackforger_model.ListBountyApplicationsOptions{
@@ -239,7 +239,24 @@ func BountyListApplications(ctx *context.Context) {
 		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, apps)
+
+	type appJSON struct {
+		ID       int64                              `json:"id"`
+		BountyID int64                              `json:"bounty_id"`
+		UserID   int64                              `json:"user_id"`
+		Username string                             `json:"username"`
+		Status   hackforger_model.ApplicationStatus `json:"status"`
+		Message  string                             `json:"message"`
+	}
+	result := make([]appJSON, 0, len(apps))
+	for _, a := range apps {
+		aj := appJSON{ID: a.ID, BountyID: a.BountyID, UserID: a.UserID, Status: a.Status, Message: a.Message}
+		if u, err := user_model.GetUserByID(ctx, a.UserID); err == nil {
+			aj.Username = u.Name
+		}
+		result = append(result, aj)
+	}
+	ctx.JSON(http.StatusOK, result)
 }
 
 // BountyListWinners returns winners as JSON for the Vue component, with resolved usernames.

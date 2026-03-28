@@ -181,7 +181,7 @@ export default {
     <div v-if="isPublisher && applications.length > 0" class="tw-mt-2">
       <strong>Applications:</strong>
       <div v-for="app in applications" :key="app.id" class="tw-flex tw-items-center tw-justify-between tw-py-1">
-        <span>User #{{ app.user_id }}: {{ app.message }}</span>
+        <span>{{ app.username || `User #${app.user_id}` }}: {{ app.message }}</span>
         <span v-if="app.status === 0">
           <button class="ui mini green button" @click="reviewApplication(app.id, 'accept')">Accept</button>
           <button class="ui mini red button" @click="reviewApplication(app.id, 'reject')">Reject</button>
