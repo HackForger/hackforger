@@ -126,6 +126,49 @@ func (at ActionType) String() string {
 		return "pull_request_ready_for_review"
 	case ActionAutoMergePullRequest:
 		return "auto_merge_pull_request"
+	// HackForger action types
+	case 30:
+		return "hackforger_hackathon_created"
+	case 31:
+		return "hackforger_hackathon_registered"
+	case 32:
+		return "hackforger_hackathon_submitted"
+	case 33:
+		return "hackforger_hackathon_scored"
+	case 34:
+		return "hackforger_bounty_created"
+	case 35:
+		return "hackforger_bounty_claimed"
+	case 36:
+		return "hackforger_bounty_delivered"
+	case 37:
+		return "hackforger_bounty_completed"
+	case 38:
+		return "hackforger_bounty_winners_selected"
+	case 39:
+		return "hackforger_grant_round_created"
+	case 40:
+		return "hackforger_grant_project_submitted"
+	case 41:
+		return "hackforger_grant_awarded"
+	case 42:
+		return "hackforger_credits_redeemed"
+	case 43:
+		return "hackforger_bounty_paid"
+	case 50:
+		return "hackforger_hackathon_phase_changed"
+	case 51:
+		return "hackforger_hackathon_finalized"
+	case 52:
+		return "hackforger_bounty_expired"
+	case 53:
+		return "hackforger_bounty_cancelled"
+	case 54:
+		return "hackforger_grant_round_opened"
+	case 55:
+		return "hackforger_grant_round_closed"
+	case 56:
+		return "hackforger_grant_round_finalized"
 	default:
 		return "action-" + strconv.Itoa(int(at))
 	}

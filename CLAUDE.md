@@ -18,7 +18,8 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - NotifyWatchers only handles repo watchers; HackForger uses custom PublishHackforgerAction for 4 audience types
 - New Go package paths: `forgejo.org/models/hackforger/`, `forgejo.org/services/hackforger/`, etc.
 - Database: XORM ORM, define Go struct + tags for auto table creation
-- Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA)
+- Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA) — see [docs/frontend-dev-guide.md](docs/frontend-dev-guide.md)
+- **Vue components must call web routes for actions, NOT `/api/v1/` routes** (session cookie auth vs token auth)
 
 ## Directory Structure
 - `models/hackforger/` -- Data models (16 tables) + CRUD data-access functions (Get/List/Create/Update/Delete)
@@ -36,6 +37,11 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Template files: snake_case (judge_panel.tmpl)
 - Vue components: PascalCase (BountyPanel.vue)
 
+## Local Testing
+- See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
+- See [docs/tests/e2e-lessons-learned.md](docs/tests/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
+- **Key**: always copy `custom/conf/app.ini` from main repo before starting server in a worktree
+
 ## Common Commands
 - `TAGS="bindata sqlite sqlite_unlock_notify" make backend` -- Compile backend (bindata embeds templates, sqlite enables SQLite3)
 - `make frontend` -- Compile frontend (required after JS/Vue changes)
@@ -48,6 +54,7 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Use `gh` CLI for GitHub operations (not `tea` -- that's for Codeberg/Forgejo)
 - Do not modify upstream Forgejo files unless listed in the 11 injection points (see implementation-plan-draft.md section 1.2)
 - All state changes must call PublishHackforgerAction to write Feed events
+- **i18n**: All user-facing text MUST have both `locale_en-US.ini` and `locale_zh-CN.ini` entries under the `[hackforger]` section. Never add keys to only one locale file.
 - Credits Deposit/Redeem must use db.WithTx transactions
 - Internal HackForger instance: https://hackforger.inside.h2os.cloud
 - API base path: https://hackforger.inside.h2os.cloud/api/v1/hackforger/

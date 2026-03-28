@@ -1380,6 +1380,26 @@ func registerRoutes(m *web.Route) {
 		m.Post("/topics", repo.TopicsPost)
 	}, context.RepoAssignment, context.RepoMustNotBeArchived(), reqRepoAdmin)
 
+	// HackForger Credits
+	m.Group("/credits", func() {
+		m.Get("", hackforger_web.CreditsDashboard)
+	}, reqSignIn)
+
+	// HackForger Bounty web routes
+	m.Group("/{username}/{reponame}", func() {
+		m.Group("/bounties", func() {
+			m.Combo("/new").Get(hackforger_web.NewBounty).
+				Post(hackforger_web.NewBountyPost)
+			m.Group("/{bounty_id}", func() {
+				m.Get("/applications", hackforger_web.BountyListApplications)
+				m.Get("/winners", hackforger_web.BountyListWinners)
+				m.Post("/applications/{application_id}", hackforger_web.BountyApplicationAction)
+				m.Post("/winners", hackforger_web.BountySelectWinners)
+				m.Post("/{action}", hackforger_web.BountyAction)
+			})
+		})
+	}, reqSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoMustNotBeArchived())
+
 	m.Group("/{username}/{reponame}", func() {
 		m.Group("", func() {
 			m.Get("/issues/posters", repo.IssuePosters) // it can't use {type:issues|pulls} because other routes like "/pulls/{index}" has higher priority

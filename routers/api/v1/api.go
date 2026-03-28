@@ -1534,6 +1534,30 @@ func Routes() *web.Route {
 						Patch(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), bind(api.EditMilestoneOption{}), repo.EditMilestone).
 						Delete(reqToken(), reqRepoWriter(unit.TypeIssues, unit.TypePullRequests), repo.DeleteMilestone)
 				})
+				// HackForger: Bounty routes
+				m.Group("/bounties", func() {
+					m.Get("", hackforger_api.ListRepoBounties)
+					m.Post("", reqToken(), mustNotBeArchived, bind(hackforger_api.CreateBountyForm{}), hackforger_api.CreateBounty)
+					m.Group("/{bounty_id}", func() {
+						m.Get("", hackforger_api.GetBounty)
+						m.Put("", reqToken(), bind(hackforger_api.UpdateBountyForm{}), hackforger_api.UpdateBounty)
+						m.Delete("", reqToken(), hackforger_api.DeleteBountyAPI)
+						m.Get("/rewards", hackforger_api.ListRewards)
+						m.Post("/rewards", reqToken(), bind(hackforger_api.AddRewardForm{}), hackforger_api.AddReward)
+						m.Delete("/rewards/{reward_id}", reqToken(), hackforger_api.DeleteReward)
+						m.Get("/applications", reqToken(), hackforger_api.ListApplications)
+						m.Post("/applications", reqToken(), bind(hackforger_api.ApplyForm{}), hackforger_api.ApplyForBounty)
+						m.Put("/applications/{application_id}", reqToken(), bind(hackforger_api.ReviewApplicationForm{}), hackforger_api.ReviewApplication)
+						m.Post("/review", reqToken(), hackforger_api.StartReviewAPI)
+						m.Post("/complete", reqToken(), hackforger_api.CompleteBountyAPI)
+						m.Post("/reject-delivery", reqToken(), hackforger_api.RejectDeliveryAPI)
+						m.Post("/pay", reqToken(), hackforger_api.MarkPaidAPI)
+						m.Post("/cancel", reqToken(), hackforger_api.CancelBountyAPI)
+						m.Post("/expire", reqToken(), hackforger_api.ExpireBountyAPI)
+						m.Post("/winners", reqToken(), bind(hackforger_api.SelectWinnersForm{}), hackforger_api.SelectWinnersAPI)
+						m.Get("/winners", hackforger_api.ListWinnersAPI)
+					})
+				})
 			}, repoAssignment(), checkTokenPublicOnly())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryIssue))
 
@@ -1739,7 +1763,9 @@ func Routes() *web.Route {
 		// HackForger API routes
 		m.Group("/hackforger", func() {
 			m.Get("/hackathons", hackforger_api.ListHackathons)
-			m.Get("/bounties", hackforger_api.ListBounties)
+			m.Get("/bounties", hackforger_api.ListAllBounties)
+			m.Get("/bounties/stats", hackforger_api.BountyStats)
+			m.Get("/bounties/leaderboard", hackforger_api.HunterLeaderboard)
 			m.Get("/grants/rounds", hackforger_api.ListGrantRounds)
 			m.Get("/credits/balance", hackforger_api.GetBalance)
 			m.Get("/feed", hackforger_api.GetFeed)

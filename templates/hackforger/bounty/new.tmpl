@@ -1,0 +1,41 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content repository">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<h2 class="ui header">{{ctx.Locale.Tr "hackforger.bounty.new.title"}}</h2>
+		<form class="ui form" action="{{.RepoLink}}/bounties/new" method="post">
+			{{.CsrfTokenHtml}}
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.bounty.new.title"}}</label>
+				<input name="title" required placeholder="Bounty title" maxlength="255" value="{{.Query.title}}">
+			</div>
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.bounty.new.issue"}}</label>
+				<input name="issue_id" type="number" required placeholder="Issue ID (e.g. 1)" value="{{.Query.issue_id}}">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.bounty.new.mode"}}</label>
+				<div class="grouped fields">
+					<div class="field">
+						<div class="ui radio checkbox">
+							<input type="radio" name="mode" value="0" checked>
+							<label>{{ctx.Locale.Tr "hackforger.bounty.new.mode.exclusive"}}</label>
+						</div>
+					</div>
+					<div class="field">
+						<div class="ui radio checkbox">
+							<input type="radio" name="mode" value="1">
+							<label>{{ctx.Locale.Tr "hackforger.bounty.new.mode.competitive"}}</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.bounty.new.deadline"}}</label>
+				<input name="deadline" type="date">
+			</div>
+			<button class="ui primary button" type="submit">{{ctx.Locale.Tr "hackforger.bounty.new.submit"}}</button>
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

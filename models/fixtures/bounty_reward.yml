@@ -1,1 +1,32 @@
-# HackForger test fixture: bounty_reward
+-
+  id: 1
+  bounty_id: 1
+  type: "money"
+  amount: 500
+  currency: "USD"
+  credits: 0
+  rank: 1
+  note: ""
+  created_unix: 1672578000
+
+-
+  id: 2
+  bounty_id: 1
+  type: "credits"
+  amount: 0
+  currency: ""
+  credits: 500
+  rank: 1
+  note: "bonus credits"
+  created_unix: 1672578000
+
+-
+  id: 3
+  bounty_id: 2
+  type: "credits"
+  amount: 0
+  currency: ""
+  credits: 1000
+  rank: 1
+  note: "1st place"
+  created_unix: 1672578100

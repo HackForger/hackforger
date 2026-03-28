@@ -1,0 +1,52 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<div class="ui secondary pointing menu">
+			<a class="{{if eq .StatusFilter ""}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties">{{ctx.Locale.Tr "hackforger.bounty.filter.all"}}</a>
+			<a class="{{if eq .StatusFilter "open"}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties?status=open">{{ctx.Locale.Tr "hackforger.bounty.status.open"}}</a>
+			<a class="{{if eq .StatusFilter "claimed"}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties?status=claimed">{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}</a>
+			<a class="{{if eq .StatusFilter "completed"}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties?status=completed">{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}</a>
+		</div>
+
+		{{if .Bounties}}
+		<div class="ui relaxed divided list">
+			{{range .Bounties}}
+			<div class="item tw-py-4">
+				<div class="content">
+					<a class="header tw-text-lg" href="{{.IssueLink}}">{{.Title}}</a>
+					<div class="tw-text-sm tw-text-gray tw-mb-1">{{.RepoFullName}} #{{.IssueIndex}}</div>
+					<div class="description tw-mt-1">
+						<span class="ui small label {{if eq .Status 0}}green{{else if eq .Status 1}}blue{{else if eq .Status 2}}orange{{else if eq .Status 3}}purple{{else if eq .Status 5}}red{{end}}">
+							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.bounty.status.open"}}
+							{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}
+							{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.bounty.status.in_review"}}
+							{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}
+							{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.bounty.status.paid"}}
+							{{else if eq .Status 5}}{{ctx.Locale.Tr "hackforger.bounty.status.expired"}}
+							{{else if eq .Status 6}}{{ctx.Locale.Tr "hackforger.bounty.status.cancelled"}}
+							{{end}}
+						</span>
+						{{if .Mode}}
+							<span class="ui small label">{{ctx.Locale.Tr "hackforger.bounty.mode.competitive"}}</span>
+						{{else}}
+							<span class="ui small label">{{ctx.Locale.Tr "hackforger.bounty.mode.exclusive"}}</span>
+						{{end}}
+					</div>
+				</div>
+			</div>
+			{{end}}
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="ui placeholder segment">
+			<div class="ui icon header">
+				{{svg "octicon-gift" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.bounty.explore.empty"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

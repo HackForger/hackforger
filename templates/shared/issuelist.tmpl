@@ -14,6 +14,7 @@
 				<div class="flex-item-header">
 					<div class="flex-item-title">
 						<a class="tw-no-underline issue-title" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">{{RenderEmoji $.Context .Title | RenderCodeBlock}}</a>
+						{{if and $.BountyMap (index $.BountyMap .ID)}}{{template "hackforger/bounty/badge" dict "BountyBadge" (index $.BountyMap .ID)}}{{end}}
 						{{if .IsPull}}
 							{{if (index $.CommitStatuses .PullRequest.ID)}}
 								{{template "repo/commit_statuses" dict "Status" (index $.CommitLastStatus .PullRequest.ID) "Statuses" (index $.CommitStatuses .PullRequest.ID)}}

@@ -14,19 +14,16 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "intercept",
-            "pattern": "\\btea\\s+(issue|pr|repo|release|login)",
-            "message": "Please use `gh` instead of `tea`. tea is the Forgejo/Codeberg CLI; we develop on GitHub. Equivalent commands: gh issue / gh pr / gh repo. For API calls use `curl` with GITHUB_TOKEN or FORGEJO_TOKEN."
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE '\\btea\\s+(issue|pr|repo|release|login)'; then echo 'BLOCKED: Please use `gh` instead of `tea`. tea is the Forgejo/Codeberg CLI; we develop on GitHub. Equivalent: gh issue / gh pr / gh repo.' >&2; exit 2; fi"
           },
           {
-            "type": "intercept",
-            "pattern": "codeberg\\.org/(Synnovator|HackForge)",
-            "message": "The project is hosted on GitHub, not Codeberg. Correct address: github.com/HackForger/hackforger"
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'codeberg\\.org/(Synnovator|HackForge)'; then echo 'BLOCKED: The project is hosted on GitHub, not Codeberg. Correct address: github.com/HackForger/hackforger' >&2; exit 2; fi"
           },
           {
-            "type": "intercept",
-            "pattern": "hackforge\\.inside\\.h2os\\.cloud",
-            "message": "The internal instance address has changed to hackforger.inside.h2os.cloud (with 'r'). Please update the URL."
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'hackforge\\.inside\\.h2os\\.cloud'; then echo 'BLOCKED: The internal instance address is hackforger.inside.h2os.cloud (with r). Please update the URL.' >&2; exit 2; fi"
           }
         ]
       },
@@ -34,9 +31,8 @@
         "matcher": "Write|Edit",
         "hooks": [
           {
-            "type": "intercept",
-            "pattern": "models/(repo|issues|org|user|actions|auth)/",
-            "message": "You are modifying an upstream Forgejo model file. HackForger's new code should go in models/hackforger/. If you must modify an upstream file, confirm it is one of the 11 injection points listed in implementation-plan-draft.md."
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'models/(repo|issues|org|user|actions|auth)/'; then echo 'BLOCKED: You are modifying an upstream Forgejo model file. New code should go in models/hackforger/. If you must modify an upstream file, confirm it is one of the 11 injection points in implementation-plan-draft.md.' >&2; exit 2; fi"
           }
         ]
       }

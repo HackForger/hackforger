@@ -107,6 +107,15 @@ func ActionIcon(opType activities_model.ActionType) string {
 		return "tag"
 	case activities_model.ActionPullReviewDismissed:
 		return "x"
+	// HackForger icons
+	case 30, 31, 32, 33, 50, 51: // Hackathon events
+		return "rocket"
+	case 34, 35, 36, 37, 38, 43, 52, 53: // Bounty events
+		return "gift"
+	case 39, 40, 41, 54, 55, 56: // Grant events
+		return "heart"
+	case 42: // Credits redeemed
+		return "credit-card"
 	default:
 		return "question"
 	}

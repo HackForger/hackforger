@@ -18,19 +18,21 @@ import (
 type BountyStatus int
 
 const (
-	BountyStatusOpen       BountyStatus = iota // 0
-	BountyStatusInProgress                     // 1
-	BountyStatusCompleted                      // 2
-	BountyStatusCancelled                      // 3
+	BountyStatusOpen      BountyStatus = 0
+	BountyStatusClaimed   BountyStatus = 1
+	BountyStatusInReview  BountyStatus = 2
+	BountyStatusCompleted BountyStatus = 3
+	BountyStatusPaid      BountyStatus = 4
+	BountyStatusExpired   BountyStatus = 5
+	BountyStatusCancelled BountyStatus = 6
 )
 
 // BountyMode represents how a bounty is assigned.
 type BountyMode int
 
 const (
-	BountyModeFirstCome  BountyMode = iota // 0
-	BountyModeApplication                  // 1
-	BountyModeInvitation                   // 2
+	BountyModeExclusive   BountyMode = 0
+	BountyModeCompetitive BountyMode = 1
 )
 
 // Bounty represents a bounty attached to a repository issue.
@@ -161,5 +163,11 @@ func ListBounties(ctx context.Context, opts ListBountiesOptions) ([]*Bounty, int
 // UpdateBounty updates an existing bounty.
 func UpdateBounty(ctx context.Context, b *Bounty) error {
 	_, err := db.GetEngine(ctx).ID(b.ID).AllCols().Update(b)
+	return err
+}
+
+// DeleteBounty deletes a bounty by its ID.
+func DeleteBounty(ctx context.Context, id int64) error {
+	_, err := db.GetEngine(ctx).ID(id).Delete(new(Bounty))
 	return err
 }
