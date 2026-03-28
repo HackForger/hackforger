@@ -52,6 +52,7 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Use `gh` CLI for GitHub operations (not `tea` -- that's for Codeberg/Forgejo)
 - Do not modify upstream Forgejo files unless listed in the 11 injection points (see implementation-plan-draft.md section 1.2)
 - All state changes must call PublishHackforgerAction to write Feed events
+- **i18n**: All user-facing text MUST have both `locale_en-US.ini` and `locale_zh-CN.ini` entries under the `[hackforger]` section. Never add keys to only one locale file.
 - Credits Deposit/Redeem must use db.WithTx transactions
 - Internal HackForger instance: https://hackforger.inside.h2os.cloud
 - API base path: https://hackforger.inside.h2os.cloud/api/v1/hackforger/
