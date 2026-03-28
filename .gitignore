@@ -134,3 +134,12 @@ prime/
 # Manpage
 /man
 tests/integration/api_activitypub_person_inbox_useractivity_test.go
+
+# Agent Setup runtime (gitignored)
+.agents/
+
+# User-local launcher overrides
+claude.local.sh
+
+# MCP server secrets (API keys, tokens)
+.mcp.env
