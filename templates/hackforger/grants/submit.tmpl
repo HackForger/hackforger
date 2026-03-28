@@ -1,0 +1,32 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>
+			{{ctx.Locale.Tr "hackforger.grant.project.submit"}}
+			&mdash; <a href="/grants/{{.Round.Slug}}">{{.Round.Name}}</a>
+		</h2>
+
+		{{template "base/alert" .}}
+
+		<form class="ui form" action="/grants/{{.Round.Slug}}/submit" method="post">
+			{{.CsrfTokenHtml}}
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.title"}}</label>
+				<input type="text" name="title" required placeholder="{{ctx.Locale.Tr "hackforger.grant.project.title_placeholder"}}">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.description"}}</label>
+				<textarea name="description" rows="6"></textarea>
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.repo_id"}} ({{ctx.Locale.Tr "hackforger.optional"}})</label>
+				<input type="number" name="repo_id" min="0" value="0">
+			</div>
+			<div class="field">
+				<button class="ui primary button">{{ctx.Locale.Tr "hackforger.grant.project.submit"}}</button>
+				<a class="ui button" href="/grants/{{.Round.Slug}}">{{ctx.Locale.Tr "cancel"}}</a>
+			</div>
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

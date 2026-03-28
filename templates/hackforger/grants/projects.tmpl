@@ -1,0 +1,55 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>
+			<a href="/grants/{{.Round.Slug}}">{{.Round.Name}}</a>
+			&mdash; {{ctx.Locale.Tr "hackforger.grant.projects"}}
+		</h2>
+
+		{{template "base/alert" .}}
+
+		{{if .Projects}}
+			<table class="ui striped table">
+				<thead>
+					<tr>
+						<th>{{ctx.Locale.Tr "hackforger.grant.project.title"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.grant.project.user"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.grant.project.award"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Projects}}
+						<tr>
+							<td>{{.Title}}</td>
+							<td>{{.UserID}}</td>
+							<td>
+								<span class="ui label {{if eq .Status 0}}grey{{else if eq .Status 1}}green{{else if eq .Status 2}}red{{else if eq .Status 3}}blue{{end}}">
+									{{if eq .Status 0}}pending{{else if eq .Status 1}}approved{{else if eq .Status 2}}rejected{{else if eq .Status 3}}funded{{end}}
+								</span>
+							</td>
+							<td>
+								{{if or (gt .AwardAmount 0) (gt .AwardCredits 0)}}
+									{{.AwardAmount}} + {{.AwardCredits}} credits
+								{{else}}
+									&mdash;
+								{{end}}
+							</td>
+						</tr>
+					{{end}}
+				</tbody>
+			</table>
+		{{else}}
+			<div class="ui placeholder segment">
+				<div class="ui icon header">
+					{{svg "octicon-project" 48}}
+					<br>
+					{{ctx.Locale.Tr "hackforger.grant.no_projects"}}
+				</div>
+			</div>
+		{{end}}
+
+		<a class="ui button" href="/grants/{{.Round.Slug}}">{{ctx.Locale.Tr "hackforger.grant.back_to_round"}}</a>
+	</div>
+</div>
+{{template "base/footer" .}}

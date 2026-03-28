@@ -1,0 +1,60 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.explore.grants"}}</h2>
+
+		<div class="ui secondary menu">
+			<a class="item{{if not .StatusFilter}} active{{end}}" href="/explore/grants">{{ctx.Locale.Tr "all"}}</a>
+			{{range $status, $name := .GrantRoundStatusNames}}
+				<a class="item{{if eq $.StatusFilter $name}} active{{end}}" href="/explore/grants?status={{$name}}">{{$name}}</a>
+			{{end}}
+		</div>
+
+		{{if .Rounds}}
+			<div class="ui three stackable cards">
+				{{range .Rounds}}
+					<div class="ui card">
+						<div class="content">
+							<div class="header">
+								<a href="/grants/{{.Slug}}">{{.Name}}</a>
+							</div>
+							<div class="meta">
+								<span class="ui label {{if eq .Status 1}}green{{else if eq .Status 0}}grey{{else if eq .Status 5}}red{{else}}blue{{end}}">
+									{{index $.GrantRoundStatusNames .Status}}
+								</span>
+							</div>
+							<div class="description">
+								{{if .Description}}{{.Description}}{{end}}
+							</div>
+						</div>
+						<div class="extra content">
+							<span>{{ctx.Locale.Tr "hackforger.grant.budget"}}: {{.Budget}} {{.Currency}}</span>
+							{{if gt .BudgetCredits 0}}
+								<span class="tw-ml-2">+ {{.BudgetCredits}} {{ctx.Locale.Tr "hackforger.credits"}}</span>
+							{{end}}
+						</div>
+					</div>
+				{{end}}
+			</div>
+		{{else}}
+			<div class="ui placeholder segment">
+				<div class="ui icon header">
+					{{svg "octicon-gift" 48}}
+					<br>
+					{{ctx.Locale.Tr "hackforger.grant.no_rounds"}}
+				</div>
+			</div>
+		{{end}}
+
+		{{if gt .Total 20}}
+			<div class="tw-flex tw-justify-center tw-mt-4">
+				{{if gt .Page 1}}
+					<a class="ui button" href="/explore/grants?page={{.PrevPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">{{ctx.Locale.Tr "repo.issues.previous"}}</a>
+				{{end}}
+				<a class="ui button" href="/explore/grants?page={{.NextPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">{{ctx.Locale.Tr "repo.issues.next"}}</a>
+			</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

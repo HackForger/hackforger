@@ -90,3 +90,10 @@ func UpdateRedeemOption(ctx context.Context, opt *RedeemOption) error {
 	_, err := db.GetEngine(ctx).ID(opt.ID).AllCols().Update(opt)
 	return err
 }
+
+// ListAllRedeemOptions returns all redeem options (including inactive), for admin use.
+func ListAllRedeemOptions(ctx context.Context) ([]*RedeemOption, error) {
+	var options []*RedeemOption
+	err := db.GetEngine(ctx).OrderBy("id DESC").Find(&options)
+	return options, err
+}

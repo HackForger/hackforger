@@ -74,3 +74,13 @@ func UpdateRedeemOrder(ctx context.Context, order *RedeemOrder) error {
 	_, err := db.GetEngine(ctx).ID(order.ID).AllCols().Update(order)
 	return err
 }
+
+// ListAllRedeemOrders returns all redeem orders (admin use), paginated.
+func ListAllRedeemOrders(ctx context.Context, opts db.ListOptions) ([]*RedeemOrder, int64, error) {
+	sess := db.GetEngine(ctx)
+	var orders []*RedeemOrder
+	count, err := sess.OrderBy("created_unix DESC").
+		Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).
+		FindAndCount(&orders)
+	return orders, count, err
+}

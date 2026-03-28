@@ -1,0 +1,61 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.grant.round.new"}}</h2>
+
+		{{template "base/alert" .}}
+
+		<form class="ui form" action="/grants/new" method="post">
+			{{.CsrfTokenHtml}}
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.round.name"}}</label>
+				<input type="text" name="name" required placeholder="{{ctx.Locale.Tr "hackforger.grant.round.name_placeholder"}}">
+			</div>
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.round.slug"}}</label>
+				<input type="text" name="slug" required pattern="[a-z0-9\-]+" placeholder="my-grant-round">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.round.description"}}</label>
+				<textarea name="description" rows="5"></textarea>
+			</div>
+			<div class="two fields">
+				<div class="field">
+					<label>{{ctx.Locale.Tr "hackforger.grant.budget"}}</label>
+					<input type="number" name="budget" step="0.01" min="0" value="0">
+				</div>
+				<div class="field">
+					<label>{{ctx.Locale.Tr "hackforger.grant.currency"}}</label>
+					<input type="text" name="currency" value="USD" maxlength="16">
+				</div>
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.budget_credits"}}</label>
+				<input type="number" name="budget_credits" min="0" value="0">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.deadline"}}</label>
+				<input type="datetime-local" name="deadline_date" id="deadline_date">
+				<input type="hidden" name="deadline" id="deadline_unix">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.org_id"}}</label>
+				<input type="number" name="org_id" min="0" value="0" placeholder="0 = personal">
+			</div>
+			<div class="field">
+				<button class="ui primary button">{{ctx.Locale.Tr "hackforger.grant.round.create"}}</button>
+				<a class="ui button" href="/explore/grants">{{ctx.Locale.Tr "cancel"}}</a>
+			</div>
+		</form>
+	</div>
+</div>
+<script>
+	// Convert datetime-local to Unix timestamp before form submit
+	document.querySelector('form').addEventListener('submit', function() {
+		var dateInput = document.getElementById('deadline_date');
+		if (dateInput.value) {
+			document.getElementById('deadline_unix').value = Math.floor(new Date(dateInput.value).getTime() / 1000);
+		}
+	});
+</script>
+{{template "base/footer" .}}

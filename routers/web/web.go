@@ -549,6 +549,41 @@ func registerRoutes(m *web.Route) {
 		})
 	}, reqSignIn)
 
+	// ***** START: HackForger Grants *****
+	m.Group("/grants", func() {
+		m.Combo("/new").Get(hackforger_web.NewGrantRound).Post(hackforger_web.NewGrantRoundPost)
+		m.Group("/{slug}", func() {
+			m.Get("", hackforger_web.GrantRoundDetail)
+			m.Get("/projects", hackforger_web.GrantRoundProjects)
+			m.Combo("/submit").Get(hackforger_web.SubmitGrantProject).Post(hackforger_web.SubmitGrantProjectPost)
+			m.Get("/export", hackforger_web.ExportGrantRoundCSV)
+			m.Group("/manage", func() {
+				m.Get("", hackforger_web.ManageGrantRound)
+				m.Post("/open", hackforger_web.ManageGrantRoundOpen)
+				m.Post("/close", hackforger_web.ManageGrantRoundClose)
+				m.Post("/finalize", hackforger_web.ManageGrantRoundFinalize)
+				m.Post("/distribute", hackforger_web.ManageGrantRoundDistribute)
+				m.Post("/cancel", hackforger_web.ManageGrantRoundCancel)
+				m.Group("/projects/{pid}", func() {
+					m.Get("", hackforger_web.ManageGrantProject)
+					m.Post("/approve", hackforger_web.ManageGrantProjectApprove)
+					m.Post("/reject", hackforger_web.ManageGrantProjectReject)
+					m.Post("/award", hackforger_web.ManageGrantProjectAward)
+					m.Post("/distribute", hackforger_web.ManageGrantProjectDistribute)
+				})
+			})
+		})
+	}, reqSignIn)
+	// ***** END: HackForger Grants *****
+
+	// ***** START: HackForger Credits *****
+	m.Group("/credits", func() {
+		m.Get("", hackforger_web.CreditsOverview)
+		m.Combo("/redeem/{id}").Get(hackforger_web.RedeemConfirm).Post(hackforger_web.RedeemConfirmPost)
+		m.Get("/orders", hackforger_web.CreditOrders)
+	}, reqSignIn)
+	// ***** END: HackForger Credits *****
+
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)
 		m.Get("/search", repo.SearchIssues)
@@ -872,6 +907,20 @@ func registerRoutes(m *web.Route) {
 			})
 			m.Post("/abuse_reports/act", admin.PerformAction)
 		}
+
+		// ***** START: HackForger Admin Credits *****
+		m.Group("/credits", func() {
+			m.Get("", hackforger_web.AdminCredits)
+			m.Post("/deposit", hackforger_web.AdminCreditsDeposit)
+			m.Post("/deduct", hackforger_web.AdminCreditsDeduct)
+			m.Get("/options", hackforger_web.AdminRedeemOptions)
+			m.Post("/options", hackforger_web.AdminRedeemOptionsCreate)
+			m.Post("/options/{id}", hackforger_web.AdminRedeemOptionsUpdate)
+			m.Get("/orders", hackforger_web.AdminCreditOrders)
+			m.Post("/orders/{oid}/fulfill", hackforger_web.AdminCreditOrdersFulfill)
+			m.Post("/orders/{oid}/cancel", hackforger_web.AdminCreditOrdersCancel)
+		})
+		// ***** END: HackForger Admin Credits *****
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
