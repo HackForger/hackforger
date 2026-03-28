@@ -123,3 +123,88 @@ func UpdateGrantRound(ctx context.Context, r *GrantRound) error {
 	_, err := db.GetEngine(ctx).ID(r.ID).AllCols().Update(r)
 	return err
 }
+
+// ErrGrantRoundNotDraft is returned when an operation requires Draft status.
+type ErrGrantRoundNotDraft struct {
+	ID     int64
+	Status GrantRoundStatus
+}
+
+// IsErrGrantRoundNotDraft checks if an error is a ErrGrantRoundNotDraft.
+func IsErrGrantRoundNotDraft(err error) bool {
+	_, ok := err.(ErrGrantRoundNotDraft)
+	return ok
+}
+
+func (err ErrGrantRoundNotDraft) Error() string {
+	return fmt.Sprintf("grant round is not in draft status [id: %d, status: %d]", err.ID, err.Status)
+}
+
+func (err ErrGrantRoundNotDraft) Unwrap() error {
+	return util.ErrInvalidArgument
+}
+
+// ErrGrantRoundSlugExists is returned when a slug is already taken.
+type ErrGrantRoundSlugExists struct {
+	Slug string
+}
+
+// IsErrGrantRoundSlugExists checks if an error is a ErrGrantRoundSlugExists.
+func IsErrGrantRoundSlugExists(err error) bool {
+	_, ok := err.(ErrGrantRoundSlugExists)
+	return ok
+}
+
+func (err ErrGrantRoundSlugExists) Error() string {
+	return fmt.Sprintf("grant round slug already exists [slug: %s]", err.Slug)
+}
+
+func (err ErrGrantRoundSlugExists) Unwrap() error {
+	return util.ErrAlreadyExist
+}
+
+// GetGrantRoundBySlug returns a grant round by its slug.
+func GetGrantRoundBySlug(ctx context.Context, slug string) (*GrantRound, error) {
+	r := new(GrantRound)
+	has, err := db.GetEngine(ctx).Where("slug = ?", slug).Get(r)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrGrantRoundNotExist{ID: 0}
+	}
+	return r, nil
+}
+
+// DeleteGrantRound deletes a grant round. Only Draft rounds can be deleted.
+func DeleteGrantRound(ctx context.Context, id int64) error {
+	r, err := GetGrantRoundByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if r.Status != GrantRoundStatusDraft {
+		return ErrGrantRoundNotDraft{ID: id, Status: r.Status}
+	}
+	_, err = db.GetEngine(ctx).ID(id).Delete(new(GrantRound))
+	return err
+}
+
+// GetGrantRoundBudgetUsage returns the total award_amount and award_credits
+// for approved or funded projects in the given round.
+func GetGrantRoundBudgetUsage(ctx context.Context, roundID int64) (float64, int64, error) {
+	type result struct {
+		UsedAmount  float64 `xorm:"used_amount"`
+		UsedCredits int64   `xorm:"used_credits"`
+	}
+	var res result
+	_, err := db.GetEngine(ctx).
+		Table("grant_project").
+		Select("COALESCE(SUM(award_amount), 0) AS used_amount, COALESCE(SUM(award_credits), 0) AS used_credits").
+		Where("round_id = ?", roundID).
+		In("status", GrantProjectStatusApproved, GrantProjectStatusFunded).
+		Get(&res)
+	if err != nil {
+		return 0, 0, err
+	}
+	return res.UsedAmount, res.UsedCredits, nil
+}
