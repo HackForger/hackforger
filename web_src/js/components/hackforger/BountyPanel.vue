@@ -34,7 +34,7 @@ export default {
   },
   computed: {
     apiBase() {
-      return `/api/v1/repos/${this.repoOwner}/${this.repoName}/bounties/${this.bountyId}`;
+      return `/${this.repoOwner}/${this.repoName}/bounties/${this.bountyId}`;
     },
     canApply() {
       return !this.isPublisher && this.currentStatus === STATUS_OPEN;
@@ -99,14 +99,14 @@ export default {
       this.error = '';
     },
     async submitApplication() {
-      const result = await this.apiCall('/applications', 'POST', {message: this.applyMessage});
-      if (result) {
+      const result = await this.apiCall('/apply', 'POST', {message: this.applyMessage});
+      if (result !== null) {
         this.showApplyForm = false;
         this.applyMessage = '';
       }
     },
     async reviewApplication(appId, action) {
-      await this.apiCall(`/applications/${appId}`, 'PUT', {action});
+      await this.apiCall(`/applications/${appId}`, 'POST', {action});
       this.loadApplications();
       if (action === 'accept' && this.mode === MODE_EXCLUSIVE) {
         this.currentStatus = STATUS_CLAIMED;
@@ -194,7 +194,7 @@ export default {
     <div v-if="winners.length > 0" class="tw-mt-2">
       <strong>Winners:</strong>
       <div v-for="w in winners" :key="w.ID" class="tw-flex tw-items-center tw-justify-between tw-py-1">
-        <span>User #{{ w.UserID }}</span>
+        <span>{{ w.Username || `User #${w.UserID}` }}</span>
         <span class="ui mini label">#{{ w.Rank }}</span>
       </div>
     </div>

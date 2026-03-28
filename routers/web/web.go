@@ -1390,6 +1390,13 @@ func registerRoutes(m *web.Route) {
 		m.Group("/bounties", func() {
 			m.Combo("/new").Get(hackforger_web.NewBounty).
 				Post(hackforger_web.NewBountyPost)
+			m.Group("/{bounty_id}", func() {
+				m.Get("/applications", hackforger_web.BountyListApplications)
+				m.Get("/winners", hackforger_web.BountyListWinners)
+				m.Post("/applications/{application_id}", hackforger_web.BountyApplicationAction)
+				m.Post("/winners", hackforger_web.BountySelectWinners)
+				m.Post("/{action}", hackforger_web.BountyAction)
+			})
 		})
 	}, reqSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoMustNotBeArchived())
 

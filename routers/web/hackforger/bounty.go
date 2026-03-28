@@ -11,6 +11,8 @@ import (
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_svc "forgejo.org/services/hackforger"
@@ -150,4 +152,119 @@ func NewBountyPost(ctx *context.Context) {
 
 	ctx.Flash.Success("Bounty created successfully")
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
+}
+
+// BountyAction handles POST actions on a bounty (apply, accept, reject, complete, etc.).
+func BountyAction(ctx *context.Context) {
+	bountyID := ctx.ParamsInt64("bounty_id")
+	action := ctx.Params("action")
+
+	var err error
+	switch action {
+	case "apply":
+		message := ctx.FormString("message")
+		_, err = hackforger_svc.ApplyForBounty(ctx, bountyID, ctx.Doer.ID, message)
+	case "complete":
+		err = hackforger_svc.CompleteBounty(ctx, bountyID, ctx.Doer.ID)
+	case "reject-delivery":
+		err = hackforger_svc.RejectDelivery(ctx, bountyID, ctx.Doer.ID)
+	case "pay":
+		err = hackforger_svc.MarkPaid(ctx, bountyID, ctx.Doer.ID)
+	case "cancel":
+		err = hackforger_svc.CancelBounty(ctx, bountyID, ctx.Doer.ID)
+	case "review":
+		err = hackforger_svc.StartReview(ctx, bountyID, ctx.Doer.ID)
+	default:
+		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "unknown action"})
+		return
+	}
+
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// BountyApplicationAction handles accept/reject of an application.
+func BountyApplicationAction(ctx *context.Context) {
+	applicationID := ctx.ParamsInt64("application_id")
+	action := ctx.FormString("action")
+
+	var err error
+	switch action {
+	case "accept":
+		err = hackforger_svc.AcceptApplication(ctx, applicationID, ctx.Doer.ID)
+	case "reject":
+		err = hackforger_svc.RejectApplication(ctx, applicationID, ctx.Doer.ID)
+	default:
+		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "unknown action"})
+		return
+	}
+
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// BountySelectWinners handles winner selection for competitive bounties.
+func BountySelectWinners(ctx *context.Context) {
+	bountyID := ctx.ParamsInt64("bounty_id")
+
+	type winnersForm struct {
+		Winners []hackforger_svc.WinnerInput `json:"winners"`
+	}
+	var form winnersForm
+	if err := json.NewDecoder(ctx.Req.Body).Decode(&form); err != nil {
+		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if err := hackforger_svc.SelectWinners(ctx, bountyID, ctx.Doer.ID, form.Winners); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// BountyListApplications returns applications as JSON for the Vue component.
+func BountyListApplications(ctx *context.Context) {
+	bountyID := ctx.ParamsInt64("bounty_id")
+	apps, _, err := hackforger_model.ListBountyApplications(ctx, hackforger_model.ListBountyApplicationsOptions{
+		BountyID: bountyID,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, apps)
+}
+
+// BountyListWinners returns winners as JSON for the Vue component, with resolved usernames.
+func BountyListWinners(ctx *context.Context) {
+	bountyID := ctx.ParamsInt64("bounty_id")
+	winners, err := hackforger_model.ListBountyWinners(ctx, bountyID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	type winnerJSON struct {
+		ID       int64  `json:"ID"`
+		BountyID int64  `json:"BountyID"`
+		UserID   int64  `json:"UserID"`
+		Username string `json:"Username"`
+		Rank     int    `json:"Rank"`
+	}
+	result := make([]winnerJSON, 0, len(winners))
+	for _, w := range winners {
+		wj := winnerJSON{ID: w.ID, BountyID: w.BountyID, UserID: w.UserID, Rank: w.Rank}
+		if u, err := user_model.GetUserByID(ctx, w.UserID); err == nil {
+			wj.Username = u.Name
+		}
+		result = append(result, wj)
+	}
+	ctx.JSON(http.StatusOK, result)
 }
