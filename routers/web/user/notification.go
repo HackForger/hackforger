@@ -13,6 +13,7 @@ import (
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
+	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/base"
@@ -305,6 +306,22 @@ func NotificationSubscriptions(ctx *context.Context) {
 	ctx.Data["CommitLastStatus"] = lastStatus
 	ctx.Data["CommitStatuses"] = commitStatuses
 	ctx.Data["Issues"] = issues
+
+	// Build BountyMap for issue list badge rendering.
+	if len(issues) > 0 {
+		issueIDs := make([]int64, len(issues))
+		for i, issue := range issues {
+			issueIDs[i] = issue.ID
+		}
+		bountyMap := make(map[int64]*hackforger_model.Bounty)
+		var bounties []*hackforger_model.Bounty
+		if err := db.GetEngine(ctx).In("issue_id", issueIDs).Find(&bounties); err == nil {
+			for _, b := range bounties {
+				bountyMap[b.IssueID] = b
+			}
+		}
+		ctx.Data["BountyMap"] = bountyMap
+	}
 
 	ctx.Data["IssueRefEndNames"], ctx.Data["IssueRefURLs"] = issue_service.GetRefEndNamesAndURLs(issues, "")
 

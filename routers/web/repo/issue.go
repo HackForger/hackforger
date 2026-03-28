@@ -358,6 +358,22 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["CommitLastStatus"] = lastStatus
 	ctx.Data["CommitStatuses"] = commitStatuses
 
+	// Build BountyMap for issue list badge rendering.
+	if len(issues) > 0 {
+		issueIDs := make([]int64, len(issues))
+		for i, issue := range issues {
+			issueIDs[i] = issue.ID
+		}
+		bountyMap := make(map[int64]*hackforger_model.Bounty)
+		var bounties []*hackforger_model.Bounty
+		if err := db.GetEngine(ctx).In("issue_id", issueIDs).Find(&bounties); err == nil {
+			for _, b := range bounties {
+				bountyMap[b.IssueID] = b
+			}
+		}
+		ctx.Data["BountyMap"] = bountyMap
+	}
+
 	// Get assignees.
 	assigneeUsers, err := repo_model.GetRepoAssignees(ctx, repo)
 	if err != nil {

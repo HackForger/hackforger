@@ -16,6 +16,7 @@ import (
 	activities_model "forgejo.org/models/activities"
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/db"
+	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
@@ -639,6 +640,22 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 		return
 	}
 	ctx.Data["Issues"] = issues
+
+	// Build BountyMap for issue list badge rendering.
+	if len(issues) > 0 {
+		issueIDs := make([]int64, len(issues))
+		for i, issue := range issues {
+			issueIDs[i] = issue.ID
+		}
+		bountyMap := make(map[int64]*hackforger_model.Bounty)
+		var bounties []*hackforger_model.Bounty
+		if err := db.GetEngine(ctx).In("issue_id", issueIDs).Find(&bounties); err == nil {
+			for _, b := range bounties {
+				bountyMap[b.IssueID] = b
+			}
+		}
+		ctx.Data["BountyMap"] = bountyMap
+	}
 
 	approvalCounts, err := issues.GetApprovalCounts(ctx)
 	if err != nil {
