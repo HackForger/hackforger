@@ -747,7 +747,7 @@ func ReviewApplication(ctx *context.APIContext) {
 
 // StartReviewAPI transitions a competitive bounty from Open to InReview.
 func StartReviewAPI(ctx *context.APIContext) {
-	// swagger:operation POST /repos/{owner}/{repo}/bounties/{bounty_id}/start-review bounty bountyStartReview
+	// swagger:operation POST /repos/{owner}/{repo}/bounties/{bounty_id}/review bounty bountyStartReview
 	// ---
 	// summary: Start review of a competitive bounty
 	// produces:

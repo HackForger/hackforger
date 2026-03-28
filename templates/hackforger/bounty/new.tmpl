@@ -7,11 +7,11 @@
 			{{.CsrfTokenHtml}}
 			<div class="required field">
 				<label>{{ctx.Locale.Tr "hackforger.bounty.new.title"}}</label>
-				<input name="title" required placeholder="Bounty title" maxlength="255">
+				<input name="title" required placeholder="Bounty title" maxlength="255" value="{{.Query.title}}">
 			</div>
 			<div class="required field">
 				<label>{{ctx.Locale.Tr "hackforger.bounty.new.issue"}}</label>
-				<input name="issue_id" type="number" required placeholder="Issue ID (e.g. 1)">
+				<input name="issue_id" type="number" required placeholder="Issue ID (e.g. 1)" value="{{.Query.issue_id}}">
 			</div>
 			<div class="field">
 				<label>{{ctx.Locale.Tr "hackforger.bounty.new.mode"}}</label>

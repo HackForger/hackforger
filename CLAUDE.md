@@ -36,6 +36,10 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Template files: snake_case (judge_panel.tmpl)
 - Vue components: PascalCase (BountyPanel.vue)
 
+## Local Testing
+- See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
+- **Key**: always copy `custom/conf/app.ini` from main repo before starting server in a worktree
+
 ## Common Commands
 - `TAGS="bindata sqlite sqlite_unlock_notify" make backend` -- Compile backend (bindata embeds templates, sqlite enables SQLite3)
 - `make frontend` -- Compile frontend (required after JS/Vue changes)

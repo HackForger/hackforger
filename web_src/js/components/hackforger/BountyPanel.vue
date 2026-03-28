@@ -118,7 +118,7 @@ export default {
       if (result !== null) this.currentStatus = 6; // Cancelled
     },
     async startReview() {
-      const result = await this.apiCall('/start-review');
+      const result = await this.apiCall('/review');
       if (result !== null) this.currentStatus = STATUS_IN_REVIEW;
     },
   },

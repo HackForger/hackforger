@@ -1548,7 +1548,7 @@ func Routes() *web.Route {
 						m.Get("/applications", reqToken(), hackforger_api.ListApplications)
 						m.Post("/applications", reqToken(), bind(hackforger_api.ApplyForm{}), hackforger_api.ApplyForBounty)
 						m.Put("/applications/{application_id}", reqToken(), bind(hackforger_api.ReviewApplicationForm{}), hackforger_api.ReviewApplication)
-						m.Post("/start-review", reqToken(), hackforger_api.StartReviewAPI)
+						m.Post("/review", reqToken(), hackforger_api.StartReviewAPI)
 						m.Post("/complete", reqToken(), hackforger_api.CompleteBountyAPI)
 						m.Post("/reject-delivery", reqToken(), hackforger_api.RejectDeliveryAPI)
 						m.Post("/pay", reqToken(), hackforger_api.MarkPaidAPI)

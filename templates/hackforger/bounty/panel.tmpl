@@ -1,3 +1,11 @@
+{{if and (not .BountyData) $.SignedUser (not .Issue.IsPull)}}
+<div class="divider"></div>
+<div class="tw-text-center tw-py-2">
+	<a class="ui small green button" href="{{.RepoLink}}/bounties/new?issue_id={{.Issue.Index}}&title={{.Issue.Title}}">
+		{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.bounty.new.submit"}}
+	</a>
+</div>
+{{end}}
 {{if .BountyData}}
 <div class="divider"></div>
 <div class="ui segment">

@@ -9,10 +9,20 @@ import (
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_svc "forgejo.org/services/hackforger"
 )
+
+// BountyView combines a Bounty with display info for templates.
+type BountyView struct {
+	*hackforger_model.Bounty
+	RepoFullName string // "owner/repo"
+	IssueIndex   int64  // issue index within repo (for URL)
+	IssueLink    string // full link "/owner/repo/issues/N"
+}
 
 const tplBountyExplore = "hackforger/bounty/explore"
 
@@ -53,7 +63,21 @@ func ExploreBounties(ctx *context.Context) {
 		return
 	}
 
-	ctx.Data["Bounties"] = bounties
+	// Build BountyViews with repo and issue info for display links
+	views := make([]*BountyView, 0, len(bounties))
+	for _, b := range bounties {
+		v := &BountyView{Bounty: b}
+		if repo, err := repo_model.GetRepositoryByID(ctx, b.RepoID); err == nil {
+			v.RepoFullName = repo.FullName()
+			if issue, err := issues_model.GetIssueByID(ctx, b.IssueID); err == nil {
+				v.IssueIndex = issue.Index
+				v.IssueLink = fmt.Sprintf("/%s/issues/%d", repo.FullName(), issue.Index)
+			}
+		}
+		views = append(views, v)
+	}
+
+	ctx.Data["Bounties"] = views
 	ctx.Data["Total"] = total
 	ctx.Data["StatusFilter"] = ctx.FormString("status")
 
@@ -69,6 +93,10 @@ const tplBountyNew = "hackforger/bounty/new"
 // NewBounty renders the create bounty form.
 func NewBounty(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("hackforger.bounty.new.title")
+	ctx.Data["Query"] = map[string]string{
+		"issue_id": ctx.FormString("issue_id"),
+		"title":    ctx.FormString("title"),
+	}
 	ctx.HTML(http.StatusOK, tplBountyNew)
 }
 

@@ -14,7 +14,8 @@
 			{{range .Bounties}}
 			<div class="item tw-py-4">
 				<div class="content">
-					<div class="header tw-text-lg">{{.Title}}</div>
+					<a class="header tw-text-lg" href="{{.IssueLink}}">{{.Title}}</a>
+					<div class="tw-text-sm tw-text-gray tw-mb-1">{{.RepoFullName}} #{{.IssueIndex}}</div>
 					<div class="description tw-mt-1">
 						<span class="ui small label {{if eq .Status 0}}green{{else if eq .Status 1}}blue{{else if eq .Status 2}}orange{{else if eq .Status 3}}purple{{else if eq .Status 5}}red{{end}}">
 							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.bounty.status.open"}}
