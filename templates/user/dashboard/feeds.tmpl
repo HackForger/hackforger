@@ -80,6 +80,28 @@
 						{{$index := index .GetIssueInfos 0}}
 						{{$reviewer := index .GetIssueInfos 1}}
 						{{ctx.Locale.Tr "action.review_dismissed" (printf "%s/pulls/%s" (.GetRepoLink ctx) $index) $index (.ShortRepoPath ctx) $reviewer}}
+					{{else if .GetOpType.InActions "hackforger_bounty_created"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_created" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_claimed"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_claimed" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_delivered"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_delivered" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_completed"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_completed" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_winners_selected"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_winners_selected" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_paid"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_paid" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_expired"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_expired" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_bounty_cancelled"}}
+						{{ctx.Locale.Tr "action.hackforger_bounty_cancelled" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_hackathon_created" "hackforger_hackathon_registered" "hackforger_hackathon_submitted" "hackforger_hackathon_scored" "hackforger_hackathon_phase_changed" "hackforger_hackathon_finalized"}}
+						{{ctx.Locale.Tr "action.hackforger_hackathon_event" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_grant_round_created" "hackforger_grant_project_submitted" "hackforger_grant_awarded" "hackforger_grant_round_opened" "hackforger_grant_round_closed" "hackforger_grant_round_finalized"}}
+						{{ctx.Locale.Tr "action.hackforger_grant_event" (.GetRepoLink ctx) (.ShortRepoPath ctx) .GetContent}}
+					{{else if .GetOpType.InActions "hackforger_credits_redeemed"}}
+						{{ctx.Locale.Tr "action.hackforger_credits_redeemed"}}
 					{{end}}
 					{{DateUtils.TimeSince .GetCreate}}
 				</div>
