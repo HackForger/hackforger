@@ -28,6 +28,14 @@
 	</div>
 	{{end}}
 
+	{{if and .BountyData.ClaimerID (gt .BountyData.ClaimerID 0)}}
+	<div class="tw-mb-2">
+		<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.claimer"}}:</strong>
+		<!-- TODO: resolve full username via user model -->
+		User #{{.BountyData.ClaimerID}}
+	</div>
+	{{end}}
+
 	<div id="hackforger-bounty-panel"
 		data-bounty-id="{{.BountyData.ID}}"
 		data-repo-owner="{{.Repository.OwnerName}}"

@@ -1,4 +1,6 @@
 <script>
+import {GET, POST, PUT, DELETE} from '../../modules/fetch.js';
+
 const STATUS_OPEN = 0;
 const STATUS_CLAIMED = 1;
 const STATUS_IN_REVIEW = 2;
@@ -51,7 +53,7 @@ export default {
     },
   },
   mounted() {
-    if (this.isPublisher && this.currentStatus === STATUS_OPEN) {
+    if (this.isPublisher) {
       this.loadApplications();
     }
   },
@@ -60,9 +62,15 @@ export default {
       this.loading = true;
       this.error = '';
       try {
-        const opts = {method, headers: {'Content-Type': 'application/json'}};
-        if (body) opts.body = JSON.stringify(body);
-        const resp = await fetch(this.apiBase + path, opts);
+        const opts = body ? {data: body} : {};
+        let resp;
+        switch (method) {
+          case 'GET': resp = await GET(this.apiBase + path, opts); break;
+          case 'POST': resp = await POST(this.apiBase + path, opts); break;
+          case 'PUT': resp = await PUT(this.apiBase + path, opts); break;
+          case 'DELETE': resp = await DELETE(this.apiBase + path, opts); break;
+          default: resp = await POST(this.apiBase + path, opts);
+        }
         if (!resp.ok) {
           const data = await resp.json().catch(() => ({}));
           throw new Error(data.message || `HTTP ${resp.status}`);
