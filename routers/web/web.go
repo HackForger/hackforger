@@ -31,6 +31,7 @@ import (
 	"forgejo.org/routers/web/devtest"
 	"forgejo.org/routers/web/events"
 	"forgejo.org/routers/web/explore"
+	hackforger_web "forgejo.org/routers/web/hackforger"
 	"forgejo.org/routers/web/feed"
 	"forgejo.org/routers/web/healthcheck"
 	"forgejo.org/routers/web/misc"
@@ -500,6 +501,9 @@ func registerRoutes(m *web.Route) {
 			}
 		}, explore.Code)
 		m.Get("/topics/search", explore.TopicSearch)
+		m.Get("/hackathons", hackforger_web.ExploreHackathons)
+		m.Get("/bounties", hackforger_web.ExploreBounties)
+		m.Get("/grants", hackforger_web.ExploreGrants)
 	}, ignExploreSignIn)
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)
