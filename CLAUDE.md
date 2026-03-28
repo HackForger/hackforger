@@ -39,6 +39,7 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 
 ## Local Testing
 - See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
+- See [docs/tests/e2e-lessons-learned.md](docs/tests/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
 - **Key**: always copy `custom/conf/app.ini` from main repo before starting server in a worktree
 
 ## Common Commands
