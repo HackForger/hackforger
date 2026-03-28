@@ -20,7 +20,7 @@ Both plan documents were drafted before a deep analysis of the Forgejo codebase.
 1. **Approach:** Structural rewrite (Option B) — preserve core design decisions and business logic, restructure affected sections to align with actual Forgejo architecture.
 2. **Feed/Notification architecture:** Implement a `HackForgerNotifier` via `services/notify/Notifier` interface instead of directly writing to the action table.
 3. **Document format:** Chinese, saved to original paths.
-4. **Document positioning:** These are high-level master plans (totaling), not detailed implementation guides. Remove code examples, keep architecture descriptions and decision points.
+4. **Document positioning:** These are high-level master plans, not detailed implementation guides. Remove code examples, keep architecture descriptions and decision points.
 5. **Database testing:** SQLite only for current phase.
 
 ## Changes to implementation-plan-draft.md
@@ -63,7 +63,7 @@ Rewrite the modification list from 10 items to 11 accurate items:
 Key conventions to note (bullet points, no code):
 
 - Tailwind CSS: all classes use `tw-` prefix (`prefix: "tw-"`, `important: true`)
-- Vue 3 Options API: all 16 existing Vue SFCs use Options API, new components follow suit
+- Vue 3 Options API: existing Vue SFCs use Options API, new components follow suit
 - Component mounting: feature modules lazy-load via `await import()`, mount with `createApp().mount(el)` to DOM placeholder elements in templates
 - UI framework: Fomantic UI (Semantic UI fork) for dropdown/modal/form — reuse first
 - Theme support: new components must support light/dark via CSS variables
