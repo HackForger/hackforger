@@ -2130,6 +2130,24 @@ func ViewIssue(ctx *context.Context) {
 				ctx.Data["BountyClaimer"] = claimer
 			}
 		}
+		// Load winners for competitive bounties
+		if bountyData.Mode == hackforger_model.BountyModeCompetitive {
+			if winners, err := hackforger_model.ListBountyWinners(ctx, bountyData.ID); err == nil && len(winners) > 0 {
+				type WinnerView struct {
+					*hackforger_model.BountyWinner
+					Username string
+				}
+				winnerViews := make([]WinnerView, 0, len(winners))
+				for _, w := range winners {
+					wv := WinnerView{BountyWinner: w}
+					if u, err := user_model.GetUserByID(ctx, w.UserID); err == nil {
+						wv.Username = u.Name
+					}
+					winnerViews = append(winnerViews, wv)
+				}
+				ctx.Data["BountyWinners"] = winnerViews
+			}
+		}
 	} else if !hackforger_model.IsErrBountyNotExist(err) {
 		ctx.ServerError("GetBountyByIssueID", err)
 		return
