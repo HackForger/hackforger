@@ -67,6 +67,15 @@ var HackforgerActionTypeName = map[activities_model.ActionType]string{
 	ActionMilestone:             "milestone",
 }
 
+func init() {
+	// Register HackForger action type names so ActionType.String() returns
+	// meaningful names instead of "action-30" etc. This makes .InActions()
+	// work in templates for HackForger events.
+	for at, name := range HackforgerActionTypeName {
+		activities_model.RegisterActionTypeName(at, name)
+	}
+}
+
 // IsHackforgerAction returns true if the ActionType is a HackForger event.
 func IsHackforgerAction(at activities_model.ActionType) bool {
 	_, ok := HackforgerActionTypeName[at]

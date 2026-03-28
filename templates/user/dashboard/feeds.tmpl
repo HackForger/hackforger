@@ -120,6 +120,8 @@
 						{{ctx.Locale.Tr "action.hackforger_grant_round_closed"}}
 					{{else if .GetOpType.InActions "hackforger_grant_round_finalized"}}
 						{{ctx.Locale.Tr "action.hackforger_grant_round_finalized"}}
+					{{else if .GetOpType.InActions "hackforger_grant_round_cancelled"}}
+						{{ctx.Locale.Tr "action.hackforger_grant_round_cancelled"}}
 					{{else if .GetOpType.InActions "hackforger_credits_redeemed"}}
 						{{ctx.Locale.Tr "action.hackforger_credits_redeemed"}}
 					{{end}}

@@ -169,9 +169,24 @@ func (at ActionType) String() string {
 		return "hackforger_grant_round_closed"
 	case 56:
 		return "hackforger_grant_round_finalized"
+	case 57:
+		return "hackforger_grant_round_cancelled"
 	default:
+		// HackForger action types (30+) are registered via RegisterActionTypeName
+		if name, ok := extraActionTypeNames[at]; ok {
+			return name
+		}
 		return "action-" + strconv.Itoa(int(at))
 	}
+}
+
+// extraActionTypeNames holds action type names registered by HackForger (or other extensions).
+var extraActionTypeNames = map[ActionType]string{}
+
+// RegisterActionTypeName registers a string name for a custom ActionType.
+// Called from models/hackforger/action_types.go init().
+func RegisterActionTypeName(at ActionType, name string) {
+	extraActionTypeNames[at] = name
 }
 
 func (at ActionType) InActions(actions ...string) bool {

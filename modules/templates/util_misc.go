@@ -15,6 +15,7 @@ import (
 
 	activities_model "forgejo.org/models/activities"
 	asymkey_model "forgejo.org/models/asymkey"
+	hackforger_model "forgejo.org/models/hackforger"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -112,12 +113,45 @@ func ActionIcon(opType activities_model.ActionType) string {
 		return "rocket"
 	case 34, 35, 36, 37, 38, 43, 52, 53: // Bounty events
 		return "gift"
-	case 39, 40, 41, 54, 55, 56: // Grant events
+	case 39, 40, 41, 54, 55, 56, 57: // Grant events
 		return "heart"
 	case 42: // Credits redeemed
 		return "credit-card"
 	default:
+		// HackForger action types
+		if hackforger_model.IsHackforgerAction(opType) {
+			return hackforgerActionIcon(opType)
+		}
 		return "question"
+	}
+}
+
+func hackforgerActionIcon(opType activities_model.ActionType) string {
+	switch opType {
+	case hackforger_model.ActionHackathonCreated, hackforger_model.ActionHackathonPhaseChanged, hackforger_model.ActionHackathonFinalized:
+		return "flame"
+	case hackforger_model.ActionHackathonRegistered, hackforger_model.ActionHackathonSubmitted:
+		return "person"
+	case hackforger_model.ActionHackathonScored:
+		return "star"
+	case hackforger_model.ActionBountyCreated, hackforger_model.ActionBountyClaimed, hackforger_model.ActionBountyDelivered, hackforger_model.ActionBountyCompleted:
+		return "goal"
+	case hackforger_model.ActionBountyWinnersSelected:
+		return "trophy"
+	case hackforger_model.ActionBountyExpired, hackforger_model.ActionBountyCancelled:
+		return "circle-slash"
+	case hackforger_model.ActionGrantRoundCreated, hackforger_model.ActionGrantRoundOpened, hackforger_model.ActionGrantRoundClosed, hackforger_model.ActionGrantRoundFinalized:
+		return "heart"
+	case hackforger_model.ActionGrantProjectSubmitted:
+		return "paper-airplane"
+	case hackforger_model.ActionGrantAwarded:
+		return "gift"
+	case hackforger_model.ActionGrantRoundCancelled:
+		return "circle-slash"
+	case hackforger_model.ActionCreditsRedeemed:
+		return "credit-card"
+	default:
+		return "zap"
 	}
 }
 
