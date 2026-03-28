@@ -129,3 +129,12 @@ prime/
 
 # Manpage
 /man
+
+# Agent Setup runtime (gitignored)
+.agents/
+
+# User-local launcher overrides
+claude.local.sh
+
+# MCP server secrets (API keys, tokens)
+.mcp.env

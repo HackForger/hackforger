@@ -1,0 +1,44 @@
+{
+  "enabledPlugins": {
+    "agent-setup@agent-setup": true,
+    "superpowers@agent-setup": true,
+    "agent-browser@agent-setup": true,
+    "skill-creator@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "learning-output-style@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "intercept",
+            "pattern": "\\btea\\s+(issue|pr|repo|release|login)",
+            "message": "Please use `gh` instead of `tea`. tea is the Forgejo/Codeberg CLI; we develop on GitHub. Equivalent commands: gh issue / gh pr / gh repo. For API calls use `curl` with GITHUB_TOKEN or FORGEJO_TOKEN."
+          },
+          {
+            "type": "intercept",
+            "pattern": "codeberg\\.org/(Synnovator|HackForge)",
+            "message": "The project is hosted on GitHub, not Codeberg. Correct address: github.com/HackForger/hackforger"
+          },
+          {
+            "type": "intercept",
+            "pattern": "hackforge\\.inside\\.h2os\\.cloud",
+            "message": "The internal instance address has changed to hackforger.inside.h2os.cloud (with 'r'). Please update the URL."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "intercept",
+            "pattern": "models/(repo|issues|org|user|actions|auth)/",
+            "message": "You are modifying an upstream Forgejo model file. HackForger's new code should go in models/hackforger/. If you must modify an upstream file, confirm it is one of the 11 injection points listed in implementation-plan-draft.md."
+          }
+        ]
+      }
+    ]
+  }
+}
