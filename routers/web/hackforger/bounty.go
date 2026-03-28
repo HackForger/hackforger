@@ -4,11 +4,14 @@
 package hackforger
 
 import (
+	"fmt"
 	"net/http"
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
+	hackforger_svc "forgejo.org/services/hackforger"
 )
 
 const tplBountyExplore = "hackforger/bounty/explore"
@@ -59,4 +62,56 @@ func ExploreBounties(ctx *context.Context) {
 	ctx.Data["Page"] = pager
 
 	ctx.HTML(http.StatusOK, tplBountyExplore)
+}
+
+const tplBountyNew = "hackforger/bounty/new"
+
+// NewBounty renders the create bounty form.
+func NewBounty(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("hackforger.bounty.new.title")
+	ctx.HTML(http.StatusOK, tplBountyNew)
+}
+
+// NewBountyPost handles the create bounty form submission.
+func NewBountyPost(ctx *context.Context) {
+	issueID := ctx.FormInt64("issue_id")
+	if issueID <= 0 {
+		ctx.Flash.Error("Issue is required")
+		ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
+		return
+	}
+
+	mode := hackforger_model.BountyMode(ctx.FormInt("mode"))
+	deadline := timeutil.TimeStamp(ctx.FormInt64("deadline"))
+
+	bounty := &hackforger_model.Bounty{
+		RepoID:      ctx.Repo.Repository.ID,
+		IssueID:     issueID,
+		PublisherID: ctx.Doer.ID,
+		Title:       ctx.FormString("title"),
+		Mode:        mode,
+		Deadline:    deadline,
+	}
+
+	if err := hackforger_model.CreateBounty(ctx, bounty); err != nil {
+		if hackforger_model.IsErrBountyAlreadyExists(err) {
+			ctx.Flash.Error("A bounty already exists for this issue")
+			ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
+			return
+		}
+		ctx.ServerError("CreateBounty", err)
+		return
+	}
+
+	// Publish feed event.
+	_ = hackforger_svc.PublishHackforgerAction(ctx, &hackforger_svc.HackforgerActionOpts{
+		ActUserID:    ctx.Doer.ID,
+		OpType:       hackforger_model.ActionBountyCreated,
+		RepoID:       bounty.RepoID,
+		Content:      &hackforger_model.HackforgerActionContent{EntityType: "bounty", EntityID: bounty.ID, EntityName: bounty.Title},
+		AudienceType: hackforger_svc.AudienceGlobal | hackforger_svc.AudienceRepoWatchers,
+	})
+
+	ctx.Flash.Success("Bounty created successfully")
+	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, bounty.IssueID))
 }
