@@ -25,6 +25,9 @@ export default {
       applications: [],
       showApplyForm: false,
       applyMessage: '',
+      winners: [],
+      showWinnersForm: false,
+      winnerEntries: [{user_id: '', rank: 1}],
       loading: false,
       error: '',
     };
@@ -51,10 +54,16 @@ export default {
     canStartReview() {
       return this.isPublisher && this.currentStatus === STATUS_OPEN && this.mode === MODE_COMPETITIVE;
     },
+    canSelectWinners() {
+      return this.isPublisher && this.currentStatus === STATUS_IN_REVIEW && this.mode === MODE_COMPETITIVE;
+    },
   },
   mounted() {
     if (this.isPublisher) {
       this.loadApplications();
+    }
+    if (this.mode === MODE_COMPETITIVE && this.currentStatus >= STATUS_COMPLETED) {
+      this.loadWinners();
     }
   },
   methods: {
@@ -123,6 +132,29 @@ export default {
       const result = await this.apiCall('/review');
       if (result !== null) this.currentStatus = STATUS_IN_REVIEW;
     },
+    addWinnerEntry() {
+      this.winnerEntries.push({user_id: '', rank: this.winnerEntries.length + 1});
+    },
+    removeWinnerEntry(index) {
+      this.winnerEntries.splice(index, 1);
+    },
+    async submitWinners() {
+      const winners = this.winnerEntries
+        .filter((e) => e.user_id)
+        .map((e) => ({user_id: Number(e.user_id), rank: e.rank}));
+      if (winners.length === 0) return;
+      const result = await this.apiCall('/winners', 'POST', {winners});
+      if (result !== null) {
+        this.currentStatus = STATUS_COMPLETED;
+        this.showWinnersForm = false;
+        this.loadWinners();
+      }
+    },
+    async loadWinners() {
+      const data = await this.apiCall('/winners', 'GET');
+      if (data) this.winners = data;
+      this.error = '';
+    },
   },
 };
 </script>
@@ -155,6 +187,36 @@ export default {
           <button class="ui mini red button" @click="reviewApplication(app.id, 'reject')">Reject</button>
         </span>
         <span v-else class="ui mini label">{{ app.status === 1 ? 'Accepted' : 'Rejected' }}</span>
+      </div>
+    </div>
+
+    <!-- Winners display (competitive, after completion) -->
+    <div v-if="winners.length > 0" class="tw-mt-2">
+      <strong>Winners:</strong>
+      <div v-for="w in winners" :key="w.ID" class="tw-flex tw-items-center tw-justify-between tw-py-1">
+        <span>User #{{ w.UserID }}</span>
+        <span class="ui mini label">#{{ w.Rank }}</span>
+      </div>
+    </div>
+
+    <!-- Select Winners form (competitive, publisher, in review) -->
+    <div v-if="canSelectWinners" class="tw-mt-2">
+      <button v-if="!showWinnersForm" class="ui small blue button tw-w-full" @click="showWinnersForm = true">
+        Select Winners
+      </button>
+      <div v-else class="ui form tw-mt-2">
+        <div v-for="(entry, idx) in winnerEntries" :key="idx" class="tw-flex tw-gap-2 tw-items-center tw-mb-1">
+          <input v-model="entry.user_id" type="number" placeholder="User ID" class="ui mini input" style="width: 100px;">
+          <span class="tw-text-sm">Rank #{{ entry.rank }}</span>
+          <button v-if="winnerEntries.length > 1" class="ui mini icon button" @click="removeWinnerEntry(idx)">
+            &times;
+          </button>
+        </div>
+        <div class="tw-flex tw-gap-1 tw-mt-1">
+          <button class="ui mini button" @click="addWinnerEntry">+ Add</button>
+          <button class="ui small green button" :disabled="loading" @click="submitWinners">Submit Winners</button>
+          <button class="ui small button" @click="showWinnersForm = false">Cancel</button>
+        </div>
       </div>
     </div>
 
