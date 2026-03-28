@@ -18,7 +18,8 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - NotifyWatchers only handles repo watchers; HackForger uses custom PublishHackforgerAction for 4 audience types
 - New Go package paths: `forgejo.org/models/hackforger/`, `forgejo.org/services/hackforger/`, etc.
 - Database: XORM ORM, define Go struct + tags for auto table creation
-- Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA)
+- Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA) — see [docs/frontend-dev-guide.md](docs/frontend-dev-guide.md)
+- **Vue components must call web routes for actions, NOT `/api/v1/` routes** (session cookie auth vs token auth)
 
 ## Directory Structure
 - `models/hackforger/` -- Data models (16 tables) + CRUD data-access functions (Get/List/Create/Update/Delete)
