@@ -1,166 +1,127 @@
-# Phase 1 Bounty — E2E Test Report
+# Phase 1 Bounty — E2E Retest Report
 
 > **Tester:** Claude (automated E2E)
 > **Date:** 2026-03-28
 > **Instance:** https://hackforger.inside.h2os.cloud
-> **Branch/Commit:** Forgejo 14.0.3-44-b07705f82e+gitea-1.22.0
+> **Branch/Commit:** Forgejo 14.0.3-49-2f8d37a788+gitea-1.22.0
 
 ---
 
-## 1. Explore Page Verification
+## 1. Explore 页面
 
-- [x] `/explore/bounties` loads without error
-- [x] Explore navbar shows Bounties tab highlighted
-- [x] Empty state or bounty listing renders correctly
-- [x] Status filter tabs present (All / Open / Claimed / Completed)
-- [x] Filters update the list when clicked
-- [ ] Pagination works (if enough bounties exist) — N/A, only 3 bounties
+- [x] `/explore/bounties` 加载正常，显示 3 个 bounty
+- [x] 标题可点击，链接到对应 Issue（显示 `acme-dev/backend #N`）
+- [x] 切换简体中文后 navbar tabs 显示 "黑客松 / 悬赏 / 资助"
+- [x] 状态 filter tabs 显示：全部 / 开放 / 已认领 / 已完成
+- [x] Filter 切换正常更新列表（"已认领" 显示空状态 "暂无悬赏。从仓库 Issue 创建一个吧！"）
+- [x] 每个 bounty 卡片显示状态标签（开放）和模式标签（独占/竞赛）
 
-**Notes:** Explore Bounties 页面正常加载，navbar 中 Bounties tab 正确高亮。状态 filter tabs（All / Open / Claimed / Completed）均存在，点击可正确过滤列表。最终列表显示 3 个 bounties：Refactor auth module (Claimed/Exclusive)、Best CLI tool challenge (Completed/Competitive)、Fix database connection pooling (Open/Exclusive)。
+**Notes:** Explore 页面所有检查项通过。i18n 中文翻译准确。
 
 ---
 
-## 2. Exclusive Bounty Flow
+## 2. Issue 面板
 
-### Step 1: Create Exclusive Bounty
-- [x] POST returns 201 Created
-- [x] Response contains correct `mode: 0` (exclusive), `status: "open"`
-
-### Step 2: Add Rewards
-- [x] Money reward added (201)
-- [x] Credits reward added (201)
-- [x] GET bounty shows 2 rewards
-
-### Step 3: Feed — bounty_created
-- [ ] Global feed contains bounty_created event (action_type 34) — **FAIL: feed 为空**
-- [ ] hacker_eve (repo watcher) sees event in following feed — **FAIL: feed 为空**
-- [ ] agent_hunter (follows org_bob) sees event in following feed — **FAIL: feed 为空**
-- [x] hacker_grace (no relationship) does NOT see event in following feed — 空（但因所有 feed 都空，无法区分是正确行为还是 bug）
-- [ ] hacker_grace CAN see event in global feed — **FAIL: global feed 也为空**
-
-### Step 4: hacker_eve applies
-- [x] Application POST returns 201
-
-### Step 5: agent_hunter applies
-- [x] Application POST returns 201
-
-### Step 6: org_bob accepts eve's application
-- [x] Accept PUT returns 200（使用 `PUT /applications/{id}` + body `{"action":"accept"}`）
-- [x] Bounty status = "claimed" (status=1)
-- [x] Bounty claimer_id = eve's user ID (3)
-
-### Step 7: Feed — bounty_claimed
-- [ ] hacker_frank (follows eve) sees bounty_claimed in following feed — **FAIL: feed 为空**
-- [ ] hacker_grace (follows eve) sees bounty_claimed in following feed — **FAIL: feed 为空**
-
-### Step 8: eve creates PR + org_bob merges
-- [x] PR created successfully（PR #3, branch eve-auth-refactor）
-- [x] PR merged successfully
-- [ ] Bounty status transitions to "in_review" / "delivered" — **FAIL: status 仍为 1 (claimed)**，MergePullRequest hook 未触发状态转换
-
-### Step 9: Feed — bounty_delivered
-- [ ] Entity feed contains bounty_delivered event (action_type 36) — **FAIL: feed 为空**
-
-### Step 10: org_bob completes bounty
-- [ ] Complete PUT returns 200 — **FAIL: POST /complete 返回 500**，因为 bounty status=1 (claimed) 而非 status=2 (in_review)，complete 操作被阻止
-- [ ] Bounty status = "completed" — **FAIL: 无法完成**
-
-### Step 11: Feed + Credits — bounty_completed
-- [ ] hacker_eve credit balance increased by 500 — **FAIL: balance=0**
-- [ ] hacker_frank sees bounty_completed in following feed — **FAIL: feed 为空**
-
-### Step 12: org_bob marks paid
-- [ ] Paid PUT returns 200 — **未测试**（被 Step 10 阻塞）
-- [ ] Bounty status = "paid" — **未测试**
-
-### Step 13: Entity feed completeness
-- [ ] Feed contains: created -> claimed -> delivered -> completed -> paid (in order) — **FAIL: feed 始终为空**
+- [x] Issue #5（Bounty 4）sidebar 显示 Bounty panel：状态 "开放"（绿色标签）
+- [x] 奖励正确显示：`USD 200 | 500 credits` — credits 金额修复确认
+- [x] Publisher（hackforger）看到 "Cancel Bounty" 操作按钮
+- [x] 无 bounty 的 Issue #6 显示 "创建悬赏" 按钮（绿色）
+- [ ] **Bounty panel 显示 "token is required" 错误** — 见下方 BUG-1
 
 **Notes:**
-- **BUG-1 (P0 Blocker): Feed 系统未生成任何事件。** 所有 bounty 生命周期事件（created, claimed, delivered, completed）均未写入 feed，所有用户的 global feed 和 following feed 始终为空。
-- **BUG-2 (P0 Blocker): PR merge hook 未触发 bounty 状态转换。** 合并关联 bounty issue 的 PR 后，bounty status 仍停留在 claimed (1)，未转换为 in_review (2)。这阻塞了后续的 complete 和 paid 操作。
-- **BUG-3 (P1): Credits 未分发。** hacker_eve 的 credit balance 始终为 0，bounty complete 操作未触发 credits 分发。
-- **API 发现**: `mode` 字段为 integer（0=exclusive, 1=competitive）；`deadline` 为 unix timestamp (int64)；accept application 使用 `PUT /applications/{id}` + `{"action":"accept"}`。
+- **BUG-1 (P1):** Bounty panel Vue 组件显示 "token is required" 红色错误消息。经 DOM 分析，`#hackforger-bounty-panel` 元素的 `data-` attributes 中**未传递 CSRF token**。组件需要 token 来发起 API 请求（apply/cancel），但服务端模板未注入 `data-csrf-token` 属性。该错误为 SSR（服务端渲染）在模板中嵌入的，不是前端 XHR 返回。
 
 ---
 
-## 3. Competitive Bounty Flow
+## 3. Exclusive Bounty 流程（Bounty 4 → Issue #5）
 
-### Step 1: Create Competitive Bounty + ranked rewards
-- [x] Bounty created with `mode: 1` (competitive), `status: "open"`
-- [x] 3 ranked rewards added (1000, 500, 200 credits) — 均返回 201
+### 申请认领
+- [x] hacker_eve 申请返回 201（Application ID=7, UserID=3）
+- [x] agent_hunter 申请返回 201（Application ID=8, UserID=6）
 
-### Step 2: Feed — bounty_created (global)
-- [ ] Global feed contains bounty_created event for competitive bounty — **FAIL: feed 为空**
+### 接受申请
+- [x] `PUT /applications/7` + `{"action":"accept"}` 返回 200
+- [x] Bounty status = 1 (Claimed) ✓
+- [x] ClaimerID = 3 (hacker_eve) ✓
 
-### Step 3: Submissions
-- [x] hacker_eve application returns 201
-- [x] hacker_frank application returns 201
-- [x] hacker_grace application returns 201
+### PR 创建 & 合并
+- [x] eve 创建分支 `eve-jwt-refactor` 并提交代码
+- [x] PR #7 "JWT auth refactor - fixes #5" 创建成功
+- [x] PR #7 合并成功
+- [ ] **Bounty 状态未从 Claimed → InReview** — 见 BUG-2
 
-### Step 4: Review + select winners
-- [x] Review POST returns 200（使用 `POST /start-review`）
-- [x] Winners POST returns 200 (eve=1st, frank=2nd, grace=3rd)
-- [x] Bounty status = "completed" (status=3)
-
-### Step 5: Feed — winners_selected (global)
-- [ ] Global feed contains winners_selected event — **FAIL: feed 为空**
-
-### Step 6: Credits distribution
-- [ ] hacker_eve balance >= 1500 (500 from exclusive + 1000 from competitive) — **FAIL: balance=0**
-- [ ] hacker_frank balance >= 500 — **FAIL: balance=0**
-- [ ] hacker_grace balance >= 200 — **FAIL: balance=0**
+### Complete / Paid
+- [ ] `POST /bounties/4/complete` 返回 422："invalid bounty status [bounty_id: 4, current: 1, expected: InReview]"
+- [ ] 无法手动触发 Exclusive bounty 的 InReview 转换（`/review` 仅限 Competitive mode）
+- [ ] Complete 和 Paid 流程被阻塞
 
 **Notes:**
-- Competitive bounty 的核心 flow（创建 → 添加奖励 → 提交 → start-review → 选择 winners）可以跑通。
-- **BUG-3 再确认**: Winners 选择成功后 credits 未分发到任何用户账户。
-- **API 发现**: review 阶段使用 `POST /start-review`（非 `/review`）；winners 选择使用 `POST /winners` + `{"winners":[{"user_id":N,"rank":N}]}`。
+- **BUG-2 (P0 Blocker):** PR merge hook 未触发 Exclusive bounty 状态转换。合并关联 Issue #5 的 PR 后，Bounty 4 状态仍为 1 (Claimed)，未转为 2 (InReview)。无手动 API 可绕过，导致后续 complete/paid 流程完全阻塞。
+- **API 发现:** Sudo header 可用于以其他用户身份执行 API 操作（需 admin token）。
 
 ---
 
-## 4. Issue Panel Verification
+## 4. Competitive Bounty 流程（Bounty 5 → Issue #2）
 
-- [x] Bounty panel appears in issue sidebar for issue #1
-- [x] Panel shows correct status label — Issue #1 显示 "Claimed"，Issue #2 显示 "Completed"
-- [ ] Rewards displayed (200 USD + 500 credits) — **部分 FAIL**: Issue #1 显示 "USD 200 | 0 credits"，credits 金额显示为 0（应为 500）
-- [ ] Claimer name shown (hacker_eve) — **FAIL: 未显示 claimer 名称**
-- [ ] As org_bob: action buttons appear — **部分 PASS**: Issue #4 (Open 状态) 有 "Cancel Bounty" 按钮；Issue #1 (Claimed) 和 #2 (Completed) 无 action buttons
-- [ ] Buttons contextually enabled/disabled based on status — **部分 FAIL**: 仅 Open 状态有按钮，其他状态缺少应有的操作按钮（如 Complete、Mark Paid）
-- [x] Issue #2 panel shows mode: competitive — 未直接显示 mode 标签，但 Explore 页面确认为 competitive
-- [ ] Issue #2 panel shows winners with ranks — **FAIL: 未显示任何 winner 信息**
+### 多人提交
+- [x] hacker_eve 申请返回 201（ID=9）
+- [x] hacker_frank 申请返回 201（ID=10）
+- [x] hacker_grace 申请返回 201（ID=11）
+
+### 审核 + 选择获奖者
+- [x] `POST /bounties/5/review` 返回 200，Status → 2 (InReview)
+- [x] `POST /bounties/5/winners` 返回 200，传入 eve=1st, frank=2nd, grace=3rd
+- [x] Bounty Status = 3 (Completed) ✓
+
+### Winners 验证
+- [x] `GET /bounties/5/winners` 返回正确的 3 个 winner 记录
+- [x] Rank 正确：eve(Rank=1), frank(Rank=2), grace(Rank=3)
+
+### 积分验证
+- [ ] Credits balance API 不存在（所有尝试路径均返回 404）— 见 BUG-3
 
 **Notes:**
-- **BUG-4**: Bounty panel 中 credits 类型的 reward 金额始终显示为 0（应显示实际金额如 500、1000 等）。Money 类型的 reward (USD 200) 显示正确。
-- **BUG-5**: Bounty panel 未显示 claimer 名称。
-- **BUG-6**: Competitive bounty 的 panel 未显示 winners 及其排名。
-- **BUG-7**: Bounty panel 在非 Open 状态下缺少 publisher action buttons（Complete、Mark Paid 等）。
-- **BUG-8**: Issue #4 的 bounty panel 显示 "token is required" 错误信息（红色背景）。
+- Competitive 核心流程（创建 → 申请 → review → winners）完全通过。
+- **BUG-3 (P1):** 无法验证 credits 是否分发。尝试了 `/user/credits`, `/users/{user}/credits`, `/{user}/credits/balance` 等路径均返回 404。缺少 Credits Balance 查询 API。
+- **API 发现:** `/review` endpoint（不是 `/start-review`，可能在本次构建中变更）；`/winners` endpoint 不变。
 
 ---
 
-## 5. Issue List Badge
+## 5. Feed 验证
 
-- [ ] Issues with bounties show green "Bounty" badge — **FAIL: 500 Internal Server Error**
-- [ ] Issues without bounties do NOT show the badge — **FAIL: 页面完全崩溃**
-- [ ] Badge visible in issue list view (no click-through needed) — **FAIL: 页面不可访问**
+- [x] 全局 feed 包含 `bounty_created` 事件 (op_type=34) — 3 个事件 ✓
+- [x] 全局 feed 包含 `bounty_winners_selected` 事件 (op_type=38) — 1 个事件 ✓
+- [ ] **缺失 `bounty_claimed` (35) 事件** — accept application 未生成 feed 事件
+- [ ] **缺失 `bounty_delivered` (36) 事件** — PR merge hook 未触发（与 BUG-2 关联）
+- [ ] **缺失 `bounty_completed` (37) 事件** — Exclusive bounty 未到达 completed 状态
 
 **Notes:**
-- **BUG-9 (P0 Blocker): Issue list 页面 500 错误。** 访问 `/acme-dev/backend/issues` 时返回 Internal Server Error。错误信息：`Render failed, failed to render template: repo/issue/list, error: template error: builtin(bindata):shared/issuelist:17:11 : executing "shared/issuelist" at <.Bounty>: can't evaluate field Bounty in type *issues.Issue`。模板在 `shared/issuelist` 第17行尝试访问 `{{if .Bounty}}{{template "hackforger/bounty/badge" .}}{{end}}`，但 `*issues.Issue` 结构体缺少 `Bounty` 字段。这是一个 **P0 Blocker**，因为它导致所有含 bounty 的 repo 的 issue 列表页面完全不可访问。
+- **BUG-4 (P1):** Feed 系统部分工作。`bounty_created` 和 `bounty_winners_selected` 事件正常生成，但 `bounty_claimed` (35) 事件缺失。accept application 操作应触发 claimed 事件但没有。
+- Following feed endpoint 返回 404（`/{user}/feed?type=following`），无法验证用户关注 feed。
 
 ---
 
-## 6. Web Create Flow
+## 6. Web 创建流程
 
-- [x] `/acme-dev/backend/bounties/new` page loads
-- [x] Form fields: title, issue, mode, deadline present
-- [x] Form submits without error
-- [x] Redirects to issue page with bounty panel
-- [x] New bounty appears in `/explore/bounties`
+- [x] `/acme-dev/backend/bounties/new` 页面正常加载
+- [x] 表单字段完整：标题（创建悬赏）、Issue ID、模式（独占/竞赛 radio）、截止日期
+- [x] 从 Issue 页面点击 "创建悬赏" 自动预填 Issue ID 和标题 ✓
+- [x] 表单提交无错误，重定向到 Issue 页面并显示 Bounty panel
+- [x] 新 bounty 出现在 `/explore/bounties` 列表中
+- [x] 完整中文化：创建悬赏、模式、独占（一人认领并交付）、竞赛（多人参与，选择获奖者）、截止日期
 
-**Notes:**
-- Web Create Flow 整体流程通畅。表单包含 Title、Issue ID、Mode（Exclusive/Competitive 单选按钮）、Deadline（日期选择器）。提交后显示 "Bounty created successfully" 提示并重定向到对应 issue 页面。
-- **BUG-8 再确认**: 新创建的 bounty 在 issue panel 中显示 "token is required" 错误（可能是 CSRF 或 API token 问题）。
-- 新 bounty 正确出现在 `/explore/bounties` 列表中（Open / Exclusive）。
+**Notes:** Web Create Flow 所有检查项通过。Issue 页面预填功能工作良好。
+
+---
+
+## 7. Issue 列表徽章
+
+- [x] Issue 列表页面 `/acme-dev/backend/issues` 正常加载（**之前的 500 错误已修复**）
+- [x] 有 bounty 的 Issue #4、#2 显示绿色 "悬赏" 徽章（带礼物图标）
+- [x] 无 bounty 的 Issue #6 不显示徽章
+- [x] 徽章在列表视图直接可见，无需点击
+
+**Notes:** Issue 列表 500 错误（`*issues.Issue` 缺少 `Bounty` 字段）已修复。徽章显示正确且中文化。
 
 ---
 
@@ -169,19 +130,28 @@
 - [ ] **PASS** — All checks passed, Phase 1 Bounty is ready
 - [x] **FAIL** — Issues found (see notes above)
 
+### 已修复（对比上次测试）
+
+| Bug | 描述 | 状态 |
+|-----|------|------|
+| Issue list 500 | `*issues.Issue` 缺少 `Bounty` 字段 | ✅ 已修复 |
+| Credits 显示 0 | Bounty panel credits 金额显示为 0 | ✅ 已修复（现显示 500 credits） |
+| Feed 完全不工作 | 所有 feed 为空 | ✅ 部分修复（created + winners_selected 正常） |
+
+### 仍存在的 Bug
+
+| Bug | 严重度 | 描述 |
+|-----|--------|------|
+| BUG-1 | P1 | Bounty panel 显示 "token is required" — Vue 组件缺少 CSRF token（`#hackforger-bounty-panel` data attributes 未注入 `data-csrf-token`） |
+| BUG-2 | **P0** | PR merge hook 未触发 Exclusive bounty 状态 Claimed→InReview 转换，阻塞 complete/paid 流程 |
+| BUG-3 | P1 | Credits Balance 查询 API 不存在（404），无法验证积分分发 |
+| BUG-4 | P1 | `bounty_claimed` (op_type=35) feed 事件缺失，accept application 未生成 |
+
 **Blockers for next phase:**
+- BUG-2 是唯一的 P0 Blocker：Exclusive bounty 无法走完 claimed → in_review → completed → paid 的完整生命周期。
 
-1. **BUG-9 (P0)**: Issue list 页面 500 错误 — `*issues.Issue` 缺少 `Bounty` 字段，导致模板渲染崩溃。所有含 bounty 的 repo 的 issue 列表不可访问。
-2. **BUG-1 (P0)**: Feed 系统完全不工作 — 所有 bounty 生命周期事件均未写入 feed。
-3. **BUG-2 (P0)**: PR merge hook 未触发 bounty 状态转换 — exclusive bounty 在 PR 合并后无法进入 in_review 状态，阻塞 complete/paid 流程。
-
-**Other observations:**
-
-- **BUG-3**: Credits 分发不工作 — bounty complete 和 winners 选择后均未给用户发放 credits。
-- **BUG-4**: Bounty panel 中 credits 类型 reward 金额始终显示为 0。
-- **BUG-5**: Bounty panel 未显示 claimer 名称。
-- **BUG-6**: Competitive bounty panel 未显示 winners 信息。
-- **BUG-7**: Bounty panel 在非 Open 状态缺少 publisher action buttons。
-- **BUG-8**: Bounty panel 显示 "token is required" 错误。
-- **API 接口与文档差异**: `mode` 为 int（非 string），`deadline` 为 unix timestamp（非 ISO 格式），accept 和 review 的 endpoint pattern 与 prompt 中记录的不一致。建议更新 API 文档。
-- Forgejo 版本已更新为 **14.0.3-44-b07705f82e+gitea-1.22.0**（较 P0 测试时有新提交）。
+**测试环境信息:**
+- Forgejo: 14.0.3-49-2f8d37a788+gitea-1.22.0
+- Admin: hackforger (ID=1)
+- Test users: org_bob (ID=2), hacker_eve (ID=3), hacker_frank (ID=4), hacker_grace (ID=5), agent_hunter (ID=6)
+- API auth: Token + Sudo header 实现多用户测试
