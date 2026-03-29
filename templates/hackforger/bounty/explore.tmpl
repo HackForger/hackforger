@@ -2,12 +2,7 @@
 <div role="main" aria-label="{{.Title}}" class="page-content explore">
 	{{template "explore/navbar" .}}
 	<div class="ui container">
-		<div class="ui secondary pointing menu">
-			<a class="{{if eq .StatusFilter ""}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties">{{ctx.Locale.Tr "hackforger.bounty.filter.all"}}</a>
-			<a class="{{if eq .StatusFilter "open"}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties?status=open">{{ctx.Locale.Tr "hackforger.bounty.status.open"}}</a>
-			<a class="{{if eq .StatusFilter "claimed"}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties?status=claimed">{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}</a>
-			<a class="{{if eq .StatusFilter "completed"}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties?status=completed">{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}</a>
-		</div>
+		{{template "hackforger/explore_search" .}}
 
 		{{if .Bounties}}
 		<div class="ui relaxed divided list">

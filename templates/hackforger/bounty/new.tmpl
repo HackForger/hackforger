@@ -4,7 +4,7 @@
 	<div class="ui container">
 		<h2 class="ui header">{{ctx.Locale.Tr "hackforger.bounty.new.title"}}</h2>
 		<form class="ui form" action="{{.RepoLink}}/bounties/new" method="post">
-			{{.CsrfTokenHtml}}
+			
 			<div class="required field">
 				<label>{{ctx.Locale.Tr "hackforger.bounty.new.title"}}</label>
 				<input name="title" required placeholder="Bounty title" maxlength="255" value="{{.Query.title}}">

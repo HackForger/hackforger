@@ -37,6 +37,11 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Template files: snake_case (judge_panel.tmpl)
 - Vue components: PascalCase (BountyPanel.vue)
 
+## CSRF / Cross-Origin Protection
+- Forgejo uses Go's `net/http.CrossOriginProtection` (NOT traditional CSRF tokens)
+- **Do NOT add `{{.CsrfTokenHtml}}` or `_csrf` hidden inputs to templates** — they don't exist in Forgejo
+- See [docs/notes/cross-origin-protection.md](docs/notes/cross-origin-protection.md) for full explanation and reverse proxy setup
+
 ## Local Testing
 - See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
 - See [docs/tests/e2e-lessons-learned.md](docs/tests/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)

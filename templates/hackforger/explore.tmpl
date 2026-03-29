@@ -2,8 +2,32 @@
 <div role="main" aria-label="{{.Title}}" class="page-content explore">
 	{{template "explore/navbar" .}}
 	<div class="ui container">
-		<h2>{{.Title}}</h2>
+		{{if .PageIsExploreHackathons}}
+		<h2>{{ctx.Locale.Tr "hackforger.explore.hackathons"}}</h2>
+		{{if .Hackathons}}
+		<div class="ui divided items">
+			{{range .Hackathons}}
+			<div class="item">
+				<div class="content">
+					<a class="header" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
+					<div class="meta">
+						<span class="ui small label">{{if eq .Status 0}}Draft{{else if eq .Status 1}}Open{{else if eq .Status 2}}Hacking{{else if eq .Status 3}}Judging{{else if eq .Status 4}}Finished{{else}}Cancelled{{end}}</span>
+					</div>
+					{{if .Description}}<div class="description">{{.Description}}</div>{{end}}
+				</div>
+			</div>
+			{{end}}
+		</div>
+		{{else}}
+		<p>{{ctx.Locale.Tr "hackforger.hackathon.no_hackathons"}}</p>
+		{{end}}
+		{{else if .PageIsExploreBounties}}
+		<h2>{{ctx.Locale.Tr "hackforger.explore.bounties"}}</h2>
 		<p>{{ctx.Locale.Tr "hackforger.explore.coming_soon"}}</p>
+		{{else if .PageIsExploreGrants}}
+		<h2>{{ctx.Locale.Tr "hackforger.explore.grants"}}</h2>
+		<p>{{ctx.Locale.Tr "hackforger.explore.coming_soon"}}</p>
+		{{end}}
 	</div>
 </div>
 {{template "base/footer" .}}

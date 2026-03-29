@@ -1,0 +1,35 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content hackathon">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.hackathon.create"}}</h2>
+		<form class="ui form" method="post" action="{{AppSubUrl}}/hackathons/new">
+			
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
+				<input name="name" required>
+			</div>
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.field.slug"}}</label>
+				<input name="slug" required pattern="[a-z0-9\-]+">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.field.description"}}</label>
+				<textarea name="description" rows="5"></textarea>
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.field.org"}}</label>
+				<input name="org_id" type="number" value="0">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.field.max_team_size"}}</label>
+				<input name="max_team_size" type="number" value="5" min="1">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.field.prize_summary"}}</label>
+				<textarea name="prize_summary" rows="3"></textarea>
+			</div>
+			<button class="ui primary button" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.create"}}</button>
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

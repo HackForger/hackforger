@@ -1,0 +1,22 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content hackathon">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.hackathon.judge"}} — {{.Hackathon.Name}}</h2>
+		{{range .Submissions}}
+		<div class="ui segment">
+			<h4>{{.Title}}</h4>
+			{{if .DemoURL}}<p><a href="{{.DemoURL}}">Demo</a></p>{{end}}
+			{{if .Description}}<p>{{.Description}}</p>{{end}}
+			<form class="ui form" method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/judge/{{.ID}}/score">
+				
+				<div class="inline fields">
+					<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.judge.score"}}</label><input name="score" type="number" step="0.1" min="0" max="10" required></div>
+					<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.judge.comment"}}</label><input name="comment"></div>
+					<button class="ui primary button" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.judge.submit_score"}}</button>
+				</div>
+			</form>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}
