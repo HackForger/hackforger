@@ -98,8 +98,10 @@ func GetGrantRoundByID(ctx context.Context, id int64) (*GrantRound, error) {
 // ListGrantRoundsOptions holds options for listing grant rounds.
 type ListGrantRoundsOptions struct {
 	db.ListOptions
-	OrgID  int64
-	Status *GrantRoundStatus
+	OrgID   int64
+	Status  *GrantRoundStatus
+	Keyword string
+	OrderBy string
 }
 
 func (opts ListGrantRoundsOptions) ToConds() builder.Cond {
@@ -110,7 +112,18 @@ func (opts ListGrantRoundsOptions) ToConds() builder.Cond {
 	if opts.Status != nil {
 		cond = cond.And(builder.Eq{"status": *opts.Status})
 	}
+	if opts.Keyword != "" {
+		cond = cond.And(builder.Like{"name", opts.Keyword})
+	}
 	return cond
+}
+
+// ToOrders implements db.FindOptionsOrder.
+func (opts ListGrantRoundsOptions) ToOrders() string {
+	if opts.OrderBy != "" {
+		return opts.OrderBy
+	}
+	return "created_unix DESC"
 }
 
 // ListGrantRounds returns grant rounds matching the given options.

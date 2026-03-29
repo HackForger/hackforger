@@ -47,9 +47,26 @@ func ExploreGrants(ctx *context.Context) {
 		}
 	}
 
+	keyword := ctx.FormTrim("q")
+	sortType := ctx.FormString("sort")
+	var orderBy string
+	switch sortType {
+	case "oldest":
+		orderBy = "created_unix ASC"
+	case "mostfunded":
+		orderBy = "budget DESC"
+	case "alphabetical":
+		orderBy = "name ASC"
+	default:
+		sortType = "newest"
+		orderBy = "created_unix DESC"
+	}
+
 	rounds, total, err := hackforger_model.ListGrantRounds(ctx, hackforger_model.ListGrantRoundsOptions{
 		ListOptions: db.ListOptions{Page: page, PageSize: 20},
 		Status:      statusFilter,
+		Keyword:     keyword,
+		OrderBy:     orderBy,
 	})
 	if err != nil {
 		ctx.ServerError("ListGrantRounds", err)
@@ -61,6 +78,8 @@ func ExploreGrants(ctx *context.Context) {
 	ctx.Data["Page"] = page
 	ctx.Data["PrevPage"] = page - 1
 	ctx.Data["NextPage"] = page + 1
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["SortType"] = sortType
 	ctx.Data["StatusFilter"] = ctx.FormString("status")
 	ctx.Data["GrantRoundStatusNames"] = hackforger_model.GrantRoundStatusNames
 	ctx.HTML(http.StatusOK, tplGrantExplore)

@@ -4,11 +4,33 @@
 	<div class="ui container">
 		<h2>{{ctx.Locale.Tr "hackforger.explore.grants"}}</h2>
 
+		<form class="ui form tw-mb-4" method="get" action="/explore/grants">
+			<div class="ui fluid action input">
+				<input name="q" type="text" placeholder="{{ctx.Locale.Tr "search"}}..." value="{{.Keyword}}">
+				{{if .StatusFilter}}<input type="hidden" name="status" value="{{.StatusFilter}}">{{end}}
+				<input type="hidden" name="sort" value="{{.SortType}}">
+				<button class="ui primary button" type="submit">{{ctx.Locale.Tr "search"}}</button>
+			</div>
+		</form>
+
 		<div class="ui secondary menu">
-			<a class="item{{if not .StatusFilter}} active{{end}}" href="/explore/grants">{{ctx.Locale.Tr "all"}}</a>
+			<a class="item{{if not .StatusFilter}} active{{end}}" href="/explore/grants?q={{.Keyword}}&sort={{.SortType}}">{{ctx.Locale.Tr "all"}}</a>
 			{{range $status, $name := .GrantRoundStatusNames}}
-				<a class="item{{if eq $.StatusFilter $name}} active{{end}}" href="/explore/grants?status={{$name}}">{{$name}}</a>
+				<a class="item{{if eq $.StatusFilter $name}} active{{end}}" href="/explore/grants?q={{$.Keyword}}&sort={{$.SortType}}&status={{$name}}">{{$name}}</a>
 			{{end}}
+
+			<div class="right menu">
+				<div class="ui dropdown item">
+					{{ctx.Locale.Tr "repo.issues.filter_sort"}}
+					{{svg "octicon-triangle-down"}}
+					<div class="menu">
+						<a class="item{{if eq .SortType "newest"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=newest">{{ctx.Locale.Tr "repo.issues.filter_sort.newest"}}</a>
+						<a class="item{{if eq .SortType "oldest"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=oldest">{{ctx.Locale.Tr "repo.issues.filter_sort.oldest"}}</a>
+						<a class="item{{if eq .SortType "mostfunded"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=mostfunded">{{ctx.Locale.Tr "hackforger.grant.sort.most_funded"}}</a>
+						<a class="item{{if eq .SortType "alphabetical"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=alphabetical">{{ctx.Locale.Tr "hackforger.grant.sort.alphabetical"}}</a>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		{{if .Rounds}}
@@ -50,9 +72,9 @@
 		{{if gt .Total 20}}
 			<div class="tw-flex tw-justify-center tw-mt-4">
 				{{if gt .Page 1}}
-					<a class="ui button" href="/explore/grants?page={{.PrevPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">{{ctx.Locale.Tr "repo.issues.previous"}}</a>
+					<a class="ui button" href="/explore/grants?page={{.PrevPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}&q={{.Keyword}}&sort={{.SortType}}">{{ctx.Locale.Tr "repo.issues.previous"}}</a>
 				{{end}}
-				<a class="ui button" href="/explore/grants?page={{.NextPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">{{ctx.Locale.Tr "repo.issues.next"}}</a>
+				<a class="ui button" href="/explore/grants?page={{.NextPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}&q={{.Keyword}}&sort={{.SortType}}">{{ctx.Locale.Tr "repo.issues.next"}}</a>
 			</div>
 		{{end}}
 	</div>
