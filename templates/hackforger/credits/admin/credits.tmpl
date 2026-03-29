@@ -8,7 +8,6 @@
 			{{/* Deposit form */}}
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deposit"}}</h5>
 			<form class="ui form" action="/-/admin/credits/deposit" method="post">
-				{{$.CsrfTokenHtml}}
 				<div class="four fields">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
@@ -35,7 +34,6 @@
 			{{/* Deduct form */}}
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deduct"}}</h5>
 			<form class="ui form" action="/-/admin/credits/deduct" method="post">
-				{{$.CsrfTokenHtml}}
 				<div class="four fields">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>

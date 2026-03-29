@@ -15,31 +15,26 @@
 				<div class="tw-flex tw-gap-2">
 					{{if eq .Round.Status 0}}
 						<form action="/grants/{{.Round.Slug}}/manage/open" method="post" class="tw-inline">
-							{{$.CsrfTokenHtml}}
 							<button class="ui green button">{{ctx.Locale.Tr "hackforger.grant.action.open"}}</button>
 						</form>
 					{{end}}
 					{{if eq .Round.Status 1}}
 						<form action="/grants/{{.Round.Slug}}/manage/close" method="post" class="tw-inline">
-							{{$.CsrfTokenHtml}}
 							<button class="ui yellow button">{{ctx.Locale.Tr "hackforger.grant.action.close"}}</button>
 						</form>
 					{{end}}
 					{{if eq .Round.Status 2}}
 						<form action="/grants/{{.Round.Slug}}/manage/finalize" method="post" class="tw-inline">
-							{{$.CsrfTokenHtml}}
 							<button class="ui blue button">{{ctx.Locale.Tr "hackforger.grant.action.finalize"}}</button>
 						</form>
 					{{end}}
 					{{if eq .Round.Status 3}}
 						<form action="/grants/{{.Round.Slug}}/manage/distribute" method="post" class="tw-inline">
-							{{$.CsrfTokenHtml}}
 							<button class="ui primary button">{{ctx.Locale.Tr "hackforger.grant.action.distribute"}}</button>
 						</form>
 					{{end}}
 					{{if and (ne .Round.Status 4) (ne .Round.Status 5)}}
 						<form action="/grants/{{.Round.Slug}}/manage/cancel" method="post" class="tw-inline">
-							{{$.CsrfTokenHtml}}
 							<button class="ui red button">{{ctx.Locale.Tr "hackforger.grant.action.cancel"}}</button>
 						</form>
 					{{end}}

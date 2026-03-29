@@ -9,7 +9,6 @@
 		{{template "base/alert" .}}
 
 		<form class="ui form" action="/grants/{{.Round.Slug}}/submit" method="post">
-			{{.CsrfTokenHtml}}
 			<div class="required field">
 				<label>{{ctx.Locale.Tr "hackforger.grant.project.title"}}</label>
 				<input type="text" name="title" required placeholder="{{ctx.Locale.Tr "hackforger.grant.project.title_placeholder"}}">

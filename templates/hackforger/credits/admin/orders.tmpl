@@ -34,12 +34,10 @@
 								{{if eq .Status "pending"}}
 									<div class="tw-flex tw-gap-1">
 										<form action="/-/admin/credits/orders/{{.ID}}/fulfill" method="post" class="tw-inline">
-											{{$.CsrfTokenHtml}}
 											<input type="text" name="note" placeholder="{{ctx.Locale.Tr "hackforger.credits.note"}}" class="tw-w-24">
 											<button class="ui mini green button">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill"}}</button>
 										</form>
 										<form action="/-/admin/credits/orders/{{.ID}}/cancel" method="post" class="tw-inline">
-											{{$.CsrfTokenHtml}}
 											<button class="ui mini red button">{{ctx.Locale.Tr "cancel"}}</button>
 										</form>
 									</div>

@@ -46,11 +46,9 @@
 				<h4>{{ctx.Locale.Tr "hackforger.grant.project.review_actions"}}</h4>
 				<div class="tw-flex tw-gap-2">
 					<form action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/approve" method="post" class="tw-inline">
-						{{$.CsrfTokenHtml}}
 						<button class="ui green button">{{ctx.Locale.Tr "hackforger.grant.project.approve"}}</button>
 					</form>
 					<form action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/reject" method="post" class="tw-inline">
-						{{$.CsrfTokenHtml}}
 						<button class="ui red button">{{ctx.Locale.Tr "hackforger.grant.project.reject"}}</button>
 					</form>
 				</div>
@@ -62,7 +60,6 @@
 			<div class="ui segment">
 				<h4>{{ctx.Locale.Tr "hackforger.grant.project.set_award"}}</h4>
 				<form class="ui form" action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/award" method="post">
-					{{$.CsrfTokenHtml}}
 					<div class="two fields">
 						<div class="field">
 							<label>{{ctx.Locale.Tr "hackforger.grant.project.award_amount"}}</label>
@@ -81,7 +78,6 @@
 				<div class="ui segment">
 					<h4>{{ctx.Locale.Tr "hackforger.grant.project.distribute"}}</h4>
 					<form action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/distribute" method="post">
-						{{$.CsrfTokenHtml}}
 						<button class="ui blue button">{{ctx.Locale.Tr "hackforger.grant.project.distribute"}}</button>
 					</form>
 				</div>

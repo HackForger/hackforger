@@ -8,7 +8,6 @@
 			{{/* Create option form */}}
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.option_create"}}</h5>
 			<form class="ui form" action="/-/admin/credits/options" method="post">
-				{{$.CsrfTokenHtml}}
 				<div class="four fields">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.credits.admin.option_name"}}</label>
@@ -53,7 +52,6 @@
 						<td>{{if .IsActive}}{{svg "octicon-check" 16}}{{else}}{{svg "octicon-x" 16}}{{end}}</td>
 						<td>
 							<form class="ui form tw-inline" action="/-/admin/credits/options/{{.ID}}" method="post">
-								{{$.CsrfTokenHtml}}
 								<input type="hidden" name="name" value="{{.Name}}">
 								<input type="hidden" name="description" value="{{.Description}}">
 								<input type="hidden" name="cost" value="{{.Cost}}">

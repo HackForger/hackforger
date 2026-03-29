@@ -34,7 +34,6 @@
 		<div class="tw-flex tw-gap-2">
 			{{if ge .Account.Balance .Option.Cost}}
 				<form action="/credits/redeem/{{.Option.ID}}" method="post">
-					{{.CsrfTokenHtml}}
 					<button class="ui primary button">{{ctx.Locale.Tr "hackforger.credits.redeem.confirm_button"}}</button>
 				</form>
 			{{end}}

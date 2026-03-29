@@ -6,7 +6,6 @@
 		{{template "base/alert" .}}
 
 		<form class="ui form" action="/grants/new" method="post">
-			{{.CsrfTokenHtml}}
 			<div class="required field">
 				<label>{{ctx.Locale.Tr "hackforger.grant.round.name"}}</label>
 				<input type="text" name="name" required placeholder="{{ctx.Locale.Tr "hackforger.grant.round.name_placeholder"}}">
