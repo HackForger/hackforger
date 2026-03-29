@@ -10,6 +10,7 @@ import (
 
 	hackforger_model "forgejo.org/models/hackforger"
 	organization_model "forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/services/context"
 	hackforger_service "forgejo.org/services/hackforger"
@@ -182,6 +183,15 @@ func ViewHackathon(ctx *context.Context) {
 
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 	ctx.Data["Tracks"] = tracks
+	trackRepoNames := make(map[int64]string)
+	for _, t := range tracks {
+		if t.RepoID > 0 {
+			if r, err := repo_model.GetRepositoryByID(ctx, t.RepoID); err == nil {
+				trackRepoNames[t.ID] = r.Name
+			}
+		}
+	}
+	ctx.Data["TrackRepoNames"] = trackRepoNames
 
 	regs, regCount, _ := hackforger_model.ListRegistrations(ctx, hackforger_model.ListRegistrationsOptions{HackathonID: h.ID})
 	ctx.Data["Registrations"] = regs
@@ -215,6 +225,13 @@ func RegisterPost(ctx *context.Context) {
 	if h == nil {
 		return
 	}
+	// Check duplicate registration first (more specific error)
+	if _, err := hackforger_model.GetRegistration(ctx, h.ID, ctx.Doer.ID); err == nil {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.already_registered"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
+
 	if h.Status != hackforger_model.HackathonStatusOpen {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
@@ -258,6 +275,19 @@ func RegisterPost(ctx *context.Context) {
 	if h.LinkedOrgID > 0 {
 		_ = organization_model.AddOrgUser(ctx, h.LinkedOrgID, ctx.Doer.ID)
 	}
+
+	// Publish registered feed event
+	_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
+		ActUserID:    ctx.Doer.ID,
+		OpType:       hackforger_model.ActionHackathonRegistered,
+		AudienceType: hackforger_service.AudienceFollowers,
+		Content: hackforger_model.HackforgerActionContent{
+			EntityType: "hackathon",
+			EntityID:   h.ID,
+			EntityName: h.Name,
+			EntitySlug: h.Slug,
+		},
+	})
 
 	ctx.Flash.Success(ctx.Tr("hackforger.hackathon.register.success"))
 	ctx.Redirect("/hackathon/" + h.Slug)
@@ -330,6 +360,13 @@ func ManageHackathon(ctx *context.Context) {
 	ctx.Data["Registrations"] = regs
 	judges, _ := hackforger_model.ListJudges(ctx, h.ID)
 	ctx.Data["Judges"] = judges
+	judgeNames := make(map[int64]string)
+	for _, j := range judges {
+		if u, err := user_model.GetUserByID(ctx, j.UserID); err == nil {
+			judgeNames[j.UserID] = u.Name
+		}
+	}
+	ctx.Data["JudgeNames"] = judgeNames
 	ctx.HTML(http.StatusOK, tplManage)
 }
 
@@ -363,7 +400,13 @@ func ManagePhasePost(ctx *context.Context) {
 		return
 	}
 	if err != nil {
-		ctx.Flash.Error(err.Error())
+		if hackforger_service.IsErrNoTracks(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_tracks"))
+		} else if hackforger_service.IsErrNoSubmissions(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_submissions"))
+		} else {
+			ctx.Flash.Error(err.Error())
+		}
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }

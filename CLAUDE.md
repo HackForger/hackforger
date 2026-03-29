@@ -37,6 +37,12 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Template files: snake_case (judge_panel.tmpl)
 - Vue components: PascalCase (BountyPanel.vue)
 
+## Error Handling & i18n
+- Service layer returns typed errors (`ErrNoTracks`, `ErrDuplicateRegistration`), NOT `fmt.Errorf("english")`
+- Web handlers check error type with `IsErr*()` then call `ctx.Tr()` for user-facing message
+- **Never show `err.Error()` to users** without type-checking first
+- See [docs/notes/i18n-error-pattern.md](docs/notes/i18n-error-pattern.md) for the pattern
+
 ## CSRF / Cross-Origin Protection
 - Forgejo uses Go's `net/http.CrossOriginProtection` (NOT traditional CSRF tokens)
 - **Do NOT add `{{.CsrfTokenHtml}}` or `_csrf` hidden inputs to templates** — they don't exist in Forgejo

@@ -60,7 +60,7 @@
 							<div class="header">{{.Name}}</div>
 							{{if .Description}}<div class="description">{{.Description}}</div>{{end}}
 						</div>
-						{{if .RepoID}}<a class="ui mini button" href="#">{{svg "octicon-repo" 14}} {{ctx.Locale.Tr "hackforger.hackathon.view.code"}}</a>{{end}}
+						{{if .RepoID}}{{$repoName := index $.TrackRepoNames .ID}}<a class="ui mini button" href="{{AppSubUrl}}/{{$.LinkedOrg.Name}}/{{$repoName}}">{{svg "octicon-repo" 14}} {{ctx.Locale.Tr "hackforger.hackathon.view.code"}}</a>{{end}}
 					</div>
 				</div>
 				{{end}}

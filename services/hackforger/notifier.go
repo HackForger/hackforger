@@ -97,7 +97,7 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	switch opts.AudienceType {
 	case AudienceFollowers:
 		var followerIDs []int64
-		err := db.GetEngine(ctx).Table("user_follow").
+		err := db.GetEngine(ctx).Table("follow").
 			Where("follow_id = ?", opts.ActUserID).
 			Cols("user_id").Find(&followerIDs)
 		if err != nil {

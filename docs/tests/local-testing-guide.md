@@ -31,7 +31,7 @@ rm -f data/queues/common/LOCK
 
 All worktrees share the same SQLite database at:
 ```
-/Users/h2oslabs/Workspace/hackforge/data/forgejo.db
+/Users/h2oslabs/Workspace/hackforger/data/forgejo.db
 ```
 
 This is configured in `custom/conf/app.ini`. The database contains test users, orgs, and repos created during P0 E2E testing.

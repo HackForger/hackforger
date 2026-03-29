@@ -22,6 +22,26 @@ import (
 	repo_service "forgejo.org/services/repository"
 )
 
+// ErrNoTracks means hackathon has no tracks (cannot publish).
+type ErrNoTracks struct{ HackathonID int64 }
+
+func (e ErrNoTracks) Error() string {
+	return fmt.Sprintf("hackathon has no tracks [id: %d]", e.HackathonID)
+}
+
+// IsErrNoTracks checks if err is ErrNoTracks.
+func IsErrNoTracks(err error) bool { _, ok := err.(ErrNoTracks); return ok }
+
+// ErrNoSubmissions means hackathon has no submissions (cannot start judging).
+type ErrNoSubmissions struct{ HackathonID int64 }
+
+func (e ErrNoSubmissions) Error() string {
+	return fmt.Sprintf("hackathon has no submissions [id: %d]", e.HackathonID)
+}
+
+// IsErrNoSubmissions checks if err is ErrNoSubmissions.
+func IsErrNoSubmissions(err error) bool { _, ok := err.(ErrNoSubmissions); return ok }
+
 // CreateHackathon creates a Forgejo Organization for the hackathon,
 // then creates the hackathon record and publishes a creation event.
 func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon) error {
@@ -77,6 +97,7 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 	repo, err := repo_service.CreateRepository(ctx, doer, orgUser, repo_service.CreateRepoOptions{
 		Name:          repoName,
 		Description:   track.Description,
+		Readme:        "Default",
 		AutoInit:      true,
 		DefaultBranch: "main",
 	})
@@ -119,7 +140,7 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 		return err
 	}
 	if trackCount == 0 {
-		return fmt.Errorf("hackathon must have at least 1 track to publish [id: %d]", h.ID)
+		return ErrNoTracks{HackathonID: h.ID}
 	}
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusOpen); err != nil {
 		return err
@@ -152,7 +173,7 @@ func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 		return err
 	}
 	if subCount == 0 {
-		return fmt.Errorf("hackathon must have at least 1 submission to start judging [id: %d]", h.ID)
+		return ErrNoSubmissions{HackathonID: h.ID}
 	}
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusJudging); err != nil {
 		return err
@@ -249,6 +270,9 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 	if err != nil {
 		return fmt.Errorf("get track repo: %w", err)
 	}
+	if err := baseRepo.LoadOwner(ctx); err != nil {
+		return fmt.Errorf("load track repo owner: %w", err)
+	}
 
 	// Fork the track repo to the participant's personal space.
 	fork, err := repo_service.ForkRepositoryIfNotExists(ctx, doer, doer, repo_service.ForkRepoOptions{
@@ -341,7 +365,7 @@ func tagTrackRepos(ctx context.Context, doerID, hackathonID int64, tagName, msg 
 		if err != nil {
 			continue
 		}
-		if err := release_service.CreateNewTag(ctx, doer, repo, "", tagName, msg); err != nil {
+		if err := release_service.CreateNewTag(ctx, doer, repo, repo.DefaultBranch, tagName, msg); err != nil {
 			log.Warn("tagTrackRepos: tag %s on repo %d: %v", tagName, repo.ID, err)
 		}
 	}

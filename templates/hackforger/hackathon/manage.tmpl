@@ -27,7 +27,7 @@
 		</div>
 		<div class="ui segment">
 			<h3>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges"}} ({{len .Judges}})</h3>
-			{{range .Judges}}<div class="ui item">User #{{.UserID}} <form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/judges/{{.UserID}}/remove" class="tw-inline"><button class="ui mini red button">Remove</button></form></div>{{end}}
+			{{range .Judges}}{{$name := index $.JudgeNames .UserID}}<div class="ui item">{{if $name}}<a href="{{AppSubUrl}}/{{$name}}">{{$name}}</a>{{else}}User #{{.UserID}}{{end}} <form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/judges/{{.UserID}}/remove" class="tw-inline"><button class="ui mini red button">Remove</button></form></div>{{end}}
 			<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judges"><div class="inline fields"><div class="field"><input name="user_id" type="number" placeholder="User ID" required></div><button class="ui small button" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.add"}}</button></div></form>
 		</div>
 	</div>
