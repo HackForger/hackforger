@@ -1,10 +1,12 @@
-# Phase 1: Grant + Credits -- E2E Manual Test Prompt
+# Phase 1: Grant + Credits — Manual E2E Test Prompt
+
+**Instance:** https://hackforger.inside.h2os.cloud
 
 ## Prerequisites
 
-### Environment Setup (if running in a git worktree)
+### Start the server (if testing in a worktree)
 
-See [docs/tests/local-testing-guide.md](../local-testing-guide.md) for full details.
+See [docs/tests/local-testing-guide.md](../local-testing-guide.md) for details.
 
 ```bash
 # 1. Copy config from main repo (worktrees don't have custom/)
@@ -14,43 +16,84 @@ cp /Users/h2oslabs/Workspace/hackforger/custom/conf/app.ini custom/conf/app.ini
 # 2. Build backend (embeds templates + assets)
 TAGS="bindata sqlite sqlite_unlock_notify" make build
 
-# 3. Build frontend (if JS/Vue files changed)
-make frontend
+# 3. Remove stale LevelDB lock if needed
+rm -f /Users/h2oslabs/Workspace/hackforger/data/queues/common/LOCK
 
-# 4. Re-embed after frontend build
-TAGS="bindata sqlite sqlite_unlock_notify" make build
+# 4. Kill any existing server (IMPORTANT: old process uses old binary!)
+kill $(lsof -t -i :3000) 2>/dev/null
+sleep 2
 
-# 5. Remove stale LevelDB lock
-rm -f data/queues/common/LOCK
-
-# 6. Start server
+# 5. Start server
 ./gitea web
+
+# 6. Verify the binary is the latest build
+./gitea --version
+# Should show a timestamp matching your build. If it shows an old commit, re-run make build.
+```
+
+Access via https://hackforger.inside.h2os.cloud/ (Caddy must be running — see local-testing-guide).
+
+> **Critical:** After `make build`, you MUST kill the old server process before starting the new one. The old process keeps running with the old binary in memory even after the file is overwritten. `lsof -i :3000` to find the PID if needed.
+
+### Test accounts
+
+- Admin: `hackforger` / `admin1234`
+- Hacker 1: `hacker_eve` (or create one)
+- Hacker 2: `hacker_frank` (for budget exceed test)
+- If users don't exist, create them via Site Administration → User Accounts
+
+### Pre-test data check
+
+The database is shared across worktrees. Before testing, verify no leftover grant data from a previous run:
+
+```bash
+sqlite3 /Users/h2oslabs/Workspace/hackforger/data/forgejo.db \
+  "SELECT id, name, slug, status FROM grant_round;"
+# If rows exist, clean up:
+# DELETE FROM grant_project WHERE round_id IN (SELECT id FROM grant_round WHERE slug LIKE 'spring-2026%');
+# DELETE FROM grant_round WHERE slug LIKE 'spring-2026%';
 ```
 
 ### Checklist
 
-- [ ] HackForger server running at http://localhost:3000 (or https://hackforger.inside.h2os.cloud)
+- [ ] HackForger server running (verified with `./gitea --version`)
 - [ ] `custom/conf/app.ini` exists in the worktree (copied from main repo)
-- [ ] Admin account available (hackforger / admin1234)
-- [ ] A second "hacker" account available (create one if needed)
-- [ ] Database migrated (all hackforger tables exist)
-- [ ] No pre-existing grant rounds (clean state recommended)
+- [ ] Admin account accessible
+- [ ] Hacker accounts accessible
+- [ ] Database migrated (grant_round, grant_project, credit_account tables exist)
+
+---
 
 ## Test Flow
 
-### A. Organization + Grant Round Setup (Admin)
+### A. Explore + Create Entry Points
 
-**A1. Create Organization**
+**A1. Explore Grants (Public)**
+
+1. Without logging in, navigate to `/explore/grants`.
+2. **Verify:** Page loads with "No grant rounds found." message.
+3. **Verify:** Search bar and sort dropdown are present.
+4. **Verify:** Status filter tabs show (All, draft, open, review, finalized, distributed, cancelled).
+
+**A2. Create via Navbar**
 
 1. Log in as admin.
-2. Create a new organization called `test-grants-org`.
-3. Verify the org page loads at `/org/test-grants-org`.
+2. Click the "+" dropdown in the top navbar.
+3. **Verify:** "New Grant Round" entry is visible.
+4. Click it.
+5. **Verify:** Redirects to `/grants/new`.
 
-**A2. Create Grant Round**
+### B. Grant Round Lifecycle (Admin)
 
-1. Navigate to the grant rounds page (e.g., `/-/hackforger/grants` or org grants page).
-2. Click "New Grant Round".
-3. Fill in:
+**B1. Create Organization**
+
+1. Create a new organization called `test-grants-org` (or use an existing org where admin is owner).
+2. **Verify:** Org page loads at `/test-grants-org`.
+
+**B2. Create Grant Round**
+
+1. Navigate to `/grants/new`.
+2. Fill in:
    - Name: `Spring 2026 Grants`
    - Slug: `spring-2026`
    - Description: `Test grant round for E2E validation.`
@@ -59,191 +102,233 @@ rm -f data/queues/common/LOCK
    - Budget (Credits): `5000`
    - Deadline: a date in the future
    - Organization: `test-grants-org`
-4. Submit.
-5. **Verify:** Round is created with status **Draft**.
-6. **Verify:** Success toast/flash: "Grant round created successfully."
+3. Submit.
+4. **Verify:** Round is created with status **Draft**.
+5. **Verify:** Redirected to round detail page `/grants/spring-2026`.
+6. **Verify:** Status progress bar shows Draft as active.
 
-**A3. Open the Round**
+**B3. Open the Round**
 
-1. On the round detail page, click "Open Round".
-2. **Verify:** Status changes to **Open**.
-3. **Verify:** Feed event appears in global feed for "grant round opened".
+1. Navigate to `/grants/spring-2026/manage`.
+2. Click "Open Round" button.
+3. **Verify:** Status changes to **Open**.
+4. **Verify:** "Submit Project" button now appears on detail page.
 
-### B. Project Submission (Hacker)
+**B4. Verify on Explore Page**
 
-**B1. Submit a Project**
+1. Navigate to `/explore/grants`.
+2. **Verify:** "Spring 2026 Grants" appears in the list.
+3. Click "Open" status tab → verify it filters correctly.
+4. Search for "Spring" → verify it appears.
+5. Sort by "Most funded" → verify no error.
 
-1. Log out. Log in as the hacker account.
-2. Navigate to the grant round `spring-2026`.
+### C. Project Submission (Hacker)
+
+**C1. Submit a Project**
+
+1. Log out. Log in as `hacker_eve`.
+2. Navigate to `/grants/spring-2026`.
 3. Click "Submit Project".
 4. Fill in:
    - Title: `Open Source Widget`
    - Description: `A widget that does amazing things.`
-   - Repository: (select or enter a repo URL)
+   - Repository: (optional, leave empty or select one)
 5. Submit.
 6. **Verify:** Project status is **Pending**.
-7. **Verify:** Success flash: "Project submitted successfully."
+7. **Verify:** Success flash message.
 
-**B2. Duplicate Submission (Error Case)**
+**C2. Duplicate Submission (Error Case)**
 
-1. While still logged in as the hacker, try to submit another project to the same round.
-2. **Verify:** Error message: "You have already submitted a project to this round."
+1. While still logged in as `hacker_eve`, navigate to `/grants/spring-2026/submit` again.
+2. Submit another project.
+3. **Verify:** Error message about already having submitted.
 
-### C. Review + Allocation (Admin)
+**C3. Second Hacker Submits**
 
-**C1. Close Applications**
+1. Log in as `hacker_frank`.
+2. Submit a project to the same round (Title: `Another Widget`).
+3. **Verify:** Submission succeeds.
+
+### D. Review + Allocation (Admin)
+
+**D1. Close Applications**
 
 1. Log in as admin.
-2. Navigate to the round detail page.
+2. Navigate to `/grants/spring-2026/manage`.
 3. Click "Close Applications".
-4. **Verify:** Status changes to **Reviewing** (or Review).
+4. **Verify:** Status changes to **Review**.
 
-**C2. Approve Project**
+**D2. Approve Projects**
 
-1. Go to the project list for the round.
-2. Click on the hacker's project.
-3. Click "Approve".
-4. **Verify:** Project status changes to **Approved**.
+1. In the manage page, click on `hacker_eve`'s project.
+2. Click "Approve".
+3. **Verify:** Project status → **Approved**.
+4. Go back, approve `hacker_frank`'s project too.
 
-**C3. Allocate Award**
+**D3. Allocate Awards**
 
-1. On the approved project, click "Allocate Award".
-2. Enter award amount: `2000` (credits).
-3. Submit.
-4. **Verify:** Award amount is recorded on the project.
+1. On `hacker_eve`'s project, enter Award Credits: `3000`, Award Amount: `5000`.
+2. Submit allocation.
+3. **Verify:** Awards recorded on project.
 
-**C4. Exceed Budget (Error Case)**
+**D4. Exceed Budget (Error Case)**
 
-1. Create a second hacker account and submit + approve a second project.
-2. Try to allocate `4000` credits (total would be 6000, exceeding 5000 budget).
-3. **Verify:** Error indicating budget would be exceeded.
+1. On `hacker_frank`'s project, enter Award Credits: `3000` (total would be 6000, exceeding 5000 budget).
+2. Submit.
+3. **Verify:** Error about exceeding credits budget.
 
-**C5. Finalize Round**
+**D5. Allocate Within Budget**
+
+1. Allocate `hacker_frank`: Credits `2000`, Amount `4000`.
+2. **Verify:** Allocation succeeds. Budget usage bar shows 5000/5000 credits, 9000/10000 amount.
+
+**D6. Finalize Round**
 
 1. Click "Finalize Allocations".
-2. **Verify:** Round status changes to **Finalized**.
-3. **Verify:** Feed event for "grant round finalized".
+2. **Verify:** Status changes to **Finalized**.
 
-### D. Distribution
+### E. Distribution
 
-**D1. Distribute a Project**
+**E1. Distribute First Project**
 
-1. On the finalized round, click "Distribute" on the approved project.
-2. **Verify:** Project status changes to **Funded**.
-3. **Verify:** Credits are deposited to the hacker's balance (check credits ledger).
-4. **Verify:** Feed event for "grant project funded".
+1. On the finalized round manage page, click "Distribute" on `hacker_eve`'s project.
+2. **Verify:** Project status → **Funded**.
+3. **Verify:** Round is still **Finalized** (frank's project not yet distributed).
 
-**D2. Auto-Transition to Distributed**
+**E2. Distribute Second Project (Auto-Transition)**
 
-1. Distribute all remaining approved projects (or if only one, it should already trigger).
-2. **Verify:** Once all approved projects are distributed, the round status auto-transitions to **Distributed**.
-3. **Verify:** Feed event for "grant round distributed".
+1. Click "Distribute" on `hacker_frank`'s project.
+2. **Verify:** Project status → **Funded**.
+3. **Verify:** Round status auto-transitions to **Distributed**.
 
-### E. Credits Lifecycle
+### F. Credits Verification
 
-**E1. Check Hacker Balance**
+**F1. Check Hacker Balance**
 
-1. Log in as the hacker.
-2. Navigate to credits overview page.
-3. **Verify:** Balance shows `2000` credits (or whatever was awarded).
-4. **Verify:** Transaction history shows a deposit entry with reference to the grant project.
+1. Log in as `hacker_eve`.
+2. Navigate to `/credits`.
+3. **Verify:** Balance shows `3000` credits.
+4. **Verify:** Transaction history shows deposit with reference `grant_round:X/project:Y`.
 
-**E2. Redeem Option**
-
-1. Navigate to redeem options page.
-2. If a redeem option exists (e.g., "Sticker Pack" for 100 credits), click "Redeem".
-3. **Verify:** Confirmation dialog: 'Are you sure you want to redeem "Sticker Pack" for 100 credits?'
-4. Confirm.
-5. **Verify:** Success message: "Successfully redeemed!"
-6. **Verify:** Balance decreased by 100.
-7. **Verify:** A new order appears in "My Orders" with status **Pending**.
-
-**E3. Insufficient Credits (Error Case)**
-
-1. Try to redeem an option that costs more than the remaining balance.
-2. **Verify:** Error: "Insufficient credits."
-
-### F. Credits Administration (Admin)
-
-**F1. Deposit Credits**
+**F2. Create Redeem Option (Admin)**
 
 1. Log in as admin.
-2. Navigate to Credits Administration.
-3. Deposit `500` credits to the hacker's user ID with reference "bonus" and note "E2E test deposit".
-4. **Verify:** Hacker's balance increases by 500.
+2. Navigate to `/-/admin/credits/options`.
+3. Create a new option: Name: `Sticker Pack`, Cost: `100`, Stock: `10`.
+4. **Verify:** Option appears in the list.
 
-**F2. Deduct Credits**
+**F3. Redeem Option (Hacker)**
 
-1. Deduct `100` credits from the hacker with reference "correction" and note "E2E test deduction".
-2. **Verify:** Hacker's balance decreases by 100.
+1. Log in as `hacker_eve`.
+2. Navigate to `/credits`.
+3. Find "Sticker Pack" in the redeem options.
+4. Click "Redeem".
+5. **Verify:** Confirmation page shows cost and current balance.
+6. Confirm.
+7. **Verify:** Balance decreased by 100 (3000 → 2900).
+8. Navigate to `/credits/orders`.
+9. **Verify:** New order with status **Pending**.
 
-**F3. Fulfill Order**
+**F4. Insufficient Credits (Error Case)**
 
-1. Navigate to "Manage Orders".
-2. Find the hacker's pending order from step E2.
-3. Click "Fulfill" and enter a fulfillment note: "Shipped via mail."
-4. **Verify:** Order status changes to **Fulfilled**.
+1. As `hacker_frank` (balance 2000), try to redeem an option costing more than 2000.
+2. **Verify:** Error: insufficient credits.
 
-**F4. Cancel Order**
+### G. Credits Administration (Admin)
 
-1. Create another order (redeem as hacker, then switch to admin).
-2. Click "Cancel" on the new order.
-3. **Verify:** Order status changes to **Cancelled**.
-4. **Verify:** Credits are refunded to the hacker's balance.
+**G1. Deposit Credits**
 
-### G. Feed Verification
+1. Log in as admin.
+2. Navigate to `/-/admin/credits`.
+3. Deposit `500` credits to `hacker_eve` with reference "bonus", note "E2E test".
+4. **Verify:** Eve's balance increases (2900 → 3400).
 
-Review the global feed (`/-/hackforger/feed` or explore feed) and confirm events were recorded for:
+**G2. Deduct Credits**
 
-- [ ] Grant round created
+1. Deduct `100` credits from `hacker_eve` with reference "correction".
+2. **Verify:** Eve's balance decreases (3400 → 3300).
+
+**G3. Fulfill Order**
+
+1. Navigate to `/-/admin/credits/orders`.
+2. Find Eve's pending order.
+3. Click "Fulfill", enter note: "Shipped via mail."
+4. **Verify:** Order status → **Fulfilled**.
+
+**G4. Cancel Order + Refund**
+
+1. As `hacker_eve`, redeem another option (Sticker Pack, 100 credits).
+2. As admin, navigate to orders, find the new pending order.
+3. Click "Cancel".
+4. **Verify:** Order status → **Cancelled**.
+5. **Verify:** Credits refunded (check Eve's balance).
+
+### H. Feed Verification (Dashboard)
+
+1. Log in as admin.
+2. Navigate to the dashboard (home page).
+3. Check the activity feed for HackForger events. **Verify** these appear with proper text (not blank):
+
+- [ ] Grant round created (by admin)
 - [ ] Grant round opened
-- [ ] Project submitted
+- [ ] Project submitted (by hacker_eve)
 - [ ] Grant round closed for review
-- [ ] Project approved
 - [ ] Grant round finalized
-- [ ] Project funded / distributed
-- [ ] Grant round fully distributed
-- [ ] Credits deposited (admin action)
-- [ ] Credits redeemed
-- [ ] Order fulfilled
+- [ ] Grant awarded / project funded (for each project)
+- [ ] Credits redeemed (by hacker_eve)
 
-### H. Export
+> **Note:** Feed audience is currently actor + global only. Follower/org-member audience resolution is deferred post-merge.
 
-**H1. CSV Export**
+### I. Export
 
-1. As admin, navigate to the finalized/distributed round.
-2. Click "Export CSV".
-3. **Verify:** A CSV file downloads containing project titles, applicant usernames, statuses, and award amounts.
+**I1. CSV Export**
+
+1. As admin, navigate to `/grants/spring-2026/export`.
+2. **Verify:** CSV file downloads.
+3. **Verify:** Contains columns: id, title, user_id, status, award_amount, award_credits.
+4. **Verify:** Both projects are listed with correct data.
+
+### J. Cancel Round (Separate Test)
+
+1. Create a new round (e.g., slug `cancel-test`), open it.
+2. Navigate to manage, click "Cancel Round".
+3. **Verify:** Status → **Cancelled**.
+4. **Verify:** Cannot submit projects to a cancelled round.
 
 ---
 
 ## Report Template
 
-Copy the checklist below and fill in pass/fail for each item.
-
 | # | Test Step | Result | Notes |
 |---|-----------|--------|-------|
-| A1 | Create organization | [ ] Pass / [ ] Fail | |
-| A2 | Create grant round (Draft) | [ ] Pass / [ ] Fail | |
-| A3 | Open round | [ ] Pass / [ ] Fail | |
-| B1 | Submit project (Pending) | [ ] Pass / [ ] Fail | |
-| B2 | Duplicate submission error | [ ] Pass / [ ] Fail | |
-| C1 | Close applications (Reviewing) | [ ] Pass / [ ] Fail | |
-| C2 | Approve project | [ ] Pass / [ ] Fail | |
-| C3 | Allocate award | [ ] Pass / [ ] Fail | |
-| C4 | Exceed budget error | [ ] Pass / [ ] Fail | |
-| C5 | Finalize round | [ ] Pass / [ ] Fail | |
-| D1 | Distribute project (credits deposited) | [ ] Pass / [ ] Fail | |
-| D2 | Round auto-transitions to Distributed | [ ] Pass / [ ] Fail | |
-| E1 | Hacker balance correct | [ ] Pass / [ ] Fail | |
-| E2 | Redeem option + order created | [ ] Pass / [ ] Fail | |
-| E3 | Insufficient credits error | [ ] Pass / [ ] Fail | |
-| F1 | Admin deposit credits | [ ] Pass / [ ] Fail | |
-| F2 | Admin deduct credits | [ ] Pass / [ ] Fail | |
-| F3 | Fulfill order | [ ] Pass / [ ] Fail | |
-| F4 | Cancel order + refund | [ ] Pass / [ ] Fail | |
-| G | Feed events recorded | [ ] Pass / [ ] Fail | |
-| H1 | CSV export | [ ] Pass / [ ] Fail | |
+| A1 | Explore grants page loads | [ ] Pass / [ ] Fail | |
+| A2 | Navbar "+" has Grant Round entry | [ ] Pass / [ ] Fail | |
+| B1 | Create organization | [ ] Pass / [ ] Fail | |
+| B2 | Create grant round (Draft) | [ ] Pass / [ ] Fail | |
+| B3 | Open round | [ ] Pass / [ ] Fail | |
+| B4 | Explore search + filter + sort | [ ] Pass / [ ] Fail | |
+| C1 | Submit project (Pending) | [ ] Pass / [ ] Fail | |
+| C2 | Duplicate submission error | [ ] Pass / [ ] Fail | |
+| C3 | Second hacker submits | [ ] Pass / [ ] Fail | |
+| D1 | Close applications (Review) | [ ] Pass / [ ] Fail | |
+| D2 | Approve projects | [ ] Pass / [ ] Fail | |
+| D3 | Allocate awards | [ ] Pass / [ ] Fail | |
+| D4 | Exceed budget error | [ ] Pass / [ ] Fail | |
+| D5 | Allocate within budget | [ ] Pass / [ ] Fail | |
+| D6 | Finalize round | [ ] Pass / [ ] Fail | |
+| E1 | Distribute first project | [ ] Pass / [ ] Fail | |
+| E2 | Distribute second + auto-transition | [ ] Pass / [ ] Fail | |
+| F1 | Hacker balance correct | [ ] Pass / [ ] Fail | |
+| F2 | Create redeem option (admin) | [ ] Pass / [ ] Fail | |
+| F3 | Redeem option + order created | [ ] Pass / [ ] Fail | |
+| F4 | Insufficient credits error | [ ] Pass / [ ] Fail | |
+| G1 | Admin deposit credits | [ ] Pass / [ ] Fail | |
+| G2 | Admin deduct credits | [ ] Pass / [ ] Fail | |
+| G3 | Fulfill order | [ ] Pass / [ ] Fail | |
+| G4 | Cancel order + refund | [ ] Pass / [ ] Fail | |
+| H | Feed events rendered (not blank) | [ ] Pass / [ ] Fail | |
+| I1 | CSV export | [ ] Pass / [ ] Fail | |
+| J | Cancel round | [ ] Pass / [ ] Fail | |
 
 **Tester:** _______________
 **Date:** _______________
