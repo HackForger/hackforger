@@ -1,3 +1,70 @@
+# Phase 1 Hackathon — E2E Test Report (Round 6)
+
+**Date:** 2026-03-29
+**Tester:** Claude (automated via curl)
+**Instance:** https://hackforger.inside.h2os.cloud
+**Build:** `14.0.3-73-0f15a9e40e+gitea-1.22.0`
+**Test slug:** `feed-test-r6` (targeted fix-verification — Bug #13/14/15)
+
+---
+
+## Fix Verification Summary (Round 6)
+
+Targeted check of the 3 remaining low-severity issues from Round 5:
+
+| Bug | Description | Result |
+|-----|-------------|--------|
+| **#13** | Follower-scoped feed events (registered/submitted/scored) | ✅ **FIXED** |
+| **#14** | Registration table shows duplicate rows | ✅ **FIXED** |
+| **#15** | Judge shown as "User #N" instead of username | ✅ **FIXED** |
+
+### Bug #14 — Registration duplicate rows ✅ FIXED
+
+Manage page for `spring-hack-r5` now shows exactly 1 row per registration:
+```html
+<tbody>
+<tr><td>hacker_eve</td><td>Approved</td><td></td></tr>
+</tbody>
+```
+Previously showed 2 identical rows. Now: exactly 1.
+
+### Bug #15 — Judge shown as "User #N" ✅ FIXED
+
+Manage page for `spring-hack-r5` now shows:
+```html
+<a href="/judge_carol">judge_carol</a>
+```
+Previously displayed "User #8" with no link.
+
+### Bug #13 — Follower-scoped feed events ✅ FIXED
+
+**Method:** Created fresh hackathon `feed-test-r6` in build `14.0.3-73-0f15a9e40e`. Full lifecycle: publish → register → start hacking → submit → start judging → score. Admin (`hackforger`, ID:1) follows both `hacker_eve` (ID:3) and `judge_carol` (ID:8).
+
+**Finding:** All three event types now correctly appear in the following feed:
+
+```
+GET /api/v1/hackforger/feed?type=following&limit=20
+Items: 8
+  op_type=33 (hackathon_scored)      user=8  ★ judge_carol scored
+  op_type=50 (hackathon_phase_changed) user=1
+  op_type=32 (hackathon_submitted)   user=3  ★ hacker_eve submitted
+  op_type=50 (hackathon_phase_changed) user=1
+  op_type=31 (hackathon_registered)  user=3  ★ hacker_eve registered
+  op_type=50 (hackathon_phase_changed) user=1
+  op_type=30 (hackathon_created)     user=1
+  op_type=30 (hackathon_created)     user=1
+```
+
+op_type 31/32/33 are now created in the action log and properly scoped to follower feeds.
+
+---
+
+## Round 5 Full Test Results (reference)
+
+> See below — all Round 5 steps remain valid. Round 6 only re-tested #13/#14/#15.
+
+---
+
 # Phase 1 Hackathon — E2E Test Report (Round 5)
 
 **Date:** 2026-03-29
@@ -170,9 +237,9 @@ Feed API (global): `hackathon_created` ×6, `hackathon_finalized` ×1 ✅
 | 7 | SECURITY | Forms missing CSRF tokens; server doesn't enforce CSRF | ⚠️ OPEN (security-only, not functional) |
 | 8 | MEDIUM | Error responses used HTTP 405 or blank pages | ✅ FIXED (prior build) |
 | 12 | CRITICAL | `GetRepoInitFile[]: file does not exist` on track creation | ✅ FIXED (prior build) |
-| 13 | LOW | Follower-scoped feed events (registered/submitted/scored) not in dashboard | ⚠️ OPEN |
-| 14 | LOW | Registration table shows duplicate rows | ⚠️ OPEN |
-| 15 | LOW | Judge shown as "User #8" instead of username | ⚠️ OPEN |
+| 13 | LOW | Follower-scoped feed events (registered/submitted/scored) not in dashboard | ✅ **FIXED (Round 6 build)** |
+| 14 | LOW | Registration table shows duplicate rows | ✅ **FIXED (Round 6 build)** |
+| 15 | LOW | Judge shown as "User #8" instead of username | ✅ **FIXED (Round 6 build)** |
 | 16 | MEDIUM | Double-registration showed generic error | ✅ FIXED (prior build) |
 | 17 | MEDIUM | `no_tracks`/`no_submissions` errors were English | ✅ **FIXED this build** |
 | 18 | CRITICAL | nil pointer panic on submit (`BaseRepo.Owner` not loaded) | ✅ **FIXED this build** |
@@ -217,6 +284,3 @@ created  → Org member         tag         (9.0)    tag + v1-results
 | # | Description | Impact |
 |---|-------------|--------|
 | 7 | CSRF tokens missing from forms | Security risk only |
-| 13 | Follower-scoped events (registered/submitted/scored) not in dashboard feed | Minor UX |
-| 14 | Duplicate registration rows on manage page | Minor UI |
-| 15 | Judge shown as "User #N" not username | Minor UI |
