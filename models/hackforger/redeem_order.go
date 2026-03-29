@@ -32,3 +32,5 @@ type RedeemOrder struct {
 func init() {
 	db.RegisterModel(new(RedeemOrder))
 }
+
+

@@ -135,9 +135,23 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	}
 }
 
+// crossOriginProtection is shared across all web routes.
+// It trusts the origin derived from ROOT_URL so that form POSTs
+// behind a reverse proxy (Caddy/nginx) are not rejected.
+var crossOriginProtection = func() *http.CrossOriginProtection {
+	cop := http.NewCrossOriginProtection()
+	// Extract origin (scheme + host) from ROOT_URL configured in app.ini.
+	// e.g., "https://hackforger.inside.h2os.cloud/" → "https://hackforger.inside.h2os.cloud"
+	if appURL := strings.TrimRight(setting.AppURL, "/"); appURL != "" {
+		if err := cop.AddTrustedOrigin(appURL); err != nil {
+			log.Error("CrossOriginProtection: failed to add trusted origin %q: %v", appURL, err)
+		}
+	}
+	return cop
+}()
+
 // verifyAuthWithOptions checks authentication according to options
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Context) {
-	crossOriginProtection := http.NewCrossOriginProtection()
 	return func(ctx *context.Context) {
 		// Check prohibit login users.
 		if ctx.IsSigned {
@@ -505,6 +519,36 @@ func registerRoutes(m *web.Route) {
 		m.Get("/bounties", hackforger_web.ExploreBounties)
 		m.Get("/grants", hackforger_web.ExploreGrants)
 	}, ignExploreSignIn)
+
+	// HackForger: public hackathon routes
+	m.Get("/hackathon/{slug}", hackforger_web.ViewHackathon)
+	m.Get("/hackathon/{slug}/leaderboard", hackforger_web.Leaderboard)
+
+	// HackForger: authenticated hackathon routes
+	m.Group("", func() {
+		m.Get("/hackathons/new", hackforger_web.NewHackathon)
+		m.Post("/hackathons/new", hackforger_web.NewHackathonPost)
+		m.Post("/hackathon/{slug}/register", hackforger_web.RegisterPost)
+		m.Get("/hackathon/{slug}/submit", hackforger_web.SubmitForm)
+		m.Post("/hackathon/{slug}/submit", hackforger_web.SubmitPost)
+		m.Group("/hackathon/{slug}/manage", func() {
+			m.Get("", hackforger_web.ManageHackathon)
+			m.Post("/publish", hackforger_web.ManagePhasePost)
+			m.Post("/start", hackforger_web.ManagePhasePost)
+			m.Post("/start-judging", hackforger_web.ManagePhasePost)
+			m.Post("/finalize", hackforger_web.ManagePhasePost)
+			m.Post("/cancel", hackforger_web.ManagePhasePost)
+			m.Post("/tracks", hackforger_web.ManageTrackPost)
+			m.Post("/registrations/{rid}", hackforger_web.ManageRegistrationPost)
+			m.Post("/judges", hackforger_web.ManageJudgePost)
+			m.Post("/judges/{uid}/remove", hackforger_web.ManageJudgeRemovePost)
+		})
+		m.Group("/hackathon/{slug}/judge", func() {
+			m.Get("", hackforger_web.JudgePage)
+			m.Post("/{sid}/score", hackforger_web.JudgeScorePost)
+		})
+	}, reqSignIn)
+
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)
 		m.Get("/search", repo.SearchIssues)

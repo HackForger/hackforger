@@ -4,11 +4,14 @@
 package hackforger
 
 import (
+	"context"
 	"fmt"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
+
+	"xorm.io/builder"
 )
 
 // SubmissionStatus represents the status of a hackathon submission.
@@ -28,6 +31,9 @@ type HackathonSubmission struct {
 	UserID         int64              `xorm:"INDEX NOT NULL"`
 	TrackID        int64              `xorm:"INDEX"`
 	RepoID         int64              `xorm:"INDEX"`
+	ForkRepoID     int64              `xorm:"INDEX"` // participant's fork of the track repo
+	PRID           int64              `xorm:"INDEX"` // pull request ID
+	PullIndex      int64              `xorm:""`      // pull request index within the track repo
 	Title          string             `xorm:"NOT NULL"`
 	Description    string             `xorm:"TEXT"`
 	DemoURL        string             `xorm:"VARCHAR(2048)"`
@@ -40,11 +46,6 @@ type HackathonSubmission struct {
 
 func init() {
 	db.RegisterModel(new(HackathonSubmission))
-}
-
-// TableName returns the XORM table name for HackathonSubmission.
-func (s *HackathonSubmission) TableName() string {
-	return "hackforger_hackathon_submission"
 }
 
 // ErrSubmissionNotExist represents a "SubmissionNotExist" kind of error.
@@ -64,4 +65,78 @@ func (err ErrSubmissionNotExist) Error() string {
 
 func (err ErrSubmissionNotExist) Unwrap() error {
 	return util.ErrNotExist
+}
+
+// ListSubmissionsOptions holds options for listing submissions.
+type ListSubmissionsOptions struct {
+	db.ListOptions
+	HackathonID int64
+	TrackID     int64
+	Status      *SubmissionStatus
+}
+
+func (opts ListSubmissionsOptions) ToConds() builder.Cond {
+	cond := builder.NewCond()
+	if opts.HackathonID != 0 {
+		cond = cond.And(builder.Eq{"hackathon_submission.hackathon_id": opts.HackathonID})
+	}
+	if opts.TrackID != 0 {
+		cond = cond.And(builder.Eq{"hackathon_submission.track_id": opts.TrackID})
+	}
+	if opts.Status != nil {
+		cond = cond.And(builder.Eq{"hackathon_submission.status": *opts.Status})
+	}
+	return cond
+}
+
+// GetSubmissionByID returns a submission by its ID.
+func GetSubmissionByID(ctx context.Context, id int64) (*HackathonSubmission, error) {
+	s, exists, err := db.GetByID[HackathonSubmission](ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrSubmissionNotExist{ID: id}
+	}
+	return s, nil
+}
+
+// ListSubmissions returns a paginated list of submissions matching the given options.
+func ListSubmissions(ctx context.Context, opts ListSubmissionsOptions) ([]*HackathonSubmission, int64, error) {
+	return db.FindAndCount[HackathonSubmission](ctx, opts)
+}
+
+// CreateSubmission inserts a new submission.
+func CreateSubmission(ctx context.Context, s *HackathonSubmission) error {
+	return db.Insert(ctx, s)
+}
+
+// UpdateSubmission updates all columns of a submission.
+func UpdateSubmission(ctx context.Context, s *HackathonSubmission) error {
+	_, err := db.GetEngine(ctx).ID(s.ID).AllCols().Update(s)
+	return err
+}
+
+// CountSubmissions returns the number of submissions for a given hackathon.
+func CountSubmissions(ctx context.Context, hackathonID int64) (int64, error) {
+	return db.GetEngine(ctx).Where("hackathon_id = ?", hackathonID).Count(new(HackathonSubmission))
+}
+
+// SubmissionRanking holds a submission ID with its computed score and rank.
+type SubmissionRanking struct {
+	SubmissionID int64
+	TotalScore   float64
+	Rank         int
+}
+
+// UpdateSubmissionRanks bulk-updates total_score and rank for a list of submissions.
+func UpdateSubmissionRanks(ctx context.Context, rankings []SubmissionRanking) error {
+	for _, r := range rankings {
+		if _, err := db.GetEngine(ctx).ID(r.SubmissionID).
+			Cols("total_score", "rank").
+			Update(&HackathonSubmission{TotalScore: r.TotalScore, Rank: r.Rank}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

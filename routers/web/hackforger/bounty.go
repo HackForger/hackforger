@@ -81,7 +81,34 @@ func ExploreBounties(ctx *context.Context) {
 
 	ctx.Data["Bounties"] = views
 	ctx.Data["Total"] = total
-	ctx.Data["StatusFilter"] = ctx.FormString("status")
+
+	statusFilterStr := ctx.FormString("status")
+	ctx.Data["StatusFilter"] = statusFilterStr
+	ctx.Data["Keyword"] = ctx.FormString("q")
+	sortType := ctx.FormString("sort")
+	if sortType == "" {
+		sortType = "newest"
+	}
+	ctx.Data["SortType"] = sortType
+	ctx.Data["SearchPlaceholderKey"] = "hackforger.bounty.search.placeholder"
+
+	type statusOption struct {
+		Value    string
+		LabelKey string
+	}
+	ctx.Data["StatusOptions"] = []statusOption{
+		{"open", "hackforger.bounty.status.open"},
+		{"claimed", "hackforger.bounty.status.claimed"},
+		{"in_review", "hackforger.bounty.status.in_review"},
+		{"completed", "hackforger.bounty.status.completed"},
+	}
+	statusLabelKeys := map[string]string{
+		"open":      "hackforger.bounty.status.open",
+		"claimed":   "hackforger.bounty.status.claimed",
+		"in_review": "hackforger.bounty.status.in_review",
+		"completed": "hackforger.bounty.status.completed",
+	}
+	ctx.Data["StatusLabelKey"] = statusLabelKeys[statusFilterStr]
 
 	pager := context.NewPagination(int(total), 20, page, 5)
 	pager.SetDefaultParams(ctx)

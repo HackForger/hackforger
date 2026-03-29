@@ -1,0 +1,41 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		{{template "hackforger/explore_search" .}}
+
+		{{if .Hackathons}}
+		<div class="ui relaxed divided list">
+			{{range .Hackathons}}
+			<div class="item tw-py-4">
+				<div class="content">
+					<a class="header tw-text-lg" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
+					{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{.Description}}</div>{{end}}
+					<div class="description tw-mt-1">
+						<span class="ui small label {{if eq .Status 1}}green{{else if eq .Status 2}}blue{{else if eq .Status 3}}orange{{else if eq .Status 4}}grey{{end}}">
+							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
+							{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
+							{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
+							{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
+							{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
+							{{else}}{{ctx.Locale.Tr "hackforger.hackathon.status.cancelled"}}
+							{{end}}
+						</span>
+					</div>
+				</div>
+			</div>
+			{{end}}
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="ui placeholder segment">
+			<div class="ui icon header">
+				{{svg "octicon-rocket" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.hackathon.no_hackathons"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

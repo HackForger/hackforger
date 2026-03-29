@@ -4,6 +4,7 @@
 package hackforger
 
 import (
+	"context"
 	"fmt"
 
 	"forgejo.org/models/db"
@@ -27,11 +28,6 @@ func init() {
 	db.RegisterModel(new(HackathonJudgeScore))
 }
 
-// TableName returns the XORM table name for HackathonJudgeScore.
-func (s *HackathonJudgeScore) TableName() string {
-	return "hackforger_hackathon_judge_score"
-}
-
 // ErrDuplicateScore represents a "DuplicateScore" kind of error.
 type ErrDuplicateScore struct {
 	JudgeID      int64
@@ -50,4 +46,59 @@ func (err ErrDuplicateScore) Error() string {
 
 func (err ErrDuplicateScore) Unwrap() error {
 	return util.ErrAlreadyExist
+}
+
+// GetScore returns the score record for a given judge and submission, or nil if none exists.
+func GetScore(ctx context.Context, judgeID, submissionID int64) (*HackathonJudgeScore, error) {
+	s := &HackathonJudgeScore{}
+	has, err := db.GetEngine(ctx).Where("judge_id = ? AND submission_id = ?", judgeID, submissionID).Get(s)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, nil
+	}
+	return s, nil
+}
+
+// ListScoresBySubmission returns all scores for a given submission.
+func ListScoresBySubmission(ctx context.Context, submissionID int64) ([]*HackathonJudgeScore, error) {
+	var scores []*HackathonJudgeScore
+	err := db.GetEngine(ctx).Where("submission_id = ?", submissionID).Find(&scores)
+	return scores, err
+}
+
+// CreateScore inserts a new judge score, returning ErrDuplicateScore if one already exists.
+func CreateScore(ctx context.Context, s *HackathonJudgeScore) error {
+	exists, err := db.GetEngine(ctx).Where("judge_id = ? AND submission_id = ?", s.JudgeID, s.SubmissionID).Exist(new(HackathonJudgeScore))
+	if err != nil {
+		return err
+	}
+	if exists {
+		return ErrDuplicateScore{JudgeID: s.JudgeID, SubmissionID: s.SubmissionID}
+	}
+	return db.Insert(ctx, s)
+}
+
+// UpdateScore updates the score and comment fields of an existing judge score.
+func UpdateScore(ctx context.Context, s *HackathonJudgeScore) error {
+	_, err := db.GetEngine(ctx).ID(s.ID).Cols("score", "comment").Update(s)
+	return err
+}
+
+// HasAllJudgesScored checks if every assigned judge has scored a given submission.
+// Cross-references the HackathonJudge table.
+func HasAllJudgesScored(ctx context.Context, hackathonID, submissionID int64) (bool, error) {
+	judgeCount, err := db.GetEngine(ctx).Where("hackathon_id = ?", hackathonID).Count(new(HackathonJudge))
+	if err != nil {
+		return false, err
+	}
+	if judgeCount == 0 {
+		return false, nil
+	}
+	scoreCount, err := db.GetEngine(ctx).Where("submission_id = ?", submissionID).Count(new(HackathonJudgeScore))
+	if err != nil {
+		return false, err
+	}
+	return scoreCount >= judgeCount, nil
 }

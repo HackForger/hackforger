@@ -1,0 +1,19 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content hackathon">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard"}} — {{.Hackathon.Name}}</h2>
+		<table class="ui celled table">
+			<thead><tr><th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.rank"}}</th><th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.team"}}</th><th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.score"}}</th></tr></thead>
+			<tbody>
+			{{range .Submissions}}
+			<tr {{if eq .Rank 1}}class="positive"{{end}}>
+				<td>#{{.Rank}}</td>
+				<td>{{.Title}}{{if .DemoURL}} — <a href="{{.DemoURL}}">Demo</a>{{end}}</td>
+				<td>{{printf "%.1f" .TotalScore}}</td>
+			</tr>
+			{{end}}
+			</tbody>
+		</table>
+	</div>
+</div>
+{{template "base/footer" .}}

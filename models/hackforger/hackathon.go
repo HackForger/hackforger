@@ -43,17 +43,13 @@ type Hackathon struct {
 	JudgingEnd        timeutil.TimeStamp `xorm:""`
 	PrizeSummary      string             `xorm:"TEXT"`
 	TemplateRepoID    int64              `xorm:"INDEX"`
+	LinkedOrgID       int64              `xorm:"INDEX"` // auto-created Forgejo Organization for this hackathon
 	CreatedUnix       timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix       timeutil.TimeStamp `xorm:"INDEX updated"`
 }
 
 func init() {
 	db.RegisterModel(new(Hackathon))
-}
-
-// TableName returns the XORM table name for Hackathon.
-func (h *Hackathon) TableName() string {
-	return "hackforger_hackathon"
 }
 
 // ErrHackathonNotExist represents a "HackathonNotExist" kind of error.
@@ -126,24 +122,49 @@ func GetHackathonBySlug(ctx context.Context, slug string) (*Hackathon, error) {
 // ListHackathonsOptions holds options for listing hackathons.
 type ListHackathonsOptions struct {
 	db.ListOptions
-	OrgID  int64
-	Status *HackathonStatus
+	OrgID   int64
+	Status  *HackathonStatus
+	Keyword string
+	SortBy  string
 }
 
 func (opts ListHackathonsOptions) ToConds() builder.Cond {
 	cond := builder.NewCond()
 	if opts.OrgID != 0 {
-		cond = cond.And(builder.Eq{"hackforger_hackathon.org_id": opts.OrgID})
+		cond = cond.And(builder.Eq{"hackathon.org_id": opts.OrgID})
 	}
 	if opts.Status != nil {
-		cond = cond.And(builder.Eq{"hackforger_hackathon.status": *opts.Status})
+		cond = cond.And(builder.Eq{"hackathon.status": *opts.Status})
+	}
+	if opts.Keyword != "" {
+		cond = cond.And(builder.Or(
+			builder.Like{"hackathon.name", opts.Keyword},
+			builder.Like{"hackathon.description", opts.Keyword},
+		))
 	}
 	return cond
 }
 
+func (opts ListHackathonsOptions) ToOrders() string {
+	switch opts.SortBy {
+	case "oldest":
+		return "hackathon.created_unix ASC"
+	case "alphabetically":
+		return "hackathon.name ASC"
+	default: // "newest"
+		return "hackathon.created_unix DESC"
+	}
+}
+
 // ListHackathons returns a list of hackathons matching the given options.
-func ListHackathons(ctx context.Context, opts ListHackathonsOptions) ([]*Hackathon, error) {
-	return db.Find[Hackathon](ctx, opts)
+func ListHackathons(ctx context.Context, opts ListHackathonsOptions) ([]*Hackathon, int64, error) {
+	return db.FindAndCount[Hackathon](ctx, opts)
+}
+
+// UpdateHackathonStatus updates only the status field of a hackathon.
+func UpdateHackathonStatus(ctx context.Context, id int64, status HackathonStatus) error {
+	_, err := db.GetEngine(ctx).ID(id).Cols("status").Update(&Hackathon{Status: status})
+	return err
 }
 
 // UpdateHackathon updates an existing hackathon.

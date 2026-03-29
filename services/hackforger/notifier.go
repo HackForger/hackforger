@@ -10,7 +10,6 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
-	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
@@ -30,14 +29,14 @@ func Init() error {
 	return nil
 }
 
-// AudienceType determines how feed events are distributed (bitmask).
+// AudienceType determines how feed events are distributed.
 type AudienceType int
 
 const (
-	AudienceGlobal       AudienceType = 1 << 0 // 1
-	AudienceFollowers    AudienceType = 1 << 1 // 2
-	AudienceOrgMembers   AudienceType = 1 << 2 // 4
-	AudienceRepoWatchers AudienceType = 1 << 3 // 8
+	AudienceGlobal       AudienceType = iota // UserID=0, visible to everyone
+	AudienceFollowers                        // Visible to ActUser's followers
+	AudienceOrgMembers                       // Visible to org members
+	AudienceRepoWatchers                     // Visible to repo watchers
 )
 
 // HackforgerActionOpts holds the parameters for publishing a HackForger feed event.
@@ -47,11 +46,15 @@ type HackforgerActionOpts struct {
 	RepoID       int64
 	Content      any
 	AudienceType AudienceType
-	OrgID        int64
+	OrgID        int64 // used when AudienceType == AudienceOrgMembers
 }
 
-// PublishHackforgerAction writes HackForger events to the action table
-// with full audience resolution using bitmask-based distribution.
+// PublishHackforgerAction writes HackForger events to the action table.
+// Unlike Forgejo's NotifyWatchers (which only handles repo watchers),
+// this supports 4 audience strategies per the spec.
+//
+// P0 skeleton: inserts for actor + global (UserID=0) only.
+// Phase 1: adds full audience resolution (followers, org members, repo watchers).
 func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) error {
 	contentBytes, err := json.Marshal(opts.Content)
 	if err != nil {
@@ -60,7 +63,7 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	contentStr := string(contentBytes)
 	now := timeutil.TimeStampNow()
 
-	// Always insert the actor's own action record.
+	// Always insert the actor's own action record
 	actorAction := &activities_model.Action{
 		ActUserID:   opts.ActUserID,
 		UserID:      opts.ActUserID,
@@ -74,11 +77,8 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 		return err
 	}
 
-	// Collect target UserIDs with dedup.
-	targets := make(map[int64]bool)
-
-	// Global: insert UserID=0 record.
-	if opts.AudienceType&AudienceGlobal != 0 {
+	// For global events, also insert a UserID=0 record
+	if opts.AudienceType == AudienceGlobal {
 		globalAction := &activities_model.Action{
 			ActUserID:   opts.ActUserID,
 			UserID:      0,
@@ -93,136 +93,104 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 		}
 	}
 
-	// Followers: query the `follow` table.
-	if opts.AudienceType&AudienceFollowers != 0 {
+	// Phase 1: resolve audience based on opts.AudienceType
+	switch opts.AudienceType {
+	case AudienceFollowers:
 		var followerIDs []int64
-		if err := db.GetEngine(ctx).Table("follow").
+		err := db.GetEngine(ctx).Table("follow").
 			Where("follow_id = ?", opts.ActUserID).
-			Cols("user_id").
-			Find(&followerIDs); err != nil {
+			Cols("user_id").Find(&followerIDs)
+		if err != nil {
 			log.Error("PublishHackforgerAction (followers query): %v", err)
-			return err
+			break
 		}
-		for _, id := range followerIDs {
-			targets[id] = true
-		}
-	}
-
-	// Org members.
-	if opts.AudienceType&AudienceOrgMembers != 0 && opts.OrgID > 0 {
-		var memberIDs []int64
-		if err := db.GetEngine(ctx).Table("org_user").
-			Where("org_id = ?", opts.OrgID).
-			Cols("uid").
-			Find(&memberIDs); err != nil {
-			log.Error("PublishHackforgerAction (org members query): %v", err)
-			return err
-		}
-		for _, id := range memberIDs {
-			targets[id] = true
-		}
-	}
-
-	// Repo watchers: query the `watch` table, excluding WatchModeDont (2).
-	if opts.AudienceType&AudienceRepoWatchers != 0 && opts.RepoID > 0 {
-		var watcherIDs []int64
-		if err := db.GetEngine(ctx).Table("watch").
-			Where("repo_id = ? AND mode <> ?", opts.RepoID, repo_model.WatchModeDont).
-			Cols("user_id").
-			Find(&watcherIDs); err != nil {
-			log.Error("PublishHackforgerAction (repo watchers query): %v", err)
-			return err
-		}
-		for _, id := range watcherIDs {
-			targets[id] = true
-		}
-	}
-
-	// Remove the actor (already inserted above).
-	delete(targets, opts.ActUserID)
-
-	// Batch insert action records for all resolved targets.
-	if len(targets) > 0 {
-		actions := make([]*activities_model.Action, 0, len(targets))
-		for uid := range targets {
-			actions = append(actions, &activities_model.Action{
+		for _, uid := range followerIDs {
+			if uid == opts.ActUserID {
+				continue
+			}
+			fa := &activities_model.Action{
 				ActUserID:   opts.ActUserID,
 				UserID:      uid,
 				OpType:      opts.OpType,
 				RepoID:      opts.RepoID,
 				Content:     contentStr,
 				CreatedUnix: now,
-			})
+			}
+			if _, err := db.GetEngine(ctx).Insert(fa); err != nil {
+				log.Error("PublishHackforgerAction (follower %d): %v", uid, err)
+			}
 		}
-		if _, err := db.GetEngine(ctx).Insert(actions); err != nil {
-			log.Error("PublishHackforgerAction (batch targets): %v", err)
-			return err
+
+	case AudienceOrgMembers:
+		if opts.OrgID == 0 {
+			break
+		}
+		var memberIDs []int64
+		err := db.GetEngine(ctx).Table("org_user").
+			Where("org_id = ?", opts.OrgID).
+			Cols("uid").Find(&memberIDs)
+		if err != nil {
+			log.Error("PublishHackforgerAction (org members query): %v", err)
+			break
+		}
+		for _, uid := range memberIDs {
+			if uid == opts.ActUserID {
+				continue
+			}
+			ma := &activities_model.Action{
+				ActUserID:   opts.ActUserID,
+				UserID:      uid,
+				OpType:      opts.OpType,
+				RepoID:      opts.RepoID,
+				Content:     contentStr,
+				CreatedUnix: now,
+			}
+			if _, err := db.GetEngine(ctx).Insert(ma); err != nil {
+				log.Error("PublishHackforgerAction (org member %d): %v", uid, err)
+			}
+		}
+
+	case AudienceRepoWatchers:
+		if opts.RepoID == 0 {
+			break
+		}
+		var watcherIDs []int64
+		err := db.GetEngine(ctx).Table("watch").
+			Where("repo_id = ? AND mode != 2", opts.RepoID).
+			Cols("user_id").Find(&watcherIDs)
+		if err != nil {
+			log.Error("PublishHackforgerAction (watchers query): %v", err)
+			break
+		}
+		for _, uid := range watcherIDs {
+			if uid == opts.ActUserID {
+				continue
+			}
+			wa := &activities_model.Action{
+				ActUserID:   opts.ActUserID,
+				UserID:      uid,
+				OpType:      opts.OpType,
+				RepoID:      opts.RepoID,
+				Content:     contentStr,
+				CreatedUnix: now,
+			}
+			if _, err := db.GetEngine(ctx).Insert(wa); err != nil {
+				log.Error("PublishHackforgerAction (watcher %d): %v", uid, err)
+			}
 		}
 	}
 
 	return nil
 }
 
-// MergePullRequest is called when a PR is merged. We scan all Claimed bounties
-// in the same repo and transition them to InReview if the PR author is the claimer.
-//
-// Design: A bounty is linked to an Issue. The claimer submits a PR that
-// references the issue (via "fixes #N"). When ANY PR in the repo is merged,
-// we check all Claimed bounties. If the PR was authored by a bounty's claimer,
-// we transition that bounty to InReview. This avoids complex cross-reference
-// parsing — the claimer-match is sufficient signal.
+// MergePullRequest is called when a PR is merged. We check if the PR's
+// issue has a linked Bounty and trigger status transitions if so.
+// This is a skeleton — full logic added in Phase 1.
 func (n *hackforgerNotifier) MergePullRequest(ctx context.Context, doer *user_model.User, pr *issues_model.PullRequest) {
-	if err := pr.LoadIssue(ctx); err != nil {
-		log.Error("hackforgerNotifier.MergePullRequest: LoadIssue: %v", err)
-		return
-	}
-
-	repoID := pr.Issue.RepoID
-	// The PR author is the poster of the PR issue.
-	prAuthorID := pr.Issue.PosterID
-
-	// Find all Claimed bounties in this repo.
-	claimedStatus := hackforger_model.BountyStatusClaimed
-	bounties, _, err := hackforger_model.ListBounties(ctx, hackforger_model.ListBountiesOptions{
-		RepoID: repoID,
-		Status: &claimedStatus,
-	})
-	if err != nil {
-		log.Error("hackforgerNotifier.MergePullRequest: ListBounties: %v", err)
-		return
-	}
-
-	for _, bounty := range bounties {
-		// Transition if the PR author is the claimer, OR the doer (merger) is the claimer.
-		if bounty.ClaimerID != prAuthorID && bounty.ClaimerID != doer.ID {
-			continue
-		}
-
-		bounty.Status = hackforger_model.BountyStatusInReview
-		if err := hackforger_model.UpdateBounty(ctx, bounty); err != nil {
-			log.Error("hackforgerNotifier.MergePullRequest: UpdateBounty(%d): %v", bounty.ID, err)
-			continue
-		}
-
-		log.Info("hackforgerNotifier.MergePullRequest: bounty %d transitioned to InReview (PR #%d, author=%d, merger=%d)",
-			bounty.ID, pr.Index, prAuthorID, doer.ID)
-
-		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-			ActUserID:    prAuthorID,
-			OpType:       hackforger_model.ActionBountyDelivered,
-			RepoID:       bounty.RepoID,
-			AudienceType: AudienceFollowers | AudienceRepoWatchers,
-			Content: &hackforger_model.HackforgerPhaseContent{
-				HackforgerActionContent: hackforger_model.HackforgerActionContent{
-					EntityType: "bounty",
-					EntityID:   bounty.ID,
-					EntityName: bounty.Title,
-				},
-				OldStatus: "claimed",
-				NewStatus: "in_review",
-			},
-		}); err != nil {
-			log.Error("hackforgerNotifier.MergePullRequest: PublishHackforgerAction(%d): %v", bounty.ID, err)
-		}
-	}
+	// Phase 1: Check if PR's Issue has a Bounty, and if doer is the Claimer,
+	// transition to InReview status.
+	_ = doer
+	_ = pr
+	_ = ctx
+	_ = hackforger_model.ActionBountyDelivered // ensure import is used
 }

@@ -1762,7 +1762,38 @@ func Routes() *web.Route {
 
 		// HackForger API routes
 		m.Group("/hackforger", func() {
+			// Hackathon routes
 			m.Get("/hackathons", hackforger_api.ListHackathons)
+			m.Post("/hackathons", reqToken(), bind(hackforger_api.CreateHackathonForm{}), hackforger_api.CreateHackathon)
+			m.Group("/hackathons/{id}", func() {
+				m.Get("", hackforger_api.GetHackathon)
+				m.Put("", reqToken(), bind(hackforger_api.UpdateHackathonForm{}), hackforger_api.UpdateHackathon)
+				m.Delete("", reqToken(), hackforger_api.DeleteHackathon)
+				m.Post("/publish", reqToken(), hackforger_api.PublishHackathon)
+				m.Post("/start", reqToken(), hackforger_api.StartHackathon)
+				m.Post("/start-judging", reqToken(), hackforger_api.StartJudgingHackathon)
+				m.Post("/finalize", reqToken(), hackforger_api.FinalizeHackathon)
+				m.Post("/cancel", reqToken(), hackforger_api.CancelHackathon)
+				m.Get("/tracks", hackforger_api.ListTracks)
+				m.Post("/tracks", reqToken(), bind(hackforger_api.CreateTrackForm{}), hackforger_api.CreateTrack)
+				m.Put("/tracks/{tid}", reqToken(), bind(hackforger_api.UpdateTrackForm{}), hackforger_api.UpdateTrack)
+				m.Delete("/tracks/{tid}", reqToken(), hackforger_api.DeleteTrack)
+				m.Post("/register", reqToken(), bind(hackforger_api.RegisterForm{}), hackforger_api.Register)
+				m.Get("/registrations", hackforger_api.ListRegistrations)
+				m.Put("/registrations/{rid}", reqToken(), bind(hackforger_api.UpdateRegistrationForm{}), hackforger_api.UpdateRegistration)
+				m.Post("/submissions", reqToken(), bind(hackforger_api.CreateSubmissionForm{}), hackforger_api.CreateSubmission)
+				m.Get("/submissions", hackforger_api.ListSubmissions)
+				m.Get("/submissions/{sid}", hackforger_api.GetSubmission)
+				m.Put("/submissions/{sid}", reqToken(), bind(hackforger_api.UpdateSubmissionForm{}), hackforger_api.UpdateSubmission)
+				m.Get("/judges", hackforger_api.ListJudges)
+				m.Post("/judges", reqToken(), bind(hackforger_api.AddJudgeForm{}), hackforger_api.AddJudge)
+				m.Delete("/judges/{uid}", reqToken(), hackforger_api.RemoveJudge)
+				m.Post("/submissions/{sid}/score", reqToken(), bind(hackforger_api.SubmitScoreForm{}), hackforger_api.SubmitScore)
+				m.Get("/submissions/{sid}/scores", hackforger_api.ListScores)
+				m.Get("/leaderboard", hackforger_api.GetLeaderboard)
+			})
+
+			// Bounty global routes
 			m.Get("/bounties", hackforger_api.ListAllBounties)
 			m.Get("/bounties/stats", hackforger_api.BountyStats)
 			m.Get("/bounties/leaderboard", hackforger_api.HunterLeaderboard)

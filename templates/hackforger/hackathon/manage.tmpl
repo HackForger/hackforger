@@ -1,0 +1,35 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content hackathon">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.hackathon.manage"}} — {{.Hackathon.Name}}</h2>
+		<div class="ui segment">
+			<h3>Phase Control</h3>
+			<span class="ui label">Current: {{.StatusLabel}}</span>
+			<div class="tw-mt-2">
+			{{if eq .Hackathon.Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/publish" class="tw-inline"><button class="ui green button">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.publish"}}</button></form>
+			{{else if eq .Hackathon.Status 1}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/start" class="tw-inline"><button class="ui blue button">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start"}}</button></form>
+			{{else if eq .Hackathon.Status 2}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/start-judging" class="tw-inline"><button class="ui orange button">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start_judging"}}</button></form>
+			{{else if eq .Hackathon.Status 3}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize" class="tw-inline"><button class="ui purple button">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.finalize"}}</button></form>
+			{{end}}
+			{{if and (ne .Hackathon.Status 4) (ne .Hackathon.Status 5)}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline"><button class="ui red button">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button></form>{{end}}
+			</div>
+		</div>
+		<div class="ui segment">
+			<h3>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks"}}</h3>
+			{{range .Tracks}}<div class="ui item">{{.Name}}</div>{{end}}
+			{{if eq .Hackathon.Status 0}}<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/tracks"><div class="inline fields"><div class="field"><input name="name" placeholder="Track name" required></div><button class="ui small button" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.add"}}</button></div></form>{{end}}
+		</div>
+		<div class="ui segment">
+			<h3>{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations"}} ({{len .Registrations}})</h3>
+			<table class="ui table"><thead><tr><th>Team</th><th>Status</th><th>Action</th></tr></thead><tbody>
+			{{range .Registrations}}<tr><td>{{.TeamName}}</td><td>{{if eq .Status 0}}Pending{{else if eq .Status 1}}Approved{{else}}Rejected{{end}}</td><td>{{if eq .Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="1"><button class="ui mini green button">Approve</button></form><form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="2"><button class="ui mini red button">Reject</button></form>{{end}}</td></tr>{{end}}
+			</tbody></table>
+		</div>
+		<div class="ui segment">
+			<h3>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges"}} ({{len .Judges}})</h3>
+			{{range .Judges}}{{$name := index $.JudgeNames .UserID}}<div class="ui item">{{if $name}}<a href="{{AppSubUrl}}/{{$name}}">{{$name}}</a>{{else}}User #{{.UserID}}{{end}} <form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/judges/{{.UserID}}/remove" class="tw-inline"><button class="ui mini red button">Remove</button></form></div>{{end}}
+			<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judges"><div class="inline fields"><div class="field"><input name="user_id" type="number" placeholder="User ID" required></div><button class="ui small button" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.add"}}</button></div></form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
