@@ -1473,11 +1473,6 @@ func registerRoutes(m *web.Route) {
 		m.Post("/topics", repo.TopicsPost)
 	}, context.RepoAssignment, context.RepoMustNotBeArchived(), reqRepoAdmin)
 
-	// HackForger Credits
-	m.Group("/credits", func() {
-		m.Get("", hackforger_web.CreditsDashboard)
-	}, reqSignIn)
-
 	// HackForger Bounty web routes
 	m.Group("/{username}/{reponame}", func() {
 		m.Group("/bounties", func() {

@@ -14,10 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMain(m *testing.M) {
-	unittest.MainTest(m)
-}
-
 func TestCreateGrantRound(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 

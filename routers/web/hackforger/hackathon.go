@@ -111,13 +111,6 @@ func ExploreHackathons(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplExploreHackathon)
 }
 
-// ExploreGrants renders the grants explore page.
-func ExploreGrants(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("hackforger.explore.grants")
-	ctx.Data["PageIsExploreGrants"] = true
-	ctx.HTML(http.StatusOK, tplExplore)
-}
-
 func NewHackathon(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
 	ctx.HTML(http.StatusOK, tplNew)
