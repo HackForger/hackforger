@@ -34,3 +34,5 @@ type CreditTransaction struct {
 func init() {
 	db.RegisterModel(new(CreditTransaction))
 }
+
+
