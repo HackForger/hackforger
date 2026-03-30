@@ -16,9 +16,10 @@ This is **Week4-Line A** work. Week3 already built the backend skeleton (models,
 - Two-step finalize: preview rankings → organizer confirms
 - Judge permission middleware (verify user is judge for the track)
 - Manage page: add judge by username, track assignment, criteria CRUD, track criteria config
-- Leaderboard: per-track tabs, weighted score breakdown
+- Leaderboard: per-track tabs, weighted score breakdown (visible only after Finished status)
 - Typed errors replacing `fmt.Errorf()` in service layer
 - Feed event: `ActionHackathonFinalized` with results summary
+- `StartJudging` validation: require at least 1 criterion defined
 - i18n keys for all new template text (en-US + zh-CN)
 
 ### Out of Scope
@@ -63,9 +64,10 @@ type HackathonJudgeCriteria struct {
     Name        string            `xorm:"NOT NULL"`           // e.g., "Innovation"
     Description string            `xorm:"TEXT"`               // guidance for judges
     MaxScore    float64           `xorm:"NOT NULL DEFAULT 10"`
-    Weight      float64           `xorm:"NOT NULL DEFAULT 25"` // default weight (percentage)
+    Weight      float64           `xorm:"NOT NULL DEFAULT 25"` // default weight (relative)
     SortOrder   int               `xorm:"NOT NULL DEFAULT 0"`
     CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
+    UpdatedUnix timeutil.TimeStamp `xorm:"updated"`
 }
 ```
 
@@ -76,6 +78,8 @@ CRUD functions:
 - `ListCriteriaByHackathon(ctx, hackathonID int64) ([]*HackathonJudgeCriteria, error)`
 - `GetCriteriaByID(ctx, id int64) (*HackathonJudgeCriteria, error)`
 - `CountCriteriaByHackathon(ctx, hackathonID int64) (int64, error)`
+
+Error type: `ErrCriteriaNotExist{ID int64}` in `models/hackforger/` with `IsErrCriteriaNotExist()` and `Unwrap() → util.ErrNotExist`.
 
 #### `hackathon_track_criteria`
 
@@ -96,7 +100,7 @@ CRUD functions:
 - `UpdateTrackCriteria(ctx, tc *HackathonTrackCriteria) error`
 - `ListTrackCriteria(ctx, trackID int64) ([]*HackathonTrackCriteria, error)`
 - `GetTrackCriteria(ctx, trackID, criteriaID int64) (*HackathonTrackCriteria, error)`
-- `SeedTrackCriteria(ctx, trackID int64, criteria []*HackathonJudgeCriteria) error` — bulk-insert default overrides for a track
+- `SeedTrackCriteria(ctx, trackID int64, criteria []*HackathonJudgeCriteria) error` — bulk-insert default overrides for a track. **Idempotent**: checks existence before insert (skip if already seeded for that criteria+track pair).
 
 ### Modified Tables
 
@@ -112,7 +116,17 @@ type HackathonJudge struct {
 }
 ```
 
-UNIQUE constraint changes from `(HackathonID, UserID)` to `(HackathonID, TrackID, UserID)`.
+UNIQUE constraint changes from `(HackathonID, UserID)` to `(HackathonID, TrackID, UserID)`. The same user CAN be a judge for multiple tracks.
+
+`ErrDuplicateJudge` must be extended with `TrackID` field:
+
+```go
+type ErrDuplicateJudge struct {
+    HackathonID int64
+    TrackID     int64 // NEW
+    UserID      int64
+}
+```
 
 Modified CRUD functions:
 - `AddJudge(ctx, hackathonID, trackID, userID int64) error` — adds trackID parameter
@@ -120,6 +134,7 @@ Modified CRUD functions:
 - `ListJudges(ctx, hackathonID int64, trackID ...int64) ([]*HackathonJudge, error)` — optional trackID filter
 - `IsJudge(ctx, hackathonID, trackID, userID int64) (bool, error)` — now track-scoped
 - `IsJudgeForAnyTrack(ctx, hackathonID, userID int64) (bool, error)` — NEW, for view page button visibility
+- `CountJudges` — updated to accept optional trackID filter
 
 #### `hackathon_judge_score` — add CriteriaID
 
@@ -127,9 +142,9 @@ Modified CRUD functions:
 type HackathonJudgeScore struct {
     ID           int64              `xorm:"pk autoincr"`
     HackathonID  int64             `xorm:"INDEX NOT NULL"`
-    SubmissionID int64             `xorm:"INDEX NOT NULL"`
-    JudgeID      int64             `xorm:"INDEX NOT NULL"`
-    CriteriaID   int64             `xorm:"INDEX NOT NULL"` // NEW
+    SubmissionID int64             `xorm:"UNIQUE(s) INDEX NOT NULL"`
+    JudgeID      int64             `xorm:"UNIQUE(s) INDEX NOT NULL"`
+    CriteriaID   int64             `xorm:"UNIQUE(s) INDEX NOT NULL"` // NEW — XORM UNIQUE(s) tag
     Score        float64           `xorm:"NOT NULL DEFAULT 0"`
     Comment      string            `xorm:"TEXT"`
     CreatedUnix  timeutil.TimeStamp `xorm:"INDEX created"`
@@ -137,24 +152,65 @@ type HackathonJudgeScore struct {
 }
 ```
 
-New UNIQUE constraint: `(JudgeID, SubmissionID, CriteriaID)`.
+UNIQUE constraint enforced at DB level via `UNIQUE(s)` tags on `(JudgeID, SubmissionID, CriteriaID)`.
+
+`ErrDuplicateScore` must be extended with `CriteriaID` field:
+
+```go
+type ErrDuplicateScore struct {
+    JudgeID      int64
+    SubmissionID int64
+    CriteriaID   int64 // NEW
+}
+```
+
+The application-level duplicate check in `CreateScore` must include `criteria_id` in its WHERE clause: `WHERE judge_id = ? AND submission_id = ? AND criteria_id = ?`.
 
 Modified CRUD functions:
 - `GetScore(ctx, judgeID, submissionID, criteriaID int64)` — adds criteriaID
 - `CreateScore` / `UpdateScore` — unchanged signature (struct has CriteriaID)
 - `ListScoresBySubmission(ctx, submissionID int64)` — returns all criteria scores
 - `ListScoresByJudgeAndSubmission(ctx, judgeID, submissionID int64)` — NEW, returns judge's scores for one submission
-- `HasAllJudgesScored` — updated to check all judges have scored all enabled criteria
+- `HasAllJudgesScored` — rewritten (see below)
+
+**Updated `HasAllJudgesScored` logic:**
+
+The naive "count judges vs count scores" no longer works. New logic:
+
+```
+HasAllJudgesScored(ctx, hackathonID, trackID, submissionID int64) (bool, error):
+  1. Get all judges assigned to the track
+  2. Get effective rubric for track (enabled criteria list)
+  3. For each judge:
+     - Count score records WHERE judge_id=J AND submission_id=S AND criteria_id IN (enabled criteria IDs)
+     - If count < len(enabled criteria), return false
+  4. Return true
+```
 
 ## Service Layer
 
 ### New: `services/hackforger/hackathon_criteria.go`
 
-Criteria lifecycle management:
+Criteria lifecycle management. `EffectiveCriteria` view struct defined here:
+
+```go
+// EffectiveCriteria represents a criterion with track-level weight resolution.
+type EffectiveCriteria struct {
+    CriteriaID  int64
+    Name        string
+    Description string
+    MaxScore    float64
+    Weight      float64  // track-level weight if set (>0), otherwise criteria default
+    SortOrder   int
+}
+```
+
+Functions:
 
 ```go
 // AddCriteria creates a criterion and auto-seeds track_criteria for all existing tracks.
 // Only allowed when hackathon status is Draft or Open.
+// Auto-seed uses SeedTrackCriteria (idempotent).
 func AddCriteria(ctx, hackathonID int64, name, description string, maxScore, weight float64, sortOrder int) error
 
 // UpdateCriteria updates a criterion's name/description/maxScore/weight/sortOrder.
@@ -163,29 +219,20 @@ func UpdateCriteria(ctx, criteriaID int64, ...) error
 
 // RemoveCriteria deletes a criterion and cascades to track_criteria + judge_score rows.
 // Only allowed when hackathon status is Draft or Open.
+// Cascade deletion wrapped in db.WithTx for atomicity.
 func RemoveCriteria(ctx, criteriaID int64) error
 
 // SetTrackCriteriaOverride sets enabled/weight for a specific track+criteria pair.
+// Validation: enabled criteria must have weight > 0.
 func SetTrackCriteriaOverride(ctx, trackID, criteriaID int64, enabled bool, weight float64) error
 
 // GetEffectiveRubric returns the effective criteria list for a track:
 // joins judge_criteria with track_criteria, filters enabled=true,
-// returns with track-level weights.
+// resolves weight (track override if >0, otherwise criteria default).
 func GetEffectiveRubric(ctx, trackID int64) ([]*EffectiveCriteria, error)
 ```
 
-`EffectiveCriteria` is a view struct:
-
-```go
-type EffectiveCriteria struct {
-    CriteriaID  int64
-    Name        string
-    Description string
-    MaxScore    float64
-    Weight      float64  // track-level weight (or default if 0)
-    SortOrder   int
-}
-```
+**Weight semantics:** Weights are relative (need not sum to 100). The scoring formula normalizes by dividing by `sum(all_enabled_weights)`. Validation: enabled criteria must have weight > 0.
 
 Auto-seed trigger points:
 - `CreateTrackWithRepo()` — seed track_criteria for all existing hackathon criteria
@@ -207,6 +254,7 @@ type CriteriaScore struct {
 // Validates: hackathon in Judging status, judge assigned to submission's track,
 // all enabled criteria scored, each score within [0, maxScore].
 // Upsert semantics: creates new or updates existing score records.
+// The entire upsert loop is wrapped in db.WithTx for atomicity.
 func SubmitScores(ctx, judgeID, submissionID int64, scores []CriteriaScore) error
 ```
 
@@ -217,57 +265,81 @@ Validation steps:
 4. Load effective rubric for track via `GetEffectiveRubric(ctx, trackID)`
 5. Verify all enabled criteria are present in `scores` (no partial submissions)
 6. Verify each score is within [0, criterion.MaxScore]
-7. Upsert score records (create or update per CriteriaID)
+7. Within `db.WithTx`: upsert score records (create or update per CriteriaID)
 8. Publish `ActionHackathonScored` feed event
 
-#### CalculateRanks (rewrite)
+#### CalculateRanks (rewrite) — split into compute + persist
 
 ```go
 // CalculateRanks computes weighted average scores and assigns ranks per track.
+// Pure computation — does NOT persist to database.
 func CalculateRanks(ctx, hackathonID int64) (map[int64][]RankedSubmission, error)
+
+// PersistRanks writes computed rankings to the hackathon_submission table.
+func PersistRanks(ctx, rankings map[int64][]RankedSubmission) error
 ```
 
-Per-track logic:
+Per-track logic in `CalculateRanks`:
 1. For each track: get effective rubric (criteria + weights)
 2. For each submission in that track:
    a. Get all judge scores grouped by criteria
    b. For each criterion: average the scores across all judges
-   c. Compute weighted total: `sum(criterion_avg * criterion_weight) / sum(all_weights)`
+   c. Compute weighted total: `sum(criterion_avg * criterion_weight) / sum(all_enabled_weights)`
 3. Sort submissions by weighted total descending
 4. Assign ranks (1-based, within track)
-5. Return `map[trackID][]RankedSubmission` for preview display
-6. Optionally persist via `UpdateSubmissionRanks`
+5. Return `map[trackID][]RankedSubmission`
 
 ```go
 type RankedSubmission struct {
-    SubmissionID int64
-    Title        string
-    UserID       int64
-    TrackID      int64
-    WeightedTotal float64
+    SubmissionID   int64
+    Title          string
+    UserID         int64
+    TrackID        int64
+    WeightedTotal  float64
     CriteriaScores map[int64]float64 // criteriaID → average score
-    Rank         int
+    Rank           int
 }
 ```
 
 ### Modified: `services/hackforger/hackathon.go`
 
-#### Two-Step Finalize
+#### Two-Step Finalize (replaces existing FinalizeHackathon)
+
+The existing `FinalizeHackathon` function is **replaced** by the two-step flow. The existing repo-tagging (`tagTrackRepos`) and release-creation (`createTrackReleases`) behavior is preserved in `ConfirmFinalize`.
 
 ```go
 // PreviewFinalize calculates rankings for all tracks without changing status.
+// Calls CalculateRanks (compute only, no persist).
 // Idempotent — organizer can call multiple times to see updated results.
 func PreviewFinalize(ctx, hackathonID int64) (map[int64][]RankedSubmission, error)
 
-// ConfirmFinalize locks status to Finished, persists final ranks,
-// publishes ActionHackathonFinalized feed event with results summary.
-// Only callable from Judging status after PreviewFinalize has been viewed.
-func ConfirmFinalize(ctx, hackathonID int64) error
+// ConfirmFinalize replaces the old FinalizeHackathon. Steps:
+// 1. Verify hackathon status == Judging
+// 2. Tag track repos with "submission-deadline" (existing tagTrackRepos behavior)
+// 3. Call CalculateRanks + PersistRanks (compute + persist)
+// 4. Update status to Finished
+// 5. Create v1-results releases on track repos (existing createTrackReleases behavior)
+// 6. Publish ActionHackathonFinalized feed event with results summary
+func ConfirmFinalize(ctx, doerID int64, h *hackforger_model.Hackathon) error
 ```
 
-### Typed Errors (replace fmt.Errorf in service layer)
+The existing `/manage/finalize` POST route is **replaced** by:
+- `GET /manage/finalize-preview` → `PreviewFinalize`
+- `POST /manage/finalize-confirm` → `ConfirmFinalize`
+
+#### StartJudging validation
+
+Add check in `StartJudging`: require at least 1 criterion defined for the hackathon. If no criteria exist, return `ErrNoCriteria{HackathonID}`. This prevents entering judging phase with nothing to score.
+
+### Typed Errors — package placement
+
+**In `models/hackforger/`** (data existence/state checks):
 
 ```go
+type ErrCriteriaNotExist struct {
+    ID int64
+}
+
 type ErrInvalidHackathonPhase struct {
     HackathonID int64
     Current     HackathonStatus
@@ -280,6 +352,14 @@ type ErrNotJudge struct {
     TrackID     int64
 }
 
+type ErrNoCriteria struct {
+    HackathonID int64
+}
+```
+
+**In `services/hackforger/`** (business validation):
+
+```go
 type ErrScoreOutOfRange struct {
     CriteriaID int64
     Score      float64
@@ -289,13 +369,28 @@ type ErrScoreOutOfRange struct {
 type ErrIncompleteRubric struct {
     Missing []int64 // criteria IDs not scored
 }
-
-type ErrCriteriaNotExist struct {
-    ID int64
-}
 ```
 
-Each has `IsErr*()` check function and `Unwrap()` returning appropriate `util.Err*`.
+Each has `IsErr*()` check function and `Unwrap()` returning appropriate `util.Err*`. Web handlers use the correct package prefix:
+
+```go
+if err := hackforger_service.SubmitScores(ctx, ...); err != nil {
+    switch {
+    case hackforger_model.IsErrNotJudge(err):
+        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.not_judge"))
+    case hackforger_service.IsErrIncompleteRubric(err):
+        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.incomplete_rubric"))
+    case hackforger_service.IsErrScoreOutOfRange(err):
+        e := err.(hackforger_service.ErrScoreOutOfRange)
+        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.score_out_of_range", fmt.Sprintf("%.0f", e.MaxScore)))
+    default:
+        ctx.Flash.Error("Internal error")
+        log.Error("SubmitScores: %v", err)
+    }
+    ctx.Redirect(...)
+    return
+}
+```
 
 ## Web Routes
 
@@ -311,6 +406,13 @@ POST /hackathon/{slug}/manage/finalize-confirm       — confirm finalize
 POST /hackathon/{slug}/judge/{sid}/scores            — submit all criteria scores (replaces /score)
 ```
 
+### Removed Routes
+
+```
+POST /hackathon/{slug}/manage/finalize   — replaced by finalize-preview + finalize-confirm
+POST /hackathon/{slug}/judge/{sid}/score — replaced by /scores (multi-criteria)
+```
+
 ### Modified Routes
 
 ```
@@ -324,7 +426,10 @@ POST /hackathon/{slug}/manage/judges/{uid}/remove — now accepts track_id
 1. Check `IsJudgeForAnyTrack(ctx, hackathon.ID, ctx.Doer.ID)` — redirect with error if not
 2. Load tracks where user is judge via `ListJudges` filtered by userID
 3. For each track: load submissions + effective rubric + judge's existing scores
-4. Pass all data to template (or Vue mount point)
+4. JSON-encode data into `data-*` attributes for Vue mount point
+
+**JudgeScorePost** → **JudgeScoresPost** — parse JSON body:
+The Vue component sends JSON via `POST` from `modules/fetch.js`. The web handler must parse JSON from the request body using `json.NewDecoder(ctx.Req.Body)`, not `ctx.FormString`. This matches how BountyPanel.vue works — it uses `POST()` from `fetch.js` which sends `Content-Type: application/json`.
 
 **ManageHackathon** — add criteria and track criteria data to template context:
 - `ctx.Data["Criteria"]` — all hackathon criteria
@@ -340,6 +445,7 @@ POST /hackathon/{slug}/manage/judges/{uid}/remove — now accepts track_id
 - Load all tracks
 - Group submissions by track
 - Pass effective criteria per track for score breakdown columns
+- **Criteria breakdown columns only visible when hackathon status is Finished** (prevents bias during judging)
 
 ## API Changes
 
@@ -360,10 +466,14 @@ POST   /hackathons/{id}/finalize-confirm                   — confirm finalize
 
 ```
 POST   /hackathons/{id}/judges                    — body now requires track_id
-DELETE /hackathons/{id}/judges/{uid}              — body/query now requires track_id
+DELETE /hackathons/{id}/judges/{uid}              — query now requires track_id
 POST   /hackathons/{id}/submissions/{sid}/score   — body changes to scores[] array
 GET    /hackathons/{id}/leaderboard               — response grouped by track, includes criteria breakdown
 ```
+
+### Backward Compatibility: old SubmitScore endpoint
+
+The old `POST /hackathons/{id}/submissions/{sid}/score` with `{"score": N, "comment": "..."}` body is **removed**. All callers must use the new multi-criteria format with `scores[]` array. This is pre-release software with no external API consumers, so breaking the old format is acceptable.
 
 ## Frontend
 
@@ -386,10 +496,11 @@ Interactive Vue component (Options API) for the judge scoring interface.
 - Pre-fill existing scores for editing
 - Progress bar: "X of Y submissions scored" per track
 - Submit button per submission → POST to `/hackathon/{slug}/judge/{sid}/scores`
-- Success/error flash messages
+- Uses `POST` from `modules/fetch.js` which sends JSON body
+- Success/error handling via response status
 - Visual indicator for completed vs pending submissions
 
-**POST format:**
+**POST format (JSON body via fetch.js):**
 ```json
 {
   "scores": [
@@ -441,21 +552,23 @@ Add three new sections:
    - Table of criteria with name, description, maxScore, weight, sortOrder
    - Add/edit/delete forms
    - Per-track criteria config: table showing each track's enabled/weight overrides
+   - **Warning message** if entering Judging with no criteria defined
 
 2. **Judge Assignment** (enhanced):
    - Show judges grouped by track with track name
    - Add judge form: username text input + track dropdown (replaces raw user_id)
    - Remove button per judge
 
-3. **Finalize Preview** (visible in Judging status):
-   - "Preview Results" button → loads ranking preview
+3. **Finalize Preview** (visible in Judging status, replaces old finalize button):
+   - "Preview Results" button → loads ranking preview via GET
    - Per-track ranking tables with criteria score breakdown
    - "Confirm & Finalize" button with confirmation dialog
 
 ### `hackathon/leaderboard.tmpl` — enhance
 
 - Tab navigation per track
-- Table columns: Rank, Team/Project, per-criteria average scores, Weighted Total
+- Table columns: Rank, Team/Project, Weighted Total
+- Per-criteria average score columns: **only visible when hackathon status is Finished**
 - Highlight top 3 with medal styling
 
 ### `hackathon/view.tmpl` — minor
@@ -473,12 +586,13 @@ hackathon.manage.criteria.add = Add Criterion
 hackathon.manage.criteria.name = Criterion Name
 hackathon.manage.criteria.description = Description
 hackathon.manage.criteria.max_score = Max Score
-hackathon.manage.criteria.weight = Weight (%)
+hackathon.manage.criteria.weight = Weight
 hackathon.manage.criteria.sort_order = Display Order
 hackathon.manage.criteria.edit = Edit
 hackathon.manage.criteria.delete = Delete
 hackathon.manage.criteria.delete_confirm = Are you sure you want to delete this criterion?
 hackathon.manage.criteria.empty = No scoring criteria defined yet.
+hackathon.manage.criteria.warning_no_criteria = Warning: No scoring criteria defined. Add criteria before starting judging.
 hackathon.manage.track_criteria = Track Scoring Overrides
 hackathon.manage.track_criteria.enabled = Enabled
 hackathon.manage.track_criteria.weight = Weight
@@ -505,6 +619,7 @@ hackathon.error.not_judge = You are not assigned as a judge for this track.
 hackathon.error.incomplete_rubric = Please score all criteria before submitting.
 hackathon.error.score_out_of_range = Score must be between 0 and %s.
 hackathon.error.criteria_locked = Scoring criteria cannot be modified after judging has started.
+hackathon.error.no_criteria = Please define at least one scoring criterion before starting judging.
 ```
 
 ## Feed Events
@@ -512,49 +627,38 @@ hackathon.error.criteria_locked = Scoring criteria cannot be modified after judg
 - `ActionHackathonScored` (existing, type 33) — published per submission when judge submits scores. Content extra: `{"submission_id": N, "track_id": N}`.
 - `ActionHackathonFinalized` (existing, type 51) — published on ConfirmFinalize. Content extra: `{"tracks": [{"track_id": N, "winner_submission_id": N, "winner_user_id": N}]}`.
 
-## Error Handling
-
-All service functions return typed errors. Web handlers check error type and use `ctx.Tr()`:
-
-```go
-// Example pattern in web handler:
-if err := hackforger_service.SubmitScores(ctx, ...); err != nil {
-    switch {
-    case hackforger_model.IsErrNotJudge(err):
-        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.not_judge"))
-    case hackforger_model.IsErrIncompleteRubric(err):
-        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.incomplete_rubric"))
-    case hackforger_model.IsErrScoreOutOfRange(err):
-        e := err.(hackforger_model.ErrScoreOutOfRange)
-        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.score_out_of_range", fmt.Sprintf("%.0f", e.MaxScore)))
-    default:
-        ctx.Flash.Error("Internal error")
-        log.Error("SubmitScores: %v", err)
-    }
-    ctx.Redirect(...)
-    return
-}
-```
-
 ## Migration Notes
 
 ### Schema Migration
 
-The `hackathon_judge` table adds a `TrackID` column. Existing rows (if any from testing) have `TrackID=0` which is invalid. Since this is pre-release, a simple approach works:
-- XORM auto-migration adds the columns
-- Existing test data with `TrackID=0` is treated as orphaned (ignored in queries that filter by track)
-- No formal migration file needed (XORM handles `Sync2` on startup)
+The `hackathon_judge` table adds a `TrackID` column. The `hackathon_judge_score` table adds a `CriteriaID` column and changes its UNIQUE constraint. Since this is pre-release:
+- XORM auto-migration (`Sync2`) adds the new columns
+- Existing test data with `TrackID=0` or `CriteriaID=0` is treated as orphaned (ignored in queries that filter by track/criteria)
+- No formal migration file needed
 
-### Backward Compatibility
+### Breaking Changes (pre-release, acceptable)
 
-The old single-score `SubmitScore` API endpoint continues to work for one-off scoring (maps to the first criteria), but the primary flow is the new multi-criteria `SubmitScores`. The old endpoint should be deprecated but not removed yet.
+- `SubmitScore` API endpoint replaced by `SubmitScores` (multi-criteria array)
+- `AddJudge` now requires `track_id`
+- `/manage/finalize` route replaced by `/manage/finalize-preview` + `/manage/finalize-confirm`
+- `FinalizeHackathon` service function replaced by `PreviewFinalize` + `ConfirmFinalize`
 
 ## Testing Strategy
 
 ### Unit Tests (Go)
 - `models/hackforger/`: CRUD for criteria, track_criteria, modified judge/score models
-- `services/hackforger/`: SubmitScores validation, CalculateRanks correctness, PreviewFinalize/ConfirmFinalize flow
+- `services/hackforger/`: SubmitScores validation, CalculateRanks correctness, PreviewFinalize/ConfirmFinalize flow, weight normalization edge cases
 
 ### E2E Manual Testing
-- Full flow: create hackathon → add criteria → create tracks → configure track criteria → add judges per track → register → submit → judge scores all criteria → preview finalize → confirm finalize → verify leaderboard
-- Edge cases: judge not assigned to track (blocked), partial rubric submission (blocked), criteria modification after judging started (blocked)
+
+See `docs/tests/e2e/phase2-judge-e2e-prompt.md` for the full E2E test prompt and report template.
+
+Test flow: create hackathon → add criteria → create tracks → configure track criteria weights → add judges per track → register → submit → judge scores all criteria → preview finalize → confirm finalize → verify leaderboard
+
+Edge cases:
+- Judge not assigned to track → blocked with error
+- Partial rubric submission (missing criteria) → blocked with error
+- Criteria modification after judging started → blocked with error
+- Start judging with no criteria → blocked with error
+- Track with all criteria disabled → excluded from scoring
+- Weight=0 on enabled criteria → validation error
