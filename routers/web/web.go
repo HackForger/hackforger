@@ -921,6 +921,14 @@ func registerRoutes(m *web.Route) {
 			m.Post("/orders/{oid}/cancel", hackforger_web.AdminCreditOrdersCancel)
 		})
 		// ***** END: HackForger Admin Credits *****
+
+		// ***** START: HackForger Admin Reputation *****
+		m.Group("/hackforger/reputation", func() {
+			m.Get("", hackforger_web.AdminReputation)
+			m.Post("", hackforger_web.AdminReputationPost)
+			m.Post("/recalc", hackforger_web.AdminReputationRecalc)
+		})
+		// ***** END: HackForger Admin Reputation *****
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
