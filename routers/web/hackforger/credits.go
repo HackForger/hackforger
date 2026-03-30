@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
@@ -17,12 +18,13 @@ import (
 )
 
 const (
-	tplCreditsOverview    base.TplName = "hackforger/credits/overview"
-	tplCreditsRedeem      base.TplName = "hackforger/credits/redeem"
-	tplCreditsOrders      base.TplName = "hackforger/credits/orders"
-	tplAdminCredits       base.TplName = "hackforger/credits/admin/credits"
-	tplAdminRedeemOptions base.TplName = "hackforger/credits/admin/options"
-	tplAdminCreditOrders  base.TplName = "hackforger/credits/admin/orders"
+	tplCreditsOverview       base.TplName = "hackforger/credits/overview"
+	tplCreditsRedeem         base.TplName = "hackforger/credits/redeem"
+	tplCreditsOrders         base.TplName = "hackforger/credits/orders"
+	tplAdminCredits          base.TplName = "hackforger/credits/admin/credits"
+	tplAdminRedeemOptions    base.TplName = "hackforger/credits/admin/options"
+	tplAdminCreditOrders     base.TplName = "hackforger/credits/admin/orders"
+	tplAdminRedeemOptionKeys base.TplName = "hackforger/credits/admin/keys"
 )
 
 // CreditsOverview renders the user's credits overview page.
@@ -311,6 +313,105 @@ func AdminCreditOrdersCancel(ctx *context.Context) {
 		ctx.Flash.Error(fmt.Sprintf("Failed to cancel order: %v", err))
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.order_cancelled"))
+	}
+	ctx.Redirect("/-/admin/credits/orders")
+}
+
+// AdminRedeemOptionKeys renders the key pool management page for an option.
+func AdminRedeemOptionKeys(ctx *context.Context) {
+	optionID := ctx.ParamsInt64(":id")
+	option, err := hackforger_model.GetRedeemOptionByID(ctx, optionID)
+	if err != nil {
+		if hackforger_model.IsErrRedeemOptionNotExist(err) {
+			ctx.NotFound("AdminRedeemOptionKeys", err)
+			return
+		}
+		ctx.ServerError("GetRedeemOptionByID", err)
+		return
+	}
+
+	keys, err := hackforger_model.ListKeysByOption(ctx, optionID)
+	if err != nil {
+		ctx.ServerError("ListKeysByOption", err)
+		return
+	}
+
+	total, available, err := hackforger_service.GetKeyPoolStatus(ctx, optionID)
+	if err != nil {
+		ctx.ServerError("GetKeyPoolStatus", err)
+		return
+	}
+
+	ctx.Data["Title"] = ctx.Tr("hackforger.credits.admin.keys.title")
+	ctx.Data["PageIsAdminCredits"] = true
+	ctx.Data["Option"] = option
+	ctx.Data["Keys"] = keys
+	ctx.Data["KeysTotal"] = total
+	ctx.Data["KeysAvailable"] = available
+	ctx.HTML(http.StatusOK, tplAdminRedeemOptionKeys)
+}
+
+// AdminRedeemOptionKeysAdd handles bulk-adding keys to a redeem option's pool.
+func AdminRedeemOptionKeysAdd(ctx *context.Context) {
+	optionID := ctx.ParamsInt64(":id")
+	rawKeys := ctx.Req.FormValue("keys")
+
+	var keys []string
+	for _, line := range strings.Split(rawKeys, "\n") {
+		k := strings.TrimSpace(line)
+		if k != "" {
+			keys = append(keys, k)
+		}
+	}
+
+	if len(keys) == 0 {
+		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.keys.empty"))
+		ctx.Redirect(fmt.Sprintf("/-/admin/credits/options/%d/keys", optionID))
+		return
+	}
+
+	if err := hackforger_service.AddKeysToOption(ctx, ctx.Doer, optionID, keys); err != nil {
+		ctx.Flash.Error(fmt.Sprintf("Failed to add keys: %v", err))
+	} else {
+		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.keys.added", len(keys)))
+	}
+	ctx.Redirect(fmt.Sprintf("/-/admin/credits/options/%d/keys", optionID))
+}
+
+// AdminCreditOrdersBatchFulfill handles batch fulfillment of multiple pending orders.
+func AdminCreditOrdersBatchFulfill(ctx *context.Context) {
+	if err := ctx.Req.ParseForm(); err != nil {
+		ctx.ServerError("ParseForm", err)
+		return
+	}
+
+	orderIDStrs := ctx.Req.Form["order_ids"]
+	if len(orderIDStrs) == 0 {
+		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.batch.no_selection"))
+		ctx.Redirect("/-/admin/credits/orders")
+		return
+	}
+
+	var orderIDs []int64
+	for _, s := range orderIDStrs {
+		id, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			continue
+		}
+		orderIDs = append(orderIDs, id)
+	}
+
+	note := ctx.Req.FormValue("note")
+	deliveryType := ctx.Req.FormValue("delivery_type")
+	deliveryValue := ctx.Req.FormValue("delivery_value")
+
+	success, failed, err := hackforger_service.BatchFulfillOrders(ctx, ctx.Doer, orderIDs, note, deliveryType, deliveryValue)
+	if err != nil {
+		ctx.Flash.Error(fmt.Sprintf("Batch fulfill error: %v", err))
+	} else if len(failed) > 0 {
+		ctx.Flash.Warning(ctx.Tr("hackforger.credits.admin.batch.partial", success, len(failed)))
+	} else {
+		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.batch.success", success))
 	}
 	ctx.Redirect("/-/admin/credits/orders")
 }
