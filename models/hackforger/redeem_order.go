@@ -4,8 +4,12 @@
 package hackforger
 
 import (
+	"context"
+	"fmt"
+
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
 
 // OrderStatus represents the status of a redeem order.
@@ -33,4 +37,50 @@ func init() {
 	db.RegisterModel(new(RedeemOrder))
 }
 
+// ErrRedeemOrderNotExist represents a "RedeemOrderNotExist" kind of error.
+type ErrRedeemOrderNotExist struct {
+	ID int64
+}
 
+// IsErrRedeemOrderNotExist checks if an error is a ErrRedeemOrderNotExist.
+func IsErrRedeemOrderNotExist(err error) bool {
+	_, ok := err.(ErrRedeemOrderNotExist)
+	return ok
+}
+
+func (err ErrRedeemOrderNotExist) Error() string {
+	return fmt.Sprintf("redeem order does not exist [id: %d]", err.ID)
+}
+
+func (err ErrRedeemOrderNotExist) Unwrap() error {
+	return util.ErrNotExist
+}
+
+// GetRedeemOrderByID returns a redeem order by its ID.
+func GetRedeemOrderByID(ctx context.Context, id int64) (*RedeemOrder, error) {
+	order := new(RedeemOrder)
+	has, err := db.GetEngine(ctx).ID(id).Get(order)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrRedeemOrderNotExist{ID: id}
+	}
+	return order, nil
+}
+
+// UpdateRedeemOrder updates an existing redeem order.
+func UpdateRedeemOrder(ctx context.Context, order *RedeemOrder) error {
+	_, err := db.GetEngine(ctx).ID(order.ID).AllCols().Update(order)
+	return err
+}
+
+// ListAllRedeemOrders returns all redeem orders (admin use), paginated.
+func ListAllRedeemOrders(ctx context.Context, opts db.ListOptions) ([]*RedeemOrder, int64, error) {
+	sess := db.GetEngine(ctx)
+	var orders []*RedeemOrder
+	count, err := sess.OrderBy("created_unix DESC").
+		Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).
+		FindAndCount(&orders)
+	return orders, count, err
+}

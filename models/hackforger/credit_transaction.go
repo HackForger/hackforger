@@ -4,8 +4,12 @@
 package hackforger
 
 import (
+	"context"
+
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
+
+	"xorm.io/builder"
 )
 
 // TransactionType represents the type of a credit transaction.
@@ -35,4 +39,21 @@ func init() {
 	db.RegisterModel(new(CreditTransaction))
 }
 
+// ListAllTransactionsOptions holds options for listing credit transactions.
+type ListAllTransactionsOptions struct {
+	db.ListOptions
+	UserID int64
+}
 
+func (opts ListAllTransactionsOptions) ToConds() builder.Cond {
+	cond := builder.NewCond()
+	if opts.UserID > 0 {
+		cond = cond.And(builder.Eq{"user_id": opts.UserID})
+	}
+	return cond
+}
+
+// ListAllTransactions returns credit transactions matching the given options.
+func ListAllTransactions(ctx context.Context, opts ListAllTransactionsOptions) ([]*CreditTransaction, int64, error) {
+	return db.FindAndCount[CreditTransaction](ctx, opts)
+}

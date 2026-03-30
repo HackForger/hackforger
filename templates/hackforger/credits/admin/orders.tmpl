@@ -1,0 +1,62 @@
+{{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin credits orders")}}
+	<div class="admin-setting-content">
+		<h4 class="ui top attached header">
+			{{ctx.Locale.Tr "hackforger.credits.admin.orders"}} ({{.Total}})
+		</h4>
+
+		{{if .Orders}}
+			<table class="ui attached segment striped table">
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.option"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.grant.actions"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Orders}}
+						<tr>
+							<td>{{.ID}}</td>
+							<td>{{.UserID}}</td>
+							<td>{{.OptionID}}</td>
+							<td>{{.Cost}}</td>
+							<td>
+								<span class="ui label {{if eq .Status "pending"}}yellow{{else if eq .Status "fulfilled"}}green{{else if eq .Status "cancelled"}}red{{end}}">
+									{{.Status}}
+								</span>
+							</td>
+							<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
+							<td>
+								{{if eq .Status "pending"}}
+									<div class="tw-flex tw-gap-1">
+										<form action="/-/admin/credits/orders/{{.ID}}/fulfill" method="post" class="tw-inline">
+											<input type="text" name="note" placeholder="{{ctx.Locale.Tr "hackforger.credits.note"}}" class="tw-w-24">
+											<button class="ui mini green button">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill"}}</button>
+										</form>
+										<form action="/-/admin/credits/orders/{{.ID}}/cancel" method="post" class="tw-inline">
+											<button class="ui mini red button">{{ctx.Locale.Tr "cancel"}}</button>
+										</form>
+									</div>
+								{{else}}
+									&mdash;
+								{{end}}
+							</td>
+						</tr>
+					{{end}}
+				</tbody>
+			</table>
+		{{else}}
+			<div class="ui attached segment">
+				<p class="tw-text-center">{{ctx.Locale.Tr "hackforger.credits.no_orders"}}</p>
+			</div>
+		{{end}}
+
+		<div class="tw-mt-4">
+			<a class="ui button" href="/-/admin/credits">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
+		</div>
+	</div>
+{{template "admin/layout_footer" .}}

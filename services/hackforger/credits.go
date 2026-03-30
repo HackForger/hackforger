@@ -5,9 +5,12 @@ package hackforger
 
 import (
 	"context"
+	"fmt"
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/util"
 )
 
 // GetOrCreateCreditAccount returns the credit account for a user,
@@ -56,6 +59,7 @@ func Deposit(ctx context.Context, userID int64, amount int64, reference, note st
 // Redeem deducts credits and creates an order within a transaction.
 func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_model.RedeemOrder, error) {
 	var order *hackforger_model.RedeemOrder
+	var optionName string
 
 	err := db.WithTx(ctx, func(ctx context.Context) error {
 		// Get option
@@ -72,6 +76,8 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 		if option.Stock == 0 {
 			return hackforger_model.ErrOutOfStock{OptionID: optionID}
 		}
+
+		optionName = option.Name
 
 		// Get account
 		acct, err := GetOrCreateCreditAccount(ctx, userID)
@@ -124,8 +130,24 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 		_, err = db.GetEngine(ctx).Insert(order)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return order, err
+	// Publish feed event for the redemption
+	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
+		ActUserID: userID,
+		OpType:    hackforger_model.ActionCreditsRedeemed,
+		Content: &hackforger_model.HackforgerActionContent{
+			EntityType: "credits",
+			EntityName: optionName,
+		},
+		AudienceType: AudienceFollowers,
+	}); err != nil {
+		return order, err
+	}
+
+	return order, nil
 }
 
 // ListTransactions returns credit transactions for a user.
@@ -153,4 +175,171 @@ func ListOrders(ctx context.Context, userID int64, opts db.ListOptions) ([]*hack
 		Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).
 		FindAndCount(&orders)
 	return orders, count, err
+}
+
+// ErrNotAdmin is returned when a non-admin user attempts an admin operation.
+type ErrNotAdmin struct {
+	UserID int64
+}
+
+func (err ErrNotAdmin) Error() string {
+	return fmt.Sprintf("user is not admin [user_id: %d]", err.UserID)
+}
+
+func (err ErrNotAdmin) Unwrap() error {
+	return util.ErrPermissionDenied
+}
+
+// IsErrNotAdmin checks if an error is ErrNotAdmin.
+func IsErrNotAdmin(err error) bool {
+	_, ok := err.(ErrNotAdmin)
+	return ok
+}
+
+// ErrOrderNotPending is returned when an order operation requires Pending status.
+type ErrOrderNotPending struct {
+	OrderID int64
+	Status  hackforger_model.OrderStatus
+}
+
+func (err ErrOrderNotPending) Error() string {
+	return fmt.Sprintf("order is not pending [order_id: %d, status: %s]", err.OrderID, err.Status)
+}
+
+func (err ErrOrderNotPending) Unwrap() error {
+	return util.ErrInvalidArgument
+}
+
+// IsErrOrderNotPending checks if an error is ErrOrderNotPending.
+func IsErrOrderNotPending(err error) bool {
+	_, ok := err.(ErrOrderNotPending)
+	return ok
+}
+
+// AdminDeposit adds credits to a user's account. Only site admins can call this.
+func AdminDeposit(ctx context.Context, admin *user_model.User, userID, amount int64, ref, note string) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+	return Deposit(ctx, userID, amount, ref, note)
+}
+
+// AdminDeduct deducts credits from a user's account. Only site admins can call this.
+func AdminDeduct(ctx context.Context, admin *user_model.User, userID, amount int64, ref, note string) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		acct, err := GetOrCreateCreditAccount(ctx, userID)
+		if err != nil {
+			return err
+		}
+
+		if acct.Balance < amount {
+			return hackforger_model.ErrInsufficientCredits{
+				UserID:    userID,
+				Balance:   acct.Balance,
+				Requested: amount,
+			}
+		}
+
+		acct.Balance -= amount
+		if _, err := db.GetEngine(ctx).ID(acct.ID).Cols("balance").Update(acct); err != nil {
+			return err
+		}
+
+		tx := &hackforger_model.CreditTransaction{
+			UserID:    userID,
+			Type:      hackforger_model.TransactionTypeWithdraw,
+			Amount:    -amount,
+			Balance:   acct.Balance,
+			Reference: ref,
+			Note:      note,
+		}
+		_, err = db.GetEngine(ctx).Insert(tx)
+		return err
+	})
+}
+
+// FulfillOrder marks a pending order as fulfilled. Only site admins can call this.
+func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, note string) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+
+	order, err := hackforger_model.GetRedeemOrderByID(ctx, orderID)
+	if err != nil {
+		return err
+	}
+
+	if order.Status != hackforger_model.OrderStatusPending {
+		return ErrOrderNotPending{OrderID: orderID, Status: order.Status}
+	}
+
+	order.Status = hackforger_model.OrderStatusFulfilled
+	order.FulfillNote = note
+	return hackforger_model.UpdateRedeemOrder(ctx, order)
+}
+
+// CancelOrder cancels a pending order and refunds the credits. Only site admins can call this.
+func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		order, err := hackforger_model.GetRedeemOrderByID(ctx, orderID)
+		if err != nil {
+			return err
+		}
+
+		if order.Status != hackforger_model.OrderStatusPending {
+			return ErrOrderNotPending{OrderID: orderID, Status: order.Status}
+		}
+
+		// Cancel the order
+		order.Status = hackforger_model.OrderStatusCancelled
+		if err := hackforger_model.UpdateRedeemOrder(ctx, order); err != nil {
+			return err
+		}
+
+		// Refund balance
+		acct, err := GetOrCreateCreditAccount(ctx, order.UserID)
+		if err != nil {
+			return err
+		}
+
+		acct.Balance += order.Cost
+		if _, err := db.GetEngine(ctx).ID(acct.ID).Cols("balance").Update(acct); err != nil {
+			return err
+		}
+
+		// Record refund transaction
+		tx := &hackforger_model.CreditTransaction{
+			UserID:    order.UserID,
+			Type:      hackforger_model.TransactionTypeRefund,
+			Amount:    order.Cost,
+			Balance:   acct.Balance,
+			Reference: fmt.Sprintf("order_%d_refund", orderID),
+			Note:      "Order cancelled and refunded",
+		}
+		_, err = db.GetEngine(ctx).Insert(tx)
+		return err
+	})
+}
+
+// CreateRedeemOptionAsAdmin creates a new redeem option. Only site admins can call this.
+func CreateRedeemOptionAsAdmin(ctx context.Context, admin *user_model.User, opt *hackforger_model.RedeemOption) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+	return hackforger_model.CreateRedeemOption(ctx, opt)
+}
+
+// UpdateRedeemOptionAsAdmin updates an existing redeem option. Only site admins can call this.
+func UpdateRedeemOptionAsAdmin(ctx context.Context, admin *user_model.User, opt *hackforger_model.RedeemOption) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+	return hackforger_model.UpdateRedeemOption(ctx, opt)
 }

@@ -1797,9 +1797,55 @@ func Routes() *web.Route {
 			m.Get("/bounties", hackforger_api.ListAllBounties)
 			m.Get("/bounties/stats", hackforger_api.BountyStats)
 			m.Get("/bounties/leaderboard", hackforger_api.HunterLeaderboard)
-			m.Get("/grants/rounds", hackforger_api.ListGrantRounds)
-			m.Get("/credits/balance", hackforger_api.GetBalance)
 			m.Get("/feed", hackforger_api.GetFeed)
+
+			// Grant Round routes
+			m.Group("/grant-rounds", func() {
+				m.Combo("").
+					Get(hackforger_api.ListGrantRounds).
+					Post(reqToken(), bind(hackforger_api.CreateGrantRoundForm{}), hackforger_api.CreateGrantRound)
+				m.Group("/{id}", func() {
+					m.Get("", hackforger_api.GetGrantRound)
+					m.Put("", reqToken(), bind(hackforger_api.UpdateGrantRoundForm{}), hackforger_api.UpdateGrantRound)
+					m.Delete("", reqToken(), hackforger_api.DeleteGrantRound)
+					m.Post("/open", reqToken(), hackforger_api.OpenRound)
+					m.Post("/close", reqToken(), hackforger_api.CloseRound)
+					m.Post("/finalize", reqToken(), hackforger_api.FinalizeRound)
+					m.Post("/distribute", reqToken(), hackforger_api.DistributeRound)
+					m.Post("/cancel", reqToken(), hackforger_api.CancelRound)
+					m.Get("/export", hackforger_api.ExportRoundCSV)
+					m.Group("/projects", func() {
+						m.Combo("").
+							Get(hackforger_api.ListGrantProjects).
+							Post(reqToken(), bind(hackforger_api.SubmitProjectForm{}), hackforger_api.SubmitProject)
+						m.Group("/{pid}", func() {
+							m.Get("", hackforger_api.GetGrantProject)
+							m.Put("", reqToken(), bind(hackforger_api.ApproveOrRejectForm{}), hackforger_api.ApproveOrRejectProject)
+							m.Put("/award", reqToken(), bind(hackforger_api.AllocateAwardForm{}), hackforger_api.AllocateAward)
+							m.Post("/distribute", reqToken(), hackforger_api.DistributeProject)
+						})
+					})
+				})
+			})
+
+			// Credits routes
+			m.Group("/credits", func() {
+				m.Get("/balance", reqToken(), hackforger_api.GetBalance)
+				m.Get("/transactions", reqToken(), hackforger_api.ListTransactions)
+				m.Group("/redeem", func() {
+					m.Get("/options", hackforger_api.ListRedeemOptions)
+					m.Post("/options", reqToken(), reqSiteAdmin(), bind(hackforger_api.CreateRedeemOptionForm{}), hackforger_api.CreateRedeemOption)
+					m.Put("/options/{id}", reqToken(), reqSiteAdmin(), bind(hackforger_api.UpdateRedeemOptionForm{}), hackforger_api.UpdateRedeemOption)
+					m.Post("", reqToken(), bind(hackforger_api.RedeemForm{}), hackforger_api.Redeem)
+					m.Get("/orders", reqToken(), hackforger_api.ListRedeemOrders)
+					m.Post("/orders/{oid}/fulfill", reqToken(), reqSiteAdmin(), bind(hackforger_api.FulfillOrderForm{}), hackforger_api.FulfillOrder)
+					m.Post("/orders/{oid}/cancel", reqToken(), reqSiteAdmin(), hackforger_api.CancelOrder)
+				})
+				m.Group("/admin", func() {
+					m.Post("/deposit", bind(hackforger_api.AdminDepositForm{}), hackforger_api.AdminDeposit)
+					m.Post("/deduct", bind(hackforger_api.AdminDeductForm{}), hackforger_api.AdminDeduct)
+				}, reqToken(), reqSiteAdmin())
+			})
 		})
 	}, sudo())
 

@@ -34,6 +34,7 @@ const (
 	ActionGrantRoundOpened      activities_model.ActionType = 54
 	ActionGrantRoundClosed      activities_model.ActionType = 55
 	ActionGrantRoundFinalized   activities_model.ActionType = 56
+	ActionGrantRoundCancelled   activities_model.ActionType = 57
 
 	// Milestone events (60, future)
 	ActionMilestone activities_model.ActionType = 60
@@ -62,7 +63,17 @@ var HackforgerActionTypeName = map[activities_model.ActionType]string{
 	ActionGrantRoundOpened:      "grant_round_opened",
 	ActionGrantRoundClosed:      "grant_round_closed",
 	ActionGrantRoundFinalized:   "grant_round_finalized",
+	ActionGrantRoundCancelled:   "grant_round_cancelled",
 	ActionMilestone:             "milestone",
+}
+
+func init() {
+	// Register HackForger action type names so ActionType.String() returns
+	// meaningful names instead of "action-30" etc. This makes .InActions()
+	// work in templates for HackForger events.
+	for at, name := range HackforgerActionTypeName {
+		activities_model.RegisterActionTypeName(at, name)
+	}
 }
 
 // IsHackforgerAction returns true if the ActionType is a HackForger event.

@@ -1,0 +1,48 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.credits.orders"}}</h2>
+
+		{{template "base/alert" .}}
+
+		{{if .Orders}}
+			<table class="ui striped table">
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.option"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Orders}}
+						<tr>
+							<td>{{.ID}}</td>
+							<td>{{.OptionID}}</td>
+							<td>{{.Cost}}</td>
+							<td>
+								<span class="ui label {{if eq .Status "pending"}}yellow{{else if eq .Status "fulfilled"}}green{{else if eq .Status "cancelled"}}red{{end}}">
+									{{.Status}}
+								</span>
+							</td>
+							<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
+						</tr>
+					{{end}}
+				</tbody>
+			</table>
+		{{else}}
+			<div class="ui placeholder segment">
+				<div class="ui icon header">
+					{{svg "octicon-package" 48}}
+					<br>
+					{{ctx.Locale.Tr "hackforger.credits.no_orders"}}
+				</div>
+			</div>
+		{{end}}
+
+		<a class="ui button" href="/credits">{{ctx.Locale.Tr "hackforger.credits.back_to_overview"}}</a>
+	</div>
+</div>
+{{template "base/footer" .}}

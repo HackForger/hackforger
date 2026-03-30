@@ -1,1 +1,9 @@
-[]
+-
+  id: 1
+  user_id: 4
+  type: "deposit"
+  amount: 1000
+  balance: 1000
+  reference: "grant_award"
+  note: "Grant award for project"
+  created_unix: 1609459200

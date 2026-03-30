@@ -1,0 +1,92 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>
+			<a href="/grants/{{.Round.Slug}}/manage">{{.Round.Name}}</a>
+			&mdash; {{.Project.Title}}
+		</h2>
+
+		{{template "base/alert" .}}
+
+		<div class="ui segment">
+			<div class="ui list">
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.project.title"}}:</strong> {{.Project.Title}}
+				</div>
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.project.user"}}:</strong> {{.Project.UserID}}
+				</div>
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.status"}}:</strong>
+					<span class="ui label {{if eq .Project.Status 0}}grey{{else if eq .Project.Status 1}}green{{else if eq .Project.Status 2}}red{{else if eq .Project.Status 3}}blue{{end}}">
+						{{if eq .Project.Status 0}}pending{{else if eq .Project.Status 1}}approved{{else if eq .Project.Status 2}}rejected{{else if eq .Project.Status 3}}funded{{end}}
+					</span>
+				</div>
+				{{if .Project.Description}}
+					<div class="item">
+						<strong>{{ctx.Locale.Tr "hackforger.grant.project.description"}}:</strong>
+						<p>{{.Project.Description}}</p>
+					</div>
+				{{end}}
+				{{if gt .Project.RepoID 0}}
+					<div class="item">
+						<strong>{{ctx.Locale.Tr "hackforger.grant.project.repo_id"}}:</strong> {{.Project.RepoID}}
+					</div>
+				{{end}}
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.project.award"}}:</strong>
+					{{.Project.AwardAmount}} + {{.Project.AwardCredits}} {{ctx.Locale.Tr "hackforger.credits"}}
+				</div>
+			</div>
+		</div>
+
+		{{/* Action buttons based on project status */}}
+		{{if eq .Project.Status 0}}
+			<div class="ui segment">
+				<h4>{{ctx.Locale.Tr "hackforger.grant.project.review_actions"}}</h4>
+				<div class="tw-flex tw-gap-2">
+					<form action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/approve" method="post" class="tw-inline">
+						<button class="ui green button">{{ctx.Locale.Tr "hackforger.grant.project.approve"}}</button>
+					</form>
+					<form action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/reject" method="post" class="tw-inline">
+						<button class="ui red button">{{ctx.Locale.Tr "hackforger.grant.project.reject"}}</button>
+					</form>
+				</div>
+			</div>
+		{{end}}
+
+		{{if eq .Project.Status 1}}
+			{{/* Approved - can set award and distribute */}}
+			<div class="ui segment">
+				<h4>{{ctx.Locale.Tr "hackforger.grant.project.set_award"}}</h4>
+				<form class="ui form" action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/award" method="post">
+					<div class="two fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.grant.project.award_amount"}}</label>
+							<input type="number" name="award_amount" step="0.01" min="0" value="{{.Project.AwardAmount}}">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.grant.project.award_credits"}}</label>
+							<input type="number" name="award_credits" min="0" value="{{.Project.AwardCredits}}">
+						</div>
+					</div>
+					<button class="ui primary button">{{ctx.Locale.Tr "hackforger.grant.project.save_award"}}</button>
+				</form>
+			</div>
+
+			{{if eq .Round.Status 3}}
+				<div class="ui segment">
+					<h4>{{ctx.Locale.Tr "hackforger.grant.project.distribute"}}</h4>
+					<form action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/distribute" method="post">
+						<button class="ui blue button">{{ctx.Locale.Tr "hackforger.grant.project.distribute"}}</button>
+					</form>
+				</div>
+			{{end}}
+		{{end}}
+
+		<div class="tw-mt-4">
+			<a class="ui button" href="/grants/{{.Round.Slug}}/manage">{{ctx.Locale.Tr "hackforger.grant.back_to_manage"}}</a>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

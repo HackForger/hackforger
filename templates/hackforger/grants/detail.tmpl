@@ -1,0 +1,80 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>{{.Round.Name}}</h2>
+
+		{{template "base/alert" .}}
+
+		{{/* Status progress bar */}}
+		<div class="ui six steps tw-mb-4">
+			<div class="step{{if eq .Round.Status 0}} active{{end}}{{if gt .Round.Status 0}} completed{{end}}">
+				<div class="content"><div class="title">{{ctx.Locale.Tr "hackforger.grant.round.status.draft"}}</div></div>
+			</div>
+			<div class="step{{if eq .Round.Status 1}} active{{end}}{{if gt .Round.Status 1}} completed{{end}}">
+				<div class="content"><div class="title">{{ctx.Locale.Tr "hackforger.grant.round.status.open"}}</div></div>
+			</div>
+			<div class="step{{if eq .Round.Status 2}} active{{end}}{{if gt .Round.Status 2}} completed{{end}}">
+				<div class="content"><div class="title">{{ctx.Locale.Tr "hackforger.grant.round.status.review"}}</div></div>
+			</div>
+			<div class="step{{if eq .Round.Status 3}} active{{end}}{{if gt .Round.Status 3}} completed{{end}}">
+				<div class="content"><div class="title">{{ctx.Locale.Tr "hackforger.grant.round.status.finalized"}}</div></div>
+			</div>
+			<div class="step{{if eq .Round.Status 4}} active{{end}}">
+				<div class="content"><div class="title">{{ctx.Locale.Tr "hackforger.grant.round.status.distributed"}}</div></div>
+			</div>
+			{{if eq .Round.Status 5}}
+				<div class="step active">
+					<div class="content"><div class="title">{{ctx.Locale.Tr "hackforger.grant.round.status.cancelled"}}</div></div>
+				</div>
+			{{end}}
+		</div>
+
+		<div class="ui segment">
+			<div class="ui list">
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.status"}}:</strong>
+					<span class="ui label">{{.StatusName}}</span>
+				</div>
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.budget"}}:</strong>
+					{{.Round.Budget}} {{.Round.Currency}}
+					({{ctx.Locale.Tr "hackforger.grant.used"}}: {{.UsedAmount}})
+				</div>
+				{{if gt .Round.BudgetCredits 0}}
+					<div class="item">
+						<strong>{{ctx.Locale.Tr "hackforger.grant.round.budget_credits"}}:</strong>
+						{{.Round.BudgetCredits}}
+						({{ctx.Locale.Tr "hackforger.grant.used"}}: {{.UsedCredits}})
+					</div>
+				{{end}}
+				<div class="item">
+					<strong>{{ctx.Locale.Tr "hackforger.grant.projects"}}:</strong>
+					<a href="/grants/{{.Round.Slug}}/projects">{{.ProjectCount}} {{ctx.Locale.Tr "hackforger.grant.projects"}}</a>
+				</div>
+				{{if .Round.Description}}
+					<div class="item">
+						<strong>{{ctx.Locale.Tr "hackforger.grant.round.description"}}:</strong>
+						<p>{{.Round.Description}}</p>
+					</div>
+				{{end}}
+			</div>
+		</div>
+
+		<div class="tw-flex tw-gap-2">
+			{{if eq .Round.Status 1}}
+				<a class="ui primary button" href="/grants/{{.Round.Slug}}/submit">
+					{{ctx.Locale.Tr "hackforger.grant.project.submit"}}
+				</a>
+			{{end}}
+			<a class="ui button" href="/grants/{{.Round.Slug}}/projects">
+				{{ctx.Locale.Tr "hackforger.grant.view_projects"}}
+			</a>
+			{{if .IsOwner}}
+				<a class="ui button" href="/grants/{{.Round.Slug}}/manage">
+					{{ctx.Locale.Tr "hackforger.grant.manage"}}
+				</a>
+			{{end}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

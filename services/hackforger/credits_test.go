@@ -1,0 +1,111 @@
+// Copyright 2026 The HackForger Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package hackforger_test
+
+import (
+	"testing"
+
+	"forgejo.org/models/db"
+	hackforger_model "forgejo.org/models/hackforger"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
+	hackforger_service "forgejo.org/services/hackforger"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestAdminDeposit(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	require.True(t, admin.IsAdmin)
+
+	// User 4 starts with balance 1000
+	acctBefore, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1000), acctBefore.Balance)
+
+	err = hackforger_service.AdminDeposit(db.DefaultContext, admin, 4, 500, "admin_grant", "Admin deposit test")
+	require.NoError(t, err)
+
+	acctAfter, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1500), acctAfter.Balance)
+}
+
+func TestAdminDeposit_NotAdmin(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	nonAdmin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	require.False(t, nonAdmin.IsAdmin)
+
+	err := hackforger_service.AdminDeposit(db.DefaultContext, nonAdmin, 4, 500, "ref", "note")
+	require.Error(t, err)
+	assert.True(t, hackforger_service.IsErrNotAdmin(err))
+}
+
+func TestAdminDeduct(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// User 4 starts with balance 1000, deduct 200
+	err := hackforger_service.AdminDeduct(db.DefaultContext, admin, 4, 200, "admin_deduct", "Deduction test")
+	require.NoError(t, err)
+
+	acctAfter, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(800), acctAfter.Balance)
+}
+
+func TestAdminDeduct_InsufficientBalance(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// User 4 has 1000, deducting 2000 should fail
+	err := hackforger_service.AdminDeduct(db.DefaultContext, admin, 4, 2000, "ref", "note")
+	require.Error(t, err)
+	assert.True(t, hackforger_model.IsErrInsufficientCredits(err))
+}
+
+func TestFulfillOrder(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// Order 1 is Pending
+	err := hackforger_service.FulfillOrder(db.DefaultContext, admin, 1, "Fulfilled by admin")
+	require.NoError(t, err)
+
+	order, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 1)
+	require.NoError(t, err)
+	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order.Status)
+	assert.Equal(t, "Fulfilled by admin", order.FulfillNote)
+}
+
+func TestCancelOrder_RefundsBalance(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// User 4 balance=1000, order 1 cost=500
+	acctBefore, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1000), acctBefore.Balance)
+
+	err = hackforger_service.CancelOrder(db.DefaultContext, admin, 1)
+	require.NoError(t, err)
+
+	// Balance should be 1000 + 500 = 1500
+	acctAfter, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1500), acctAfter.Balance)
+
+	// Order should be cancelled
+	order, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 1)
+	require.NoError(t, err)
+	assert.Equal(t, hackforger_model.OrderStatusCancelled, order.Status)
+}
