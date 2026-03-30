@@ -89,7 +89,7 @@ Add `distributeHackathonCredits(ctx, hackathonID)` called from `FinalizeHackatho
 func distributeHackathonCredits(ctx, hackathonID):
   tracks = ListTracksByHackathon(ctx, hackathonID)
   for each track where PrizeCredits > 0:
-    submissions = ListSubmissions(ctx, {TrackID: track.ID})
+    submissions = ListSubmissions(ctx, {TrackID: track.ID, ListAll: true})
     // Sort by TotalScore descending (per-track ranking, independent of global Rank)
     sort submissions by TotalScore DESC, ID ASC
     // Assign per-track rank: 1, 2, 3, ...
@@ -133,6 +133,8 @@ func distributeHackathonCredits(ctx, hackathonID):
 - No scored submissions in track (`TotalScore == 0`): skip, no deposits
 - Tiered mode with fewer submissions than ratio entries: skip missing ranks, unclaimed portion is NOT redistributed (organizer set the rules; see example below)
 - Integer division remainder: always assigned to rank 1 (highest-ranked) in both tiered and equal modes for consistency
+
+**Atomicity:** Each track's deposits are independent transactions (the existing `Deposit()` wraps each call in `db.WithTx`). If track 1 deposits succeed but track 2 fails, partial credits remain awarded. This is acceptable — the failure window is small, and wrapping all deposits in a single mega-transaction would be complex. On failure, the error is logged and returned so the admin can investigate.
 
 **Tiered with fewer submissions example:**
 Track has 1000 credits, ratios `[{1: 50%}, {2: 30%}, {3: 20%}]`, but only 2 submissions:
@@ -219,10 +221,15 @@ existing: deduct balance -> deduct stock -> create transaction -> create order (
 after creating order, add:
   if option.FulfillMode == "auto":
     // Two-step claim for SQLite compatibility (UPDATE...ORDER BY...LIMIT
-    // requires SQLITE_ENABLE_UPDATE_DELETE_LIMIT which may not be enabled):
+    // requires SQLITE_ENABLE_UPDATE_DELETE_LIMIT which may not be enabled).
+    // Concurrency note: SQLite uses database-level write locks within
+    // transactions, so this is inherently serialized. For PostgreSQL/MySQL,
+    // use XORM's ForUpdate() on the SELECT session to acquire a row-level
+    // lock and prevent double-claiming under concurrent redeems.
     key = SELECT id, key_value FROM redeem_option_key
           WHERE option_id = option.ID AND is_used = false
           ORDER BY id ASC LIMIT 1
+          [ForUpdate on PostgreSQL/MySQL]
     if no key found:
       return ErrOutOfStock  // triggers full tx rollback
     UPDATE redeem_option_key SET is_used = true, order_id = order.ID WHERE id = key.ID
@@ -391,7 +398,7 @@ All keys go under the `[hackforger]` section in both locale files.
 | `models/hackforger/hackathon_track.go` | Add PrizeDistMode, PrizeDistRatios fields |
 | `models/hackforger/redeem_option.go` | Add FulfillMode field |
 | `models/hackforger/redeem_order.go` | Add DeliveryType, DeliveryValue fields |
-| `models/hackforger/action_types.go` | Add ActionOrderFulfilled (43), ActionOrderCancelled (44) |
+| `models/hackforger/action_types.go` | Add ActionOrderFulfilled (58), ActionOrderCancelled (59) |
 | `models/hackforger/init.go` | Register RedeemOptionKey model |
 | `services/hackforger/hackathon.go` | Add distributeHackathonCredits(), call from FinalizeHackathon() |
 | `services/hackforger/credits.go` | Modify Redeem() for auto-fulfill, update FulfillOrder() signature, add BatchFulfillOrders(), notifyOrderStatusChange(), key pool management funcs |
