@@ -1846,6 +1846,13 @@ func Routes() *web.Route {
 					m.Post("/deduct", bind(hackforger_api.AdminDeductForm{}), hackforger_api.AdminDeduct)
 				}, reqToken(), reqSiteAdmin())
 			})
+
+			// Reputation routes
+			m.Group("/reputation", func() {
+				m.Get("/users/{username}", hackforger_api.GetUserReputation)
+				m.Get("/leaderboard", hackforger_api.GetReputationLeaderboard)
+				m.Post("/recalculate/{username}", reqToken(), reqSiteAdmin(), hackforger_api.AdminRecalculateReputation)
+			})
 		})
 	}, sudo())
 

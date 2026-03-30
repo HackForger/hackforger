@@ -518,6 +518,7 @@ func registerRoutes(m *web.Route) {
 		m.Get("/hackathons", hackforger_web.ExploreHackathons)
 		m.Get("/bounties", hackforger_web.ExploreBounties)
 		m.Get("/grants", hackforger_web.ExploreGrants)
+		m.Get("/reputation", hackforger_web.ExploreReputation)
 	}, ignExploreSignIn)
 
 	// HackForger: public hackathon routes
@@ -921,6 +922,14 @@ func registerRoutes(m *web.Route) {
 			m.Post("/orders/{oid}/cancel", hackforger_web.AdminCreditOrdersCancel)
 		})
 		// ***** END: HackForger Admin Credits *****
+
+		// ***** START: HackForger Admin Reputation *****
+		m.Group("/hackforger/reputation", func() {
+			m.Get("", hackforger_web.AdminReputation)
+			m.Post("", hackforger_web.AdminReputationPost)
+			m.Post("/recalc", hackforger_web.AdminReputationRecalc)
+		})
+		// ***** END: HackForger Admin Reputation *****
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 

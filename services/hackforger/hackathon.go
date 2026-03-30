@@ -72,6 +72,10 @@ func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_m
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doer.ID,
 		OpType:       hackforger_model.ActionHackathonCreated,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
 		AudienceType: AudienceGlobal,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
@@ -200,6 +204,10 @@ func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Ha
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionHackathonFinalized,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
 		AudienceType: AudienceGlobal,
 		Content: hackforger_model.HackforgerPhaseContent{
 			HackforgerActionContent: hackforger_model.HackforgerActionContent{
@@ -327,6 +335,10 @@ func publishSubmissionEvent(ctx context.Context, doer *user_model.User, h *hackf
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doer.ID,
 		OpType:       hackforger_model.ActionHackathonSubmitted,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
 		AudienceType: AudienceFollowers,
 		RepoID:       sub.RepoID,
 		Content: hackforger_model.HackforgerActionContent{
@@ -428,6 +440,10 @@ func publishPhaseChange(ctx context.Context, doerID int64, h *hackforger_model.H
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionHackathonPhaseChanged,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
 		AudienceType: AudienceOrgMembers,
 		OrgID:        h.OrgID,
 		Content: hackforger_model.HackforgerPhaseContent{

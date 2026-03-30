@@ -7,6 +7,7 @@ import (
 	"context"
 
 	user_model "forgejo.org/models/user"
+	hackforger_service "forgejo.org/services/hackforger"
 )
 
 func registerHackforgerHackathonStatus() {
@@ -37,8 +38,7 @@ func registerHackforgerReputationRecalc() {
 		RunAtStart: false,
 		Schedule:   "@every 1h",
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
-		// Phase 1: call hackforger_service.RecalculateAllReputations(ctx)
-		return nil
+		return hackforger_service.RecalculateAllReputations(ctx)
 	})
 }
 

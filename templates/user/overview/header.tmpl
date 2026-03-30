@@ -41,6 +41,12 @@
 					{{svg "octicon-rss"}} {{ctx.Locale.Tr "user.activity"}}
 				</a>
 			{{end}}
+			<a class="{{if eq .TabName "community"}}active {{end}}item" href="{{.ContextUser.HomeLink}}?tab=community">
+				{{svg "octicon-people"}} {{ctx.Locale.Tr "hackforger.profile.community"}}
+			</a>
+			<a class="{{if eq .TabName "reputation"}}active {{end}}item" href="{{.ContextUser.HomeLink}}?tab=reputation">
+				{{svg "octicon-star"}} {{ctx.Locale.Tr "hackforger.profile.reputation"}}
+			</a>
 			{{if not .DisableStars}}
 			<a class="{{if eq .TabName "stars"}}active {{end}}item" href="{{.ContextUser.HomeLink}}?tab=stars">
 				{{svg "octicon-star"}} {{ctx.Locale.Tr "user.starred"}}

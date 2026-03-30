@@ -6,7 +6,6 @@ package hackforger
 import (
 	"testing"
 
-	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	"forgejo.org/models/unittest"
@@ -21,6 +20,9 @@ func TestPublishHackforgerAction_Global(t *testing.T) {
 	err := PublishHackforgerAction(db.DefaultContext, &HackforgerActionOpts{
 		ActUserID:    2,
 		OpType:       hackforger_model.ActionBountyCreated,
+		EntityType:   "bounty",
+		EntityID:     1,
+		EntityName:   "Test Bounty",
 		RepoID:       1,
 		AudienceType: AudienceGlobal,
 		Content: &hackforger_model.HackforgerActionContent{
@@ -31,8 +33,8 @@ func TestPublishHackforgerAction_Global(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Verify global record (UserID=0) was created.
-	var globalActions []*activities_model.Action
+	// Verify global record (UserID=0) was created in hackforger_action table.
+	var globalActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND user_id = 0", hackforger_model.ActionBountyCreated).
 		Find(&globalActions)
@@ -40,8 +42,8 @@ func TestPublishHackforgerAction_Global(t *testing.T) {
 	assert.NotEmpty(t, globalActions, "expected a global action record with UserID=0")
 	assert.Equal(t, int64(2), globalActions[0].ActUserID)
 
-	// Verify actor's own record was created.
-	var actorActions []*activities_model.Action
+	// Verify actor's own record was created in hackforger_action table.
+	var actorActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND user_id = 2 AND act_user_id = 2", hackforger_model.ActionBountyCreated).
 		Find(&actorActions)
@@ -67,7 +69,7 @@ func TestPublishHackforgerAction_Followers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify actor record exists.
-	var actorActions []*activities_model.Action
+	var actorActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND user_id = 2 AND act_user_id = 2", hackforger_model.ActionBountyClaimed).
 		Find(&actorActions)
@@ -75,7 +77,7 @@ func TestPublishHackforgerAction_Followers(t *testing.T) {
 	assert.Len(t, actorActions, 1, "expected actor's own action record")
 
 	// Verify follower records exist (users 4 and 8).
-	var followerActions []*activities_model.Action
+	var followerActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND act_user_id = 2 AND user_id != 2", hackforger_model.ActionBountyClaimed).
 		Find(&followerActions)
@@ -94,11 +96,14 @@ func TestPublishHackforgerAction_CombinedAudience(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	// Test RepoWatchers audience for user 2 on repo 1.
-	// Note: AudienceGlobal=0 (iota), cannot be combined with bitwise OR.
+	// AudienceGlobal=1 (bit flag 1<<0); AudienceRepoWatchers=8 (bit flag 1<<3).
 	// Exact watcher set depends on fixture data; we verify basic invariants.
 	err := PublishHackforgerAction(db.DefaultContext, &HackforgerActionOpts{
 		ActUserID:    2,
 		OpType:       hackforger_model.ActionBountyCompleted,
+		EntityType:   "bounty",
+		EntityID:     3,
+		EntityName:   "Combined Bounty",
 		RepoID:       1,
 		AudienceType: AudienceRepoWatchers,
 		Content: &hackforger_model.HackforgerActionContent{
@@ -109,8 +114,8 @@ func TestPublishHackforgerAction_CombinedAudience(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Verify action records were created.
-	var allActions []*activities_model.Action
+	// Verify action records were created in hackforger_action table.
+	var allActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND act_user_id = 2", hackforger_model.ActionBountyCompleted).
 		Find(&allActions)
@@ -146,7 +151,7 @@ func TestPublishHackforgerAction_Dedup(t *testing.T) {
 	require.NoError(t, err)
 
 	// Count records for user 4 — should be exactly 1 (dedup).
-	var user4Actions []*activities_model.Action
+	var user4Actions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND user_id = 4 AND act_user_id = 2", hackforger_model.ActionBountyDelivered).
 		Find(&user4Actions)
@@ -156,7 +161,7 @@ func TestPublishHackforgerAction_Dedup(t *testing.T) {
 	// Verify action records were created for each unique audience member.
 	// The exact count depends on fixture data (follow + watch tables).
 	// The key invariant is: actor gets 1 record + each unique target gets 1 record.
-	var allActions []*activities_model.Action
+	var allActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND act_user_id = 2", hackforger_model.ActionBountyDelivered).
 		Find(&allActions)

@@ -114,28 +114,52 @@ func Dashboard(ctx *context.Context) {
 		ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
 	}
 
-	feeds, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
-		RequestedUser:   ctxUser,
-		RequestedTeam:   ctx.Org.Team,
-		Actor:           ctx.Doer,
-		IncludePrivate:  true,
-		OnlyPerformedBy: false,
-		Date:            ctx.FormString("date"),
-		ListOptions: db.ListOptions{
-			Page:     page,
-			PageSize: setting.UI.FeedPagingNum,
-		},
-	})
-	if err != nil {
-		ctx.ServerError("GetFeeds", err)
-		return
+	feedType := ctx.FormString("feed")
+	if feedType == "" {
+		feedType = "code"
 	}
+	ctx.Data["FeedType"] = feedType
 
-	ctx.Data["Feeds"] = feeds
-
-	pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
-	pager.AddParam(ctx, "date", "Date")
-	ctx.Data["Page"] = pager
+	if feedType == "community" {
+		feeds, count, err := hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
+			UserID:        uid,
+			IncludeGlobal: true,
+			ListOptions:   db.ListOptions{Page: page, PageSize: setting.UI.FeedPagingNum},
+		})
+		if err != nil {
+			ctx.ServerError("GetHackforgerFeeds", err)
+			return
+		}
+		if err := hackforger_model.LoadActUsers(ctx, feeds); err != nil {
+			ctx.ServerError("LoadActUsers", err)
+			return
+		}
+		ctx.Data["HackforgerFeeds"] = feeds
+		pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
+		pager.AddParam(ctx, "feed", "FeedType")
+		ctx.Data["Page"] = pager
+	} else {
+		feeds, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
+			RequestedUser:   ctxUser,
+			RequestedTeam:   ctx.Org.Team,
+			Actor:           ctx.Doer,
+			IncludePrivate:  true,
+			OnlyPerformedBy: false,
+			Date:            ctx.FormString("date"),
+			ListOptions: db.ListOptions{
+				Page:     page,
+				PageSize: setting.UI.FeedPagingNum,
+			},
+		})
+		if err != nil {
+			ctx.ServerError("GetFeeds", err)
+			return
+		}
+		ctx.Data["Feeds"] = feeds
+		pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
+		pager.AddParam(ctx, "date", "Date")
+		ctx.Data["Page"] = pager
+	}
 
 	ctx.HTML(http.StatusOK, tplDashboard)
 }

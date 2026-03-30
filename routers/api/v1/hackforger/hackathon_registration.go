@@ -53,6 +53,21 @@ func Register(ctx *context.APIContext) {
 		ctx.InternalServerError(err)
 		return
 	}
+
+	// Publish feed event for registration (global + followers so it appears in entity timelines)
+	_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
+		ActUserID:    ctx.Doer.ID,
+		OpType:       hackforger_model.ActionHackathonRegistered,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
+		AudienceType: hackforger_service.AudienceGlobal | hackforger_service.AudienceFollowers,
+		Content: hackforger_model.HackforgerActionContent{
+			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+		},
+	})
+
 	ctx.JSON(http.StatusCreated, r)
 }
 
@@ -96,6 +111,10 @@ func UpdateRegistration(ctx *context.APIContext) {
 				_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
 					ActUserID:    r.UserID,
 					OpType:       hackforger_model.ActionHackathonRegistered,
+					EntityType:   "hackathon",
+					EntityID:     h.ID,
+					EntityName:   h.Name,
+					EntitySlug:   h.Slug,
 					AudienceType: hackforger_service.AudienceFollowers,
 					Content: hackforger_model.HackforgerActionContent{
 						EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,

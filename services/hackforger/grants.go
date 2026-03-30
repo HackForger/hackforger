@@ -172,6 +172,10 @@ func publishGrantEvent(ctx context.Context, actUserID int64, opType activities_m
 	return PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    actUserID,
 		OpType:       opType,
+		EntityType:   "grant_round",
+		EntityID:     round.ID,
+		EntityName:   round.Name,
+		EntitySlug:   round.Slug,
 		Content:      content,
 		AudienceType: audience,
 		OrgID:        round.OrgID,
@@ -349,6 +353,9 @@ func SubmitProject(ctx context.Context, doerID, roundID int64, opts SubmitProjec
 	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionGrantProjectSubmitted,
+		EntityType:   "grant_project",
+		EntityID:     project.ID,
+		EntityName:   project.Title,
 		Content:      content,
 		AudienceType: AudienceFollowers,
 	}); err != nil {
@@ -514,6 +521,9 @@ func DistributeProject(ctx context.Context, doerID, projectID int64) error {
 		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 			ActUserID:    doerID,
 			OpType:       hackforger_model.ActionGrantAwarded,
+			EntityType:   "grant_project",
+			EntityID:     project.ID,
+			EntityName:   project.Title,
 			Content:      content,
 			AudienceType: AudienceGlobal,
 			OrgID:        round.OrgID,

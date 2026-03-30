@@ -197,6 +197,9 @@ func AcceptApplication(ctx context.Context, applicationID, doerID int64) error {
 			if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 				ActUserID:    doerID,
 				OpType:       hackforger_model.ActionBountyClaimed,
+				EntityType:   "bounty",
+				EntityID:     bounty.ID,
+				EntityName:   bounty.Title,
 				RepoID:       bounty.RepoID,
 				AudienceType: AudienceFollowers | AudienceRepoWatchers,
 				Content: &hackforger_model.HackforgerPhaseContent{
@@ -315,6 +318,9 @@ func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {
 		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 			ActUserID:    doerID,
 			OpType:       hackforger_model.ActionBountyCompleted,
+			EntityType:   "bounty",
+			EntityID:     bounty.ID,
+			EntityName:   bounty.Title,
 			RepoID:       bounty.RepoID,
 			AudienceType: AudienceFollowers | AudienceRepoWatchers,
 			Content: &hackforger_model.HackforgerPhaseContent{
@@ -438,6 +444,9 @@ func SelectWinners(ctx context.Context, bountyID, doerID int64, winners []Winner
 		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 			ActUserID:    doerID,
 			OpType:       hackforger_model.ActionBountyWinnersSelected,
+			EntityType:   "bounty",
+			EntityID:     bounty.ID,
+			EntityName:   bounty.Title,
 			RepoID:       bounty.RepoID,
 			AudienceType: AudienceGlobal,
 			Content: &hackforger_model.HackforgerPhaseContent{
@@ -484,10 +493,13 @@ func MarkPaid(ctx context.Context, bountyID, doerID int64) error {
 		return err
 	}
 
-	// Publish with AudienceType=0 (entity feed only).
+	// AudienceType=0: no broadcast — only the actor's own feed record is written.
 	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionBountyPaid,
+		EntityType:   "bounty",
+		EntityID:     bounty.ID,
+		EntityName:   bounty.Title,
 		RepoID:       bounty.RepoID,
 		AudienceType: 0,
 		Content: &hackforger_model.HackforgerPhaseContent{
@@ -533,6 +545,9 @@ func CancelBounty(ctx context.Context, bountyID, doerID int64) error {
 	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionBountyCancelled,
+		EntityType:   "bounty",
+		EntityID:     bounty.ID,
+		EntityName:   bounty.Title,
 		RepoID:       bounty.RepoID,
 		AudienceType: AudienceRepoWatchers,
 		Content: &hackforger_model.HackforgerPhaseContent{
@@ -583,6 +598,9 @@ func CheckExpiredBounties(ctx context.Context) error {
 		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 			ActUserID:    bounty.PublisherID,
 			OpType:       hackforger_model.ActionBountyExpired,
+			EntityType:   "bounty",
+			EntityID:     bounty.ID,
+			EntityName:   bounty.Title,
 			RepoID:       bounty.RepoID,
 			AudienceType: AudienceRepoWatchers,
 			Content: &hackforger_model.HackforgerPhaseContent{
@@ -683,6 +701,9 @@ func ExpireBounty(ctx context.Context, bounty *hackforger_model.Bounty) error {
 	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    bounty.PublisherID,
 		OpType:       hackforger_model.ActionBountyExpired,
+		EntityType:   "bounty",
+		EntityID:     bounty.ID,
+		EntityName:   bounty.Title,
 		RepoID:       bounty.RepoID,
 		AudienceType: AudienceRepoWatchers,
 		Content: &hackforger_model.HackforgerPhaseContent{

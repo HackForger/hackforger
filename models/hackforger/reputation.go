@@ -20,6 +20,7 @@ type Reputation struct {
 	GrantsReceived     int                `xorm:"NOT NULL DEFAULT 0"`
 	TotalStars         int64              `xorm:"NOT NULL DEFAULT 0"`
 	TotalCreditsEarned int64              `xorm:"NOT NULL DEFAULT 0"`
+	Tier               string             `xorm:"VARCHAR(20) NOT NULL DEFAULT 'Bronze'"`
 	UpdatedUnix        timeutil.TimeStamp `xorm:"updated"`
 }
 
@@ -39,7 +40,7 @@ func GetOrCreateReputation(ctx context.Context, userID int64) (*Reputation, erro
 		return r, nil
 	}
 
-	r = &Reputation{UserID: userID}
+	r = &Reputation{UserID: userID, Tier: "Bronze"}
 	if _, err := db.GetEngine(ctx).Insert(r); err != nil {
 		return nil, err
 	}

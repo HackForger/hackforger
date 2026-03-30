@@ -6,14 +6,9 @@ package hackforger
 import (
 	"net/http"
 
-	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
-	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/json"
 	"forgejo.org/services/context"
-
-	"xorm.io/builder"
 )
 
 // feedItem is the JSON representation of a single feed entry.
@@ -39,15 +34,6 @@ type feedEntity struct {
 	Slug string `json:"slug,omitempty"`
 }
 
-// hackforgerOpTypes returns all HackForger action type values for use in queries.
-func hackforgerOpTypes() []int {
-	types := make([]int, 0, len(hackforger_model.HackforgerActionTypeName))
-	for at := range hackforger_model.HackforgerActionTypeName {
-		types = append(types, int(at))
-	}
-	return types
-}
-
 // GetFeed returns the HackForger activity feed.
 //
 // swagger:operation GET /hackforger/feed hackforger hackforgerGetFeed
@@ -58,9 +44,21 @@ func hackforgerOpTypes() []int {
 // parameters:
 // - name: type
 //   in: query
-//   description: Feed type (global or following)
+//   description: Feed type (global, following, entity, user)
 //   type: string
 //   default: global
+// - name: entity_type
+//   in: query
+//   description: Entity type filter (used with type=entity)
+//   type: string
+// - name: entity_id
+//   in: query
+//   description: Entity ID filter (used with type=entity)
+//   type: integer
+// - name: user_id
+//   in: query
+//   description: User ID filter (used with type=user)
+//   type: integer
 // - name: page
 //   in: query
 //   description: Page number
@@ -91,51 +89,64 @@ func GetFeed(ctx *context.APIContext) {
 		listOpts.PageSize = 20
 	}
 
-	opTypes := hackforgerOpTypes()
-	cond := builder.In("op_type", opTypes)
+	var actions []*hackforger_model.HackforgerAction
+	var count int64
+	var err error
 
-	if feedType == "following" && ctx.Doer != nil {
-		// Restrict to actions performed by users the doer follows.
-		followingCond := builder.In("act_user_id",
-			builder.Select("follow_id").From("follow").Where(builder.Eq{"user_id": ctx.Doer.ID}),
-		)
-		cond = cond.And(followingCond)
-	}
-
-	sess := db.GetEngine(ctx).Where(cond)
-	sess = db.SetSessionPagination(sess, &listOpts)
-
-	var actions []*activities_model.Action
-	count, err := sess.Desc("created_unix").FindAndCount(&actions)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "FindAndCount", err)
+	switch feedType {
+	case "global", "following", "entity", "user":
+		// valid types
+	default:
+		ctx.JSON(http.StatusBadRequest, map[string]string{
+			"message": "invalid feed type: " + feedType + ". Valid values: global, following, entity, user",
+		})
 		return
 	}
 
-	// Load act users in bulk.
-	actUserIDs := make([]int64, 0, len(actions))
-	seen := make(map[int64]bool)
-	for _, a := range actions {
-		if !seen[a.ActUserID] {
-			actUserIDs = append(actUserIDs, a.ActUserID)
-			seen[a.ActUserID] = true
-		}
-	}
-	userMap := make(map[int64]*user_model.User)
-	if len(actUserIDs) > 0 {
-		var users []*user_model.User
-		if err := db.GetEngine(ctx).In("id", actUserIDs).Find(&users); err != nil {
-			ctx.Error(http.StatusInternalServerError, "FindUsers", err)
+	switch feedType {
+	case "following":
+		if ctx.Doer == nil {
+			ctx.Error(http.StatusUnauthorized, "following feed requires authentication", nil)
 			return
 		}
-		for _, u := range users {
-			userMap[u.ID] = u
-		}
+		actions, count, err = hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
+			ListOptions:   listOpts,
+			UserID:        ctx.Doer.ID,
+			IncludeGlobal: true,
+		})
+
+	case "entity":
+		entityType := ctx.FormString("entity_type")
+		entityID := ctx.FormInt64("entity_id")
+		actions, count, err = hackforger_model.GetEntityTimeline(ctx, entityType, entityID, listOpts)
+
+	case "user":
+		userID := ctx.FormInt64("user_id")
+		actions, count, err = hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
+			ListOptions: listOpts,
+			ActUserID:   userID,
+		})
+
+	default: // "global"
+		actions, count, err = hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
+			ListOptions:   listOpts,
+			IncludeGlobal: true,
+		})
+	}
+
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetHackforgerFeeds", err)
+		return
+	}
+
+	if err := hackforger_model.LoadActUsers(ctx, actions); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadActUsers", err)
+		return
 	}
 
 	items := make([]*feedItem, 0, len(actions))
 	for _, a := range actions {
-		opName := hackforger_model.HackforgerActionTypeName[activities_model.ActionType(a.OpType)]
+		opName := hackforger_model.HackforgerActionTypeName[a.OpType]
 		item := &feedItem{
 			ID:        a.ID,
 			OpType:    int(a.OpType),
@@ -143,23 +154,19 @@ func GetFeed(ctx *context.APIContext) {
 			CreatedAt: int64(a.CreatedUnix),
 		}
 
-		if u, ok := userMap[a.ActUserID]; ok {
+		if a.ActUser != nil {
 			item.Actor = &feedActor{
-				ID:       u.ID,
-				Username: u.Name,
+				ID:       a.ActUser.ID,
+				Username: a.ActUser.Name,
 			}
 		}
 
-		// Parse HackForger content JSON.
-		if a.Content != "" {
-			var content hackforger_model.HackforgerActionContent
-			if err := json.Unmarshal([]byte(a.Content), &content); err == nil {
-				item.Entity = &feedEntity{
-					Type: content.EntityType,
-					ID:   content.EntityID,
-					Name: content.EntityName,
-					Slug: content.EntitySlug,
-				}
+		if a.EntityType != "" {
+			item.Entity = &feedEntity{
+				Type: a.EntityType,
+				ID:   a.EntityID,
+				Name: a.EntityName,
+				Slug: a.EntitySlug,
 			}
 		}
 

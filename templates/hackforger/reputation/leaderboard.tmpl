@@ -1,0 +1,50 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.reputation.leaderboard"}}</h2>
+		{{if .Leaderboard}}
+		<table class="ui celled striped table">
+			<thead>
+				<tr>
+					<th>{{ctx.Locale.Tr "hackforger.reputation.rank"}}</th>
+					<th>{{ctx.Locale.Tr "admin.users.name"}}</th>
+					<th>{{ctx.Locale.Tr "hackforger.reputation.score"}}</th>
+					<th>{{ctx.Locale.Tr "hackforger.reputation.tier"}}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Leaderboard}}
+				<tr>
+					<td>{{.Rank}}</td>
+					<td>
+						{{if .User}}
+							{{ctx.AvatarUtils.Avatar .User 20}}
+							<a href="{{AppSubUrl}}/{{.User.Name}}">{{.User.Name}}</a>
+						{{else}}
+							#{{.UserID}}
+						{{end}}
+					</td>
+					<td>{{.Score}}</td>
+					<td>
+						<span class="ui label {{if eq .Tier "Diamond"}}purple{{else if eq .Tier "Gold"}}yellow{{else if eq .Tier "Silver"}}grey{{else}}brown{{end}}">
+							{{.Tier}}
+						</span>
+					</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="ui placeholder segment">
+			<div class="ui icon header">
+				{{svg "octicon-star" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.reputation.leaderboard"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

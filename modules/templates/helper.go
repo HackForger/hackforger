@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	activities_model "forgejo.org/models/activities"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/markup"
@@ -220,6 +221,41 @@ func NewFuncMap() template.FuncMap {
 
 		"FilenameIsImage": FilenameIsImage,
 		"TabSizeClass":    TabSizeClass,
+
+		// -----------------------------------------------------------------
+		// hackforger
+		"HackforgerEntityURL": func(entityType, slug string) string {
+			switch entityType {
+			case "hackathon":
+				return setting.AppSubURL + "/hackathon/" + url.PathEscape(slug)
+			case "grant":
+				return setting.AppSubURL + "/grants/" + url.PathEscape(slug)
+			default:
+				return ""
+			}
+		},
+		"HackforgerActionIcon": func(opType activities_model.ActionType) string {
+			switch {
+			case opType >= 30 && opType <= 33:
+				return "octicon-rocket"
+			case opType >= 34 && opType <= 38:
+				return "octicon-gift"
+			case opType == 43:
+				return "octicon-gift"
+			case opType >= 39 && opType <= 41:
+				return "octicon-heart"
+			case opType == 42:
+				return "octicon-credit-card"
+			case opType >= 50 && opType <= 51:
+				return "octicon-rocket"
+			case opType >= 52 && opType <= 53:
+				return "octicon-gift"
+			case opType >= 54 && opType <= 57:
+				return "octicon-heart"
+			default:
+				return "octicon-pulse"
+			}
+		},
 	}
 }
 

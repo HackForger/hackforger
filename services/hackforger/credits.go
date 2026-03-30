@@ -136,13 +136,15 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 
 	// Publish feed event for the redemption
 	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID: userID,
-		OpType:    hackforger_model.ActionCreditsRedeemed,
+		ActUserID:    userID,
+		OpType:       hackforger_model.ActionCreditsRedeemed,
+		EntityType:   "credits",
+		EntityName:   optionName,
+		AudienceType: AudienceFollowers,
 		Content: &hackforger_model.HackforgerActionContent{
 			EntityType: "credits",
 			EntityName: optionName,
 		},
-		AudienceType: AudienceFollowers,
 	}); err != nil {
 		return order, err
 	}
