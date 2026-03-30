@@ -1845,8 +1845,13 @@ func Routes() *web.Route {
 					m.Get("/options", hackforger_api.ListRedeemOptions)
 					m.Post("/options", reqToken(), reqSiteAdmin(), bind(hackforger_api.CreateRedeemOptionForm{}), hackforger_api.CreateRedeemOption)
 					m.Put("/options/{id}", reqToken(), reqSiteAdmin(), bind(hackforger_api.UpdateRedeemOptionForm{}), hackforger_api.UpdateRedeemOption)
+					m.Group("/options/{id}", func() {
+						m.Post("/keys", reqToken(), reqSiteAdmin(), bind(hackforger_api.AddKeysForm{}), hackforger_api.AddKeys)
+						m.Get("/keys", reqToken(), reqSiteAdmin(), hackforger_api.ListKeys)
+					})
 					m.Post("", reqToken(), bind(hackforger_api.RedeemForm{}), hackforger_api.Redeem)
 					m.Get("/orders", reqToken(), hackforger_api.ListRedeemOrders)
+					m.Post("/orders/batch-fulfill", reqToken(), reqSiteAdmin(), bind(hackforger_api.BatchFulfillForm{}), hackforger_api.BatchFulfill)
 					m.Post("/orders/{oid}/fulfill", reqToken(), reqSiteAdmin(), bind(hackforger_api.FulfillOrderForm{}), hackforger_api.FulfillOrder)
 					m.Post("/orders/{oid}/cancel", reqToken(), reqSiteAdmin(), hackforger_api.CancelOrder)
 				})

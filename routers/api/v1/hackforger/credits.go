@@ -63,6 +63,19 @@ type FulfillOrderForm struct {
 	DeliveryValue string `json:"delivery_value"`
 }
 
+// AddKeysForm represents the JSON body for adding keys to an option.
+type AddKeysForm struct {
+	Keys []string `json:"keys" binding:"Required"`
+}
+
+// BatchFulfillForm represents the JSON body for batch fulfilling orders.
+type BatchFulfillForm struct {
+	OrderIDs      []int64 `json:"order_ids" binding:"Required"`
+	Note          string  `json:"note"`
+	DeliveryType  string  `json:"delivery_type"`
+	DeliveryValue string  `json:"delivery_value"`
+}
+
 // --- Helpers ---
 
 // handleCreditsError maps service/model errors to HTTP responses.
@@ -473,4 +486,127 @@ func AdminDeduct(ctx *context.APIContext) {
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+// AddKeys adds keys to a redeem option's key pool (admin only).
+func AddKeys(ctx *context.APIContext) {
+	// swagger:operation POST /hackforger/credits/redeem/options/{id}/keys hackforger hackforgerAddKeys
+	// ---
+	// summary: Add keys to a redeem option's key pool (admin only)
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: id
+	//   in: path
+	//   description: ID of the redeem option
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     "$ref": "#/definitions/AddKeysForm"
+	// responses:
+	//   "200":
+	//     description: Key pool status after addition
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	form := web.GetForm(ctx).(*AddKeysForm)
+	optionID := ctx.ParamsInt64(":id")
+
+	if err := hackforger_service.AddKeysToOption(ctx, ctx.Doer, optionID, form.Keys); err != nil {
+		handleCreditsError(ctx, err)
+		return
+	}
+
+	total, available, err := hackforger_service.GetKeyPoolStatus(ctx, optionID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetKeyPoolStatus", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, map[string]any{
+		"total":     total,
+		"available": available,
+	})
+}
+
+// ListKeys returns all keys for a redeem option (admin only).
+func ListKeys(ctx *context.APIContext) {
+	// swagger:operation GET /hackforger/credits/redeem/options/{id}/keys hackforger hackforgerListKeys
+	// ---
+	// summary: List all keys for a redeem option (admin only)
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: id
+	//   in: path
+	//   description: ID of the redeem option
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     description: Key list
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	optionID := ctx.ParamsInt64(":id")
+
+	// Verify option exists
+	if _, err := hackforger_model.GetRedeemOptionByID(ctx, optionID); err != nil {
+		handleCreditsError(ctx, err)
+		return
+	}
+
+	keys, err := hackforger_model.ListKeysByOption(ctx, optionID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "ListKeysByOption", err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, keys)
+}
+
+// BatchFulfill fulfills multiple redeem orders at once (admin only).
+func BatchFulfill(ctx *context.APIContext) {
+	// swagger:operation POST /hackforger/credits/redeem/orders/batch-fulfill hackforger hackforgerBatchFulfill
+	// ---
+	// summary: Batch fulfill redeem orders (admin only)
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     "$ref": "#/definitions/BatchFulfillForm"
+	// responses:
+	//   "200":
+	//     description: Batch fulfill result
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+
+	form := web.GetForm(ctx).(*BatchFulfillForm)
+
+	success, failed, err := hackforger_service.BatchFulfillOrders(ctx, ctx.Doer, form.OrderIDs, form.Note, form.DeliveryType, form.DeliveryValue)
+	if err != nil {
+		handleCreditsError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, map[string]any{
+		"success": success,
+		"failed":  failed,
+	})
 }
