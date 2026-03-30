@@ -153,7 +153,7 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
     // Build base record from opts
     base := &hackforger_model.HackforgerAction{
         ActUserID:   opts.ActUserID,
-        OpType:      int(opts.OpType),
+        OpType:      opts.OpType,
         EntityType:  opts.EntityType,   // NEW: explicit field
         EntityID:    opts.EntityID,     // NEW: explicit field
         EntityName:  opts.EntityName,   // NEW: explicit field
@@ -255,7 +255,7 @@ func RecalculateReputation(ctx context.Context, userID int64) error {
     //      (BountyStatusCompleted=3, BountyStatusPaid=4)
     //    - HackathonWins: COUNT(*) FROM hackathon_submission WHERE user_id=? AND rank=1
     //    - GrantsReceived: COUNT(*) FROM grant_project WHERE user_id=? AND status IN (1,3)
-    //      (GrantProjectStatusApproved=1, GrantProjectStatusDistributed=3)
+    //      (GrantProjectStatusApproved=1, GrantProjectStatusFunded=3)
     //    - TotalStars: SUM(num_stars) FROM repository WHERE owner_id=?
     //    - TotalCreditsEarned: SUM(amount) FROM credit_transaction
     //      WHERE user_id=? AND type IN ('deposit','reward')
@@ -282,10 +282,10 @@ type ReputationTier struct {
 
 ### 3.2 Cron Task
 
-Register in `services/cron/tasks_extended.go` inside `initExtendedTasks()`:
+A cron skeleton already exists in `services/cron/tasks_hackforger.go`. Fill in the existing stub with the actual call:
 
 ```go
-// Inside initExtendedTasks():
+// In services/cron/tasks_hackforger.go — existing skeleton:
 RegisterTaskFatal("hackforger_reputation_recalc", &OlderThanConfig{
     BaseConfig: BaseConfig{Enabled: true, RunAtStart: false, Schedule: "@every 1h"},
     OlderThan:  0,
