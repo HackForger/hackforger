@@ -28,8 +28,10 @@ type RedeemOrder struct {
 	OptionID    int64              `xorm:"INDEX NOT NULL"`
 	Cost        int64              `xorm:"NOT NULL"`
 	Status      OrderStatus        `xorm:"VARCHAR(16) NOT NULL DEFAULT 'pending'"`
-	FulfillNote string             `xorm:"TEXT"`
-	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
+	FulfillNote   string             `xorm:"TEXT"`
+	DeliveryType  string             `xorm:"VARCHAR(32) NOT NULL DEFAULT ''"`
+	DeliveryValue string             `xorm:"TEXT NOT NULL DEFAULT ''"`
+	CreatedUnix   timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"updated"`
 }
 
