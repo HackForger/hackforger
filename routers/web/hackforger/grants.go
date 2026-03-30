@@ -268,15 +268,17 @@ func SubmitGrantProjectPost(ctx *context.Context) {
 		RepoID:      repoID,
 	})
 	if err != nil {
-		if hackforger_model.IsErrGrantRoundNotOpen(err) {
-			ctx.Flash.Error(ctx.Tr("hackforger.grant.round.not_open"))
-		} else if hackforger_model.IsErrGrantProjectAlreadyExists(err) {
+		if hackforger_model.IsErrGrantProjectAlreadyExists(err) {
 			ctx.Flash.Error(ctx.Tr("hackforger.grant.project.already_submitted"))
-		} else {
-			ctx.ServerError("SubmitProject", err)
+			ctx.Redirect(fmt.Sprintf("/grants/%s", slug))
 			return
 		}
-		ctx.HTML(http.StatusOK, tplGrantSubmit)
+		if hackforger_model.IsErrGrantRoundNotOpen(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.grant.round.not_open"))
+			ctx.Redirect(fmt.Sprintf("/grants/%s", slug))
+			return
+		}
+		ctx.ServerError("SubmitProject", err)
 		return
 	}
 

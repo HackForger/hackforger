@@ -24,8 +24,8 @@
 					{{ctx.Locale.Tr "repo.issues.filter_sort"}}
 					{{svg "octicon-triangle-down"}}
 					<div class="menu">
-						<a class="item{{if eq .SortType "newest"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=newest">{{ctx.Locale.Tr "repo.issues.filter_sort.newest"}}</a>
-						<a class="item{{if eq .SortType "oldest"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=oldest">{{ctx.Locale.Tr "repo.issues.filter_sort.oldest"}}</a>
+						<a class="item{{if eq .SortType "newest"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=newest">{{ctx.Locale.Tr "hackforger.grant.sort.newest"}}</a>
+						<a class="item{{if eq .SortType "oldest"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=oldest">{{ctx.Locale.Tr "hackforger.grant.sort.oldest"}}</a>
 						<a class="item{{if eq .SortType "mostfunded"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=mostfunded">{{ctx.Locale.Tr "hackforger.grant.sort.most_funded"}}</a>
 						<a class="item{{if eq .SortType "alphabetical"}} active{{end}}" href="/explore/grants?q={{.Keyword}}&status={{.StatusFilter}}&sort=alphabetical">{{ctx.Locale.Tr "hackforger.grant.sort.alphabetical"}}</a>
 					</div>

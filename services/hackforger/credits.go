@@ -59,6 +59,7 @@ func Deposit(ctx context.Context, userID int64, amount int64, reference, note st
 // Redeem deducts credits and creates an order within a transaction.
 func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_model.RedeemOrder, error) {
 	var order *hackforger_model.RedeemOrder
+	var optionName string
 
 	err := db.WithTx(ctx, func(ctx context.Context) error {
 		// Get option
@@ -75,6 +76,8 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 		if option.Stock == 0 {
 			return hackforger_model.ErrOutOfStock{OptionID: optionID}
 		}
+
+		optionName = option.Name
 
 		// Get account
 		acct, err := GetOrCreateCreditAccount(ctx, userID)
@@ -127,8 +130,24 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 		_, err = db.GetEngine(ctx).Insert(order)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return order, err
+	// Publish feed event for the redemption
+	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
+		ActUserID: userID,
+		OpType:    hackforger_model.ActionCreditsRedeemed,
+		Content: &hackforger_model.HackforgerActionContent{
+			EntityType: "credits",
+			EntityName: optionName,
+		},
+		AudienceType: AudienceFollowers,
+	}); err != nil {
+		return order, err
+	}
+
+	return order, nil
 }
 
 // ListTransactions returns credit transactions for a user.

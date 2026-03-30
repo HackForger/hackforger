@@ -486,7 +486,7 @@ func DistributeProject(ctx context.Context, doerID, projectID int64) error {
 		// Deposit credits
 		if project.AwardCredits > 0 {
 			if err := Deposit(ctx, project.UserID, project.AwardCredits,
-				fmt.Sprintf("grant_round_%d", round.ID),
+				fmt.Sprintf("grant_round:%d/project:%d", round.ID, project.ID),
 				fmt.Sprintf("Grant award for project: %s", project.Title),
 			); err != nil {
 				return err
@@ -573,6 +573,22 @@ func DistributeRound(ctx context.Context, doerID, roundID int64) error {
 	return nil
 }
 
+// grantProjectStatusName converts a GrantProjectStatus to its human-readable string.
+func grantProjectStatusName(s hackforger_model.GrantProjectStatus) string {
+	switch s {
+	case hackforger_model.GrantProjectStatusPending:
+		return "pending"
+	case hackforger_model.GrantProjectStatusApproved:
+		return "approved"
+	case hackforger_model.GrantProjectStatusRejected:
+		return "rejected"
+	case hackforger_model.GrantProjectStatusFunded:
+		return "funded"
+	default:
+		return fmt.Sprintf("unknown(%d)", s)
+	}
+}
+
 // ExportRoundCSV generates a CSV export of all projects in a round.
 func ExportRoundCSV(ctx context.Context, roundID int64) ([]byte, error) {
 	projects, _, err := hackforger_model.ListGrantProjectsByRound(ctx, hackforger_model.ListGrantProjectsByRoundOptions{
@@ -597,7 +613,7 @@ func ExportRoundCSV(ctx context.Context, roundID int64) ([]byte, error) {
 			p.Title,
 			strconv.FormatInt(p.UserID, 10),
 			strconv.FormatInt(p.RepoID, 10),
-			strconv.Itoa(int(p.Status)),
+			grantProjectStatusName(p.Status),
 			strconv.FormatFloat(p.AwardAmount, 'f', 2, 64),
 			strconv.FormatInt(p.AwardCredits, 10),
 		}

@@ -29,7 +29,7 @@
 								</span>
 							</td>
 							<td>
-								{{if or (gt .AwardAmount 0) (gt .AwardCredits 0)}}
+								{{if or (gt .AwardAmount 0.0) (gt .AwardCredits 0)}}
 									{{.AwardAmount}} + {{.AwardCredits}} credits
 								{{else}}
 									&mdash;
