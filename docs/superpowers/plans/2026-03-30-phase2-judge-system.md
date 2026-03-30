@@ -449,7 +449,10 @@ func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hack
             })
         }
     }
-    // TODO: update to new feed API after feed refactor merges
+    // NOTE: Deliberately using HackforgerActionContent (not HackforgerPhaseContent)
+    // because ActionHackathonFinalized now carries results summary, not phase transition info.
+    // Feed rendering templates will be updated by the feed refactor (merges first).
+    // TODO: update to new feed API format after feed refactor merges
     _ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
         ActUserID: doerID, OpType: hackforger_model.ActionHackathonFinalized,
         AudienceType: AudienceGlobal,
@@ -606,7 +609,12 @@ func FinalizePreview(ctx *context.Context) {
     if h == nil { return }
     rankings, err := hackforger_service.PreviewFinalize(ctx, h.ID)
     if err != nil {
-        ctx.Flash.Error(err.Error())
+        if hackforger_model.IsErrInvalidHackathonPhase(err) {
+            ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
+        } else {
+            log.Error("PreviewFinalize: %v", err)
+            ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+        }
         ctx.Redirect("/hackathon/" + h.Slug + "/manage")
         return
     }
@@ -712,6 +720,8 @@ func JudgePage(ctx *context.Context) {
 
 - [ ] **Step 2: Replace JudgeScorePost with JudgeScoresPost (JSON handler)**
 
+First, add `"encoding/json"` and `"fmt"` to the import block of `routers/web/hackforger/hackathon.go` (if not already present).
+
 Replace existing `JudgeScorePost` (line ~473):
 
 ```go
@@ -730,7 +740,6 @@ func JudgeScoresPost(ctx *context.Context) {
             Comment    string  `json:"comment"`
         } `json:"scores"`
     }
-    // Note: add "encoding/json" to the import block of this file
     var req scoreReq
     if err := json.NewDecoder(ctx.Req.Body).Decode(&req); err != nil {
         ctx.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request body"})
@@ -749,7 +758,8 @@ func JudgeScoresPost(ctx *context.Context) {
         case hackforger_service.IsErrIncompleteRubric(err):
             msg = ctx.Tr("hackforger.hackathon.error.incomplete_rubric"); status = http.StatusBadRequest
         case hackforger_service.IsErrScoreOutOfRange(err):
-            msg = ctx.Tr("hackforger.hackathon.error.score_out_of_range", "10"); status = http.StatusBadRequest
+            e := err.(hackforger_service.ErrScoreOutOfRange)
+            msg = ctx.Tr("hackforger.hackathon.error.score_out_of_range", fmt.Sprintf("%.0f", e.MaxScore)); status = http.StatusBadRequest
         }
         ctx.JSON(status, map[string]string{"message": msg})
         return
@@ -795,7 +805,8 @@ func ManageJudgeRemovePost(ctx *context.Context) {
     userID := ctx.ParamsInt64(":uid")
     trackID, _ := strconv.ParseInt(ctx.FormString("track_id"), 10, 64)
     if err := hackforger_model.RemoveJudge(ctx, h.ID, trackID, userID); err != nil {
-        ctx.Flash.Error(err.Error())
+        log.Error("RemoveJudge: %v", err)
+        ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
     }
     ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }
@@ -1160,15 +1171,24 @@ export default {
     },
   },
   created() {
-    // Pre-fill existing scores from submissions data
+    // Pre-populate ALL keys for Vue reactivity tracking.
+    // Vue 3 data() objects need keys to exist at creation time for reactivity.
     for (const trackId in this.submissions) {
+      const rubric = this.rubrics[trackId] || [];
       for (const sub of this.submissions[trackId]) {
+        // Initialize all criteria slots with defaults
+        this.scores[sub.id] = {};
+        this.saving[sub.id] = false;
+        this.saved[sub.id] = false;
+        this.errors[sub.id] = '';
+        for (const c of rubric) {
+          this.scores[sub.id][c.criteria_id] = {score: 0, comment: ''};
+        }
+        // Overwrite with existing scores if any
         if (sub.existing_scores) {
-          this.scores[sub.id] = {};
           for (const s of sub.existing_scores) {
             this.scores[sub.id][s.criteria_id] = {score: s.score, comment: s.comment};
           }
-          // Mark as already scored
           if (sub.existing_scores.length > 0) this.saved[sub.id] = true;
         }
       }
