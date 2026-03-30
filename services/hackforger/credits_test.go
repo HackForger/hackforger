@@ -184,3 +184,47 @@ func TestRedeem_AutoFulfill_NoKeys(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(2500), acctAfter.Balance)
 }
+
+func TestBatchFulfillOrders(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// Orders 1 and 3 are both pending
+	success, failed, err := hackforger_service.BatchFulfillOrders(db.DefaultContext, admin, []int64{1, 3}, "batch note", "", "")
+	require.NoError(t, err)
+	assert.Equal(t, 2, success)
+	assert.Empty(t, failed)
+
+	// Verify both orders are fulfilled
+	order1, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 1)
+	require.NoError(t, err)
+	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order1.Status)
+	assert.Equal(t, "batch note", order1.FulfillNote)
+
+	order3, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 3)
+	require.NoError(t, err)
+	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order3.Status)
+	assert.Equal(t, "batch note", order3.FulfillNote)
+}
+
+func TestBatchFulfillOrders_PartialFailure(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// Fulfill order 1 first so it's no longer pending
+	err := hackforger_service.FulfillOrder(db.DefaultContext, admin, 1, "pre-fulfilled", "", "")
+	require.NoError(t, err)
+
+	// Now batch fulfill orders 1 (already fulfilled) and 3 (still pending)
+	success, failed, err := hackforger_service.BatchFulfillOrders(db.DefaultContext, admin, []int64{1, 3}, "batch note", "", "")
+	require.NoError(t, err)
+	assert.Equal(t, 1, success)
+	assert.Equal(t, []int64{1}, failed)
+
+	// Order 3 should be fulfilled
+	order3, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 3)
+	require.NoError(t, err)
+	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order3.Status)
+}

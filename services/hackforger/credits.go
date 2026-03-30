@@ -397,6 +397,24 @@ func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) err
 	return nil
 }
 
+// BatchFulfillOrders fulfills multiple orders at once. Returns the count of
+// successes and a list of order IDs that failed. Only site admins can call this.
+func BatchFulfillOrders(ctx context.Context, admin *user_model.User, orderIDs []int64, note, deliveryType, deliveryValue string) (int, []int64, error) {
+	if !admin.IsAdmin {
+		return 0, nil, ErrNotAdmin{UserID: admin.ID}
+	}
+	var success int
+	var failed []int64
+	for _, oid := range orderIDs {
+		if err := FulfillOrder(ctx, admin, oid, note, deliveryType, deliveryValue); err != nil {
+			failed = append(failed, oid)
+		} else {
+			success++
+		}
+	}
+	return success, failed, nil
+}
+
 // syncOptionStock updates the option's Stock and IsActive based on available keys.
 func syncOptionStock(ctx context.Context, optionID int64) error {
 	avail, err := hackforger_model.CountAvailableKeys(ctx, optionID)
