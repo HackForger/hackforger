@@ -35,6 +35,8 @@ const (
 	ActionGrantRoundClosed      activities_model.ActionType = 55
 	ActionGrantRoundFinalized   activities_model.ActionType = 56
 	ActionGrantRoundCancelled   activities_model.ActionType = 57
+	ActionOrderFulfilled        activities_model.ActionType = 58
+	ActionOrderCancelled        activities_model.ActionType = 59
 
 	// Milestone events (60, future)
 	ActionMilestone activities_model.ActionType = 60
@@ -64,6 +66,8 @@ var HackforgerActionTypeName = map[activities_model.ActionType]string{
 	ActionGrantRoundClosed:      "grant_round_closed",
 	ActionGrantRoundFinalized:   "grant_round_finalized",
 	ActionGrantRoundCancelled:   "grant_round_cancelled",
+	ActionOrderFulfilled:        "order_fulfilled",
+	ActionOrderCancelled:        "order_cancelled",
 	ActionMilestone:             "milestone",
 }
 
