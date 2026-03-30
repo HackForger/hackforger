@@ -91,6 +91,67 @@ func (err ErrHackathonSlugAlreadyExist) Unwrap() error {
 	return util.ErrAlreadyExist
 }
 
+// ErrInvalidHackathonPhase represents a phase transition error (e.g. judging requires Judging status).
+type ErrInvalidHackathonPhase struct {
+	HackathonID int64
+	Current     HackathonStatus
+	Expected    HackathonStatus
+}
+
+// IsErrInvalidHackathonPhase checks if an error is a ErrInvalidHackathonPhase.
+func IsErrInvalidHackathonPhase(err error) bool {
+	_, ok := err.(ErrInvalidHackathonPhase)
+	return ok
+}
+
+func (err ErrInvalidHackathonPhase) Error() string {
+	return fmt.Sprintf("invalid hackathon phase [id: %d, current: %d, expected: %d]", err.HackathonID, err.Current, err.Expected)
+}
+
+func (err ErrInvalidHackathonPhase) Unwrap() error {
+	return util.ErrInvalidArgument
+}
+
+// ErrNotJudge represents a permission error when a user is not assigned as judge.
+type ErrNotJudge struct {
+	UserID      int64
+	HackathonID int64
+	TrackID     int64
+}
+
+// IsErrNotJudge checks if an error is a ErrNotJudge.
+func IsErrNotJudge(err error) bool {
+	_, ok := err.(ErrNotJudge)
+	return ok
+}
+
+func (err ErrNotJudge) Error() string {
+	return fmt.Sprintf("user is not a judge [user_id: %d, hackathon_id: %d, track_id: %d]", err.UserID, err.HackathonID, err.TrackID)
+}
+
+func (err ErrNotJudge) Unwrap() error {
+	return util.ErrPermissionDenied
+}
+
+// ErrNoCriteria represents a missing scoring criteria error.
+type ErrNoCriteria struct {
+	HackathonID int64
+}
+
+// IsErrNoCriteria checks if an error is a ErrNoCriteria.
+func IsErrNoCriteria(err error) bool {
+	_, ok := err.(ErrNoCriteria)
+	return ok
+}
+
+func (err ErrNoCriteria) Error() string {
+	return fmt.Sprintf("no scoring criteria defined [hackathon_id: %d]", err.HackathonID)
+}
+
+func (err ErrNoCriteria) Unwrap() error {
+	return util.ErrInvalidArgument
+}
+
 // CreateHackathon creates a new hackathon in the database.
 func CreateHackathon(ctx context.Context, h *Hackathon) error {
 	return db.Insert(ctx, h)
