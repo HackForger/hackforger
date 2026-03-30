@@ -23,6 +23,14 @@
 									<a href="{{AppSubUrl}}/{{$user.Name}}">{{$user.Name}}</a>
 								</div>
 								{{end}}
+								{{if gt .RepoID 0}}
+									{{$repo := index $.RepoMap .RepoID}}
+									{{if $repo}}
+									<div class="tw-text-sm tw-mt-1">
+										{{svg "octicon-repo" 14}} <a href="{{AppSubUrl}}/{{$repo.FullName}}">{{$repo.FullName}}</a>
+									</div>
+									{{end}}
+								{{end}}
 								{{if .Description}}
 								<div class="tw-text-sm tw-text-gray tw-mt-1">{{.Description}}</div>
 								{{end}}

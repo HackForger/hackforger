@@ -17,9 +17,14 @@
 				<label>{{ctx.Locale.Tr "hackforger.grant.project.description"}}</label>
 				<textarea name="description" rows="6"></textarea>
 			</div>
-			<div class="field">
-				<label>{{ctx.Locale.Tr "hackforger.grant.project.repo_id"}} ({{ctx.Locale.Tr "hackforger.optional"}})</label>
-				<input type="number" name="repo_id" min="0" value="0">
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.repo"}}</label>
+				<select name="repo_id" class="ui search dropdown" required>
+					<option value="">{{ctx.Locale.Tr "hackforger.grant.project.select_repo"}}</option>
+					{{range .Repos}}
+					<option value="{{.ID}}">{{.FullName}}</option>
+					{{end}}
+				</select>
 			</div>
 			<div class="field">
 				<button class="ui primary button">{{ctx.Locale.Tr "hackforger.grant.project.submit"}}</button>

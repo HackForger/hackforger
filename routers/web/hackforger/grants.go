@@ -11,6 +11,7 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	org_model "forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/timeutil"
@@ -273,11 +274,25 @@ func GrantRoundProjects(ctx *context.Context) {
 		}
 	}
 
+	// Load repo info for each project that has a linked repo
+	repoMap := make(map[int64]*repo_model.Repository)
+	for _, p := range projects {
+		if p.RepoID > 0 {
+			if _, ok := repoMap[p.RepoID]; !ok {
+				r, err := repo_model.GetRepositoryByID(ctx, p.RepoID)
+				if err == nil {
+					repoMap[p.RepoID] = r
+				}
+			}
+		}
+	}
+
 	ctx.Data["Title"] = fmt.Sprintf("%s - %s", round.Name, ctx.Tr("hackforger.grant.projects"))
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["Round"] = round
 	ctx.Data["Projects"] = projects
 	ctx.Data["UserMap"] = userMap
+	ctx.Data["RepoMap"] = repoMap
 	ctx.Data["Total"] = total
 	ctx.Data["Page"] = page
 	ctx.HTML(http.StatusOK, tplGrantProjects)
@@ -296,10 +311,34 @@ func SubmitGrantProject(ctx *context.Context) {
 		return
 	}
 
+	// Load the current user's repos for the dropdown
+	repos, _, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
+		Actor:       ctx.Doer,
+		OwnerID:     ctx.Doer.ID,
+		Private:     true,
+		ListOptions: db.ListOptions{PageSize: 100},
+	})
+	if err != nil {
+		ctx.ServerError("SearchRepository", err)
+		return
+	}
+
 	ctx.Data["Title"] = ctx.Tr("hackforger.grant.project.submit")
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["Round"] = round
+	ctx.Data["Repos"] = repos
 	ctx.HTML(http.StatusOK, tplGrantSubmit)
+}
+
+// loadUserRepos is a helper to load the current user's repos for the submit form dropdown.
+func loadUserRepos(ctx *context.Context) (repo_model.RepositoryList, error) {
+	repos, _, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
+		Actor:       ctx.Doer,
+		OwnerID:     ctx.Doer.ID,
+		Private:     true,
+		ListOptions: db.ListOptions{PageSize: 100},
+	})
+	return repos, err
 }
 
 // SubmitGrantProjectPost handles the POST to submit a project.
@@ -323,8 +362,33 @@ func SubmitGrantProjectPost(ctx *context.Context) {
 	description := ctx.Req.FormValue("description")
 	repoID, _ := strconv.ParseInt(ctx.Req.FormValue("repo_id"), 10, 64)
 
+	// Helper to reload repos on validation errors so the dropdown is repopulated
+	reloadRepos := func() {
+		repos, repoErr := loadUserRepos(ctx)
+		if repoErr == nil {
+			ctx.Data["Repos"] = repos
+		}
+	}
+
 	if title == "" {
 		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.title_required"))
+		reloadRepos()
+		ctx.HTML(http.StatusOK, tplGrantSubmit)
+		return
+	}
+
+	if repoID <= 0 {
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.repo_required"))
+		reloadRepos()
+		ctx.HTML(http.StatusOK, tplGrantSubmit)
+		return
+	}
+
+	// Verify the repo exists and belongs to the current user
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil || repo.OwnerID != ctx.Doer.ID {
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.invalid_repo"))
+		reloadRepos()
 		ctx.HTML(http.StatusOK, tplGrantSubmit)
 		return
 	}
