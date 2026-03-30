@@ -67,6 +67,7 @@ func ClaimKey(ctx context.Context, optionID, orderID int64) (*RedeemOptionKey, e
 		has, err := db.GetEngine(txCtx).
 			Where("option_id = ? AND is_used = ?", optionID, false).
 			OrderBy("id ASC").
+			ForUpdate().
 			Limit(1).
 			Get(k)
 		if err != nil {
