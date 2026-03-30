@@ -442,7 +442,43 @@ func ManageTrackPost(ctx *context.Context) {
 	if h == nil {
 		return
 	}
-	t := &hackforger_model.HackathonTrack{HackathonID: h.ID, Name: ctx.FormString("name")}
+
+	prizeCredits, _ := strconv.ParseInt(ctx.FormString("prize_credits"), 10, 64)
+	prizeDistMode := ctx.FormString("prize_dist_mode")
+	if prizeDistMode == "" {
+		prizeDistMode = "winner_takes_all"
+	}
+
+	t := &hackforger_model.HackathonTrack{
+		HackathonID:   h.ID,
+		Name:          ctx.FormString("name"),
+		PrizeCredits:  prizeCredits,
+		PrizeDistMode: prizeDistMode,
+	}
+
+	// Validate and set ratios only for tiered mode
+	if prizeDistMode == "tiered" {
+		ratiosJSON := strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
+		if ratiosJSON != "" {
+			ratios, err := hackforger_model.ParsePrizeDistRatios(ratiosJSON)
+			if err != nil {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
+			if err := hackforger_model.ValidatePrizeDistRatios(ratios); err != nil {
+				if hackforger_model.IsErrInvalidDistRatios(err) {
+					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				} else {
+					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				}
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
+			t.PrizeDistRatios = ratiosJSON
+		}
+	}
+
 	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
 		ctx.Flash.Error(err.Error())
 	}
