@@ -84,7 +84,7 @@ func GetHackforgerFeeds(ctx context.Context, opts GetHackforgerFeedsOptions) ([]
 	// Deduplicate: an actor may have both a personal record (UserID=actorID)
 	// and a global record (UserID=0) for the same event. Group to avoid dupes.
 	if opts.IncludeGlobal && opts.UserID > 0 {
-		sess = sess.GroupBy("act_user_id, op_type, entity_type, entity_id, created_unix")
+		sess = sess.GroupBy("act_user_id, op_type, entity_type, entity_id, entity_name, entity_slug, org_id, repo_id, content, created_unix")
 	}
 
 	sess = db.SetSessionPagination(sess, &opts.ListOptions)
@@ -102,7 +102,7 @@ func GetEntityTimeline(ctx context.Context, entityType string, entityID int64, o
 
 	opts.SetDefaultValues()
 	sess := db.GetEngine(ctx).Where(cond).
-		GroupBy("act_user_id, op_type, entity_type, entity_id, created_unix")
+		GroupBy("act_user_id, op_type, entity_type, entity_id, entity_name, entity_slug, org_id, repo_id, content, created_unix")
 	sess = db.SetSessionPagination(sess, &opts)
 
 	actions := make([]*HackforgerAction, 0, opts.PageSize)
