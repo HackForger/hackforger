@@ -79,14 +79,21 @@ Validation rules:
 
 Add `distributeHackathonCredits(ctx, hackathonID)` called from `FinalizeHackathon()` after `CalculateRanks()` succeeds.
 
+**Important: per-track ranking.** The existing `CalculateRanks()` computes a single global ranking across all submissions in a hackathon. For prize distribution, we need per-track rankings. Rather than modifying `CalculateRanks()` (which is used for leaderboard display), `distributeHackathonCredits()` computes its own per-track ranking by sorting submissions within each track by `TotalScore` descending. This is independent of the global `Rank` field.
+
+**ListSubmissions change needed:** The existing `ListSubmissionsOptions` has no `OrderBy` support. Add a `SortByScore bool` field; when true, the `ToOrders()` method returns `"total_score DESC, id ASC"`. Alternatively, the service layer can sort the returned slice in-memory (simpler, adequate for hackathon-sized datasets).
+
 **Pseudocode:**
 
 ```
 func distributeHackathonCredits(ctx, hackathonID):
   tracks = ListTracksByHackathon(ctx, hackathonID)
   for each track where PrizeCredits > 0:
-    submissions = ListSubmissions(ctx, {TrackID: track.ID, OrderBy: "rank ASC"})
-    ranked = filter(submissions, sub.Rank > 0)
+    submissions = ListSubmissions(ctx, {TrackID: track.ID})
+    // Sort by TotalScore descending (per-track ranking, independent of global Rank)
+    sort submissions by TotalScore DESC, ID ASC
+    // Assign per-track rank: 1, 2, 3, ...
+    ranked = filter(submissions, sub.TotalScore > 0)  // exclude unscored
     if len(ranked) == 0: continue
 
     switch track.PrizeDistMode:
@@ -98,15 +105,18 @@ func distributeHackathonCredits(ctx, hackathonID):
         ratios = parseJSON(track.PrizeDistRatios)
         deposited = 0
         for i, r := range ratios:
-          sub = findByRank(ranked, r.Rank)
-          if sub == nil: continue  // fewer submissions than ratios, skip
-          if i == len(ratios)-1 && sub != nil:
-            amount = track.PrizeCredits - deposited  // last rank gets remainder
-          else:
-            amount = track.PrizeCredits * r.Pct / 100
+          trackRankIdx = r.Rank - 1  // 0-indexed
+          if trackRankIdx >= len(ranked): continue  // fewer submissions than ratios, skip
+          sub = ranked[trackRankIdx]
+          amount = track.PrizeCredits * r.Pct / 100
           deposited += amount
           Deposit(ctx, sub.UserID, amount,
             "hackathon:{id}/track:{tid}:rank:{r.Rank}", "Hackathon rank {r.Rank}: {track.Name}")
+        // Rounding remainder: deposited may be < PrizeCredits due to integer division.
+        // Award remainder to rank 1 (highest ranked, most deserving).
+        if remainder := track.PrizeCredits - deposited; remainder > 0 && len(ranked) > 0:
+          Deposit(ctx, ranked[0].UserID, remainder,
+            "hackathon:{id}/track:{tid}:rank:1:remainder", "Hackathon rounding remainder: {track.Name}")
 
       case "equal":
         perUser = track.PrizeCredits / int64(len(ranked))
@@ -115,14 +125,22 @@ func distributeHackathonCredits(ctx, hackathonID):
           amount = perUser
           if i == 0: amount += remainder  // rank 1 gets remainder
           Deposit(ctx, sub.UserID, amount,
-            "hackathon:{id}/track:{tid}:rank:{sub.Rank}", "Hackathon participant: {track.Name}")
+            "hackathon:{id}/track:{tid}:rank:{i+1}", "Hackathon participant: {track.Name}")
 ```
 
 **Edge cases:**
 - Track has `PrizeCredits = 0`: skip entirely
-- No ranked submissions in track: skip, no deposits
-- Tiered mode with fewer submissions than ratio entries: skip missing ranks, unclaimed portion is NOT redistributed (organizer set the rules)
-- Integer division remainder: always assigned to the highest-ranked recipient (rank 1 for equal, last ratio entry for tiered)
+- No scored submissions in track (`TotalScore == 0`): skip, no deposits
+- Tiered mode with fewer submissions than ratio entries: skip missing ranks, unclaimed portion is NOT redistributed (organizer set the rules; see example below)
+- Integer division remainder: always assigned to rank 1 (highest-ranked) in both tiered and equal modes for consistency
+
+**Tiered with fewer submissions example:**
+Track has 1000 credits, ratios `[{1: 50%}, {2: 30%}, {3: 20%}]`, but only 2 submissions:
+- Rank 1 gets `1000 * 50 / 100 = 500`
+- Rank 2 gets `1000 * 30 / 100 = 300`
+- Rank 3 skipped (no submission)
+- `deposited = 800`, remainder `200` goes to rank 1
+- Final: rank 1 = 700, rank 2 = 300, total = 1000 (no credits lost)
 
 ### 2.3 Track Create/Update Validation
 
@@ -187,6 +205,12 @@ Example: `hackathon:5/track:12:rank:1`
 |--------|------|---------|-------------|
 | `fulfill_mode` | VARCHAR(16) NOT NULL | `"manual"` | `"manual"` or `"auto"` |
 
+**Updated `FulfillOrder` signature** (F2 adds delivery fields):
+
+```go
+func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, note, deliveryType, deliveryValue string) error
+```
+
 **Modified `Redeem()` flow** (all within existing `db.WithTx`):
 
 ```
@@ -194,13 +218,14 @@ existing: deduct balance -> deduct stock -> create transaction -> create order (
 
 after creating order, add:
   if option.FulfillMode == "auto":
-    key = claim one unused key:
-      UPDATE redeem_option_key
-      SET is_used = true, order_id = order.ID
-      WHERE option_id = option.ID AND is_used = false
-      ORDER BY id ASC LIMIT 1
+    // Two-step claim for SQLite compatibility (UPDATE...ORDER BY...LIMIT
+    // requires SQLITE_ENABLE_UPDATE_DELETE_LIMIT which may not be enabled):
+    key = SELECT id, key_value FROM redeem_option_key
+          WHERE option_id = option.ID AND is_used = false
+          ORDER BY id ASC LIMIT 1
     if no key found:
       return ErrOutOfStock  // triggers full tx rollback
+    UPDATE redeem_option_key SET is_used = true, order_id = order.ID WHERE id = key.ID
     order.Status = "fulfilled"
     order.DeliveryType = "license_key"
     order.DeliveryValue = key.KeyValue
@@ -213,6 +238,8 @@ after creating order, add:
 - Keys claimed -> Stock decreases automatically
 - The `Stock` column on `RedeemOption` is kept in sync by the service layer on key add/remove operations
 - If all keys are used and Stock reaches 0, set `IsActive = false` automatically
+- Validation: when `FulfillMode = "auto"`, `Stock = -1` (unlimited) is NOT allowed — stock is always derived from key count. The admin cannot manually set Stock for auto-fulfill options.
+- Note: existing `RedeemOption.Stock` field is type `int` (not `int64`). This is fine — key pool sizes won't exceed int range.
 
 **Admin UI for key pool:**
 - Option create/edit page: `FulfillMode` radio (Manual / Auto-fulfill)
@@ -259,11 +286,11 @@ Note: if `delivery_value` is empty, each order gets only the note. For batch sce
 
 ### 3.4 F1: Order Status Notification
 
-**New action types** (extending the existing HackForger range):
+**New action types** (in lifecycle range 58-59, since 30-43 and 50-57 are taken):
 
 ```go
-ActionOrderFulfilled activities_model.ActionType = 43
-ActionOrderCancelled activities_model.ActionType = 44
+ActionOrderFulfilled activities_model.ActionType = 58
+ActionOrderCancelled activities_model.ActionType = 59
 ```
 
 Add corresponding string mappings in `action_types.go`:
@@ -272,6 +299,18 @@ Add corresponding string mappings in `action_types.go`:
 ActionOrderFulfilled: "order_fulfilled",
 ActionOrderCancelled: "order_cancelled",
 ```
+
+**New audience type — `AudienceDirectUser`:**
+
+The existing audience types (Global, Followers, OrgMembers, RepoWatchers) don't support targeting a specific user. Order notifications need to reach the order owner directly. Add:
+
+```go
+AudienceDirectUser  // Visible to a specific user (opts.TargetUserID)
+```
+
+Add `TargetUserID int64` to `HackforgerActionOpts`, used when `AudienceType == AudienceDirectUser`.
+
+In `PublishHackforgerAction`, the `AudienceDirectUser` case inserts a single action row with `UserID = opts.TargetUserID`.
 
 **Implementation — standalone helper in `credits.go`:**
 
@@ -282,9 +321,10 @@ func notifyOrderStatusChange(ctx context.Context, order *RedeemOrder, adminID in
 This calls `PublishHackforgerAction` with:
 - `ActUserID = adminID`
 - `OpType = actionType`
-- `AudienceType = AudienceFollowers` (of the admin — minimal audience)
+- `AudienceType = AudienceDirectUser`
+- `TargetUserID = order.UserID` (the order owner — the person who should see the notification)
 - `Content.EntityType = "credits"`, `Content.EntityName = optionName`
-- `Content.Extra = {"order_id": order.ID, "user_id": order.UserID}`
+- `Content.Extra = {"order_id": order.ID}`
 
 Called from:
 - `FulfillOrder()` — with `ActionOrderFulfilled`
@@ -293,7 +333,7 @@ Called from:
 
 **Isolation strategy:**
 - All notification code stays in `services/hackforger/credits.go`
-- No changes to `feed.go`, `notifier.go`, or feed query logic
+- The `AudienceDirectUser` addition to `notifier.go` is minimal (~5 lines in the switch)
 - Committed as a separate, independent commit
 - When Line-B later reworks the feed system, only this isolated commit may need rebasing
 
@@ -301,7 +341,7 @@ Called from:
 
 ## 4. Schema Migration
 
-One new migration file in `models/forgejo_migrations/` covering all schema changes:
+One new migration file: `models/forgejo_migrations/v14g_credits-fulfill-hackathon-prizes.go`. Covers all schema changes:
 
 **Alter `hackathon_track`:**
 - ADD `prize_dist_mode` VARCHAR(20) NOT NULL DEFAULT 'winner_takes_all'
@@ -354,7 +394,8 @@ All keys go under the `[hackforger]` section in both locale files.
 | `models/hackforger/action_types.go` | Add ActionOrderFulfilled (43), ActionOrderCancelled (44) |
 | `models/hackforger/init.go` | Register RedeemOptionKey model |
 | `services/hackforger/hackathon.go` | Add distributeHackathonCredits(), call from FinalizeHackathon() |
-| `services/hackforger/credits.go` | Modify Redeem() for auto-fulfill, add BatchFulfillOrders(), notifyOrderStatusChange(), key pool management funcs |
+| `services/hackforger/credits.go` | Modify Redeem() for auto-fulfill, update FulfillOrder() signature, add BatchFulfillOrders(), notifyOrderStatusChange(), key pool management funcs |
+| `services/hackforger/notifier.go` | Add AudienceDirectUser type + TargetUserID field (~5 lines, separate commit) |
 | `routers/web/hackforger/credits.go` | Add key pool web handlers, batch fulfill handler |
 | `routers/api/v1/hackforger/credits.go` | Add key pool API endpoints, batch fulfill API |
 | `routers/web/web.go` | Register new key pool + batch fulfill routes |
@@ -363,7 +404,7 @@ All keys go under the `[hackforger]` section in both locale files.
 | `templates/hackforger/credits/orders.tmpl` | Show delivery info for fulfilled orders |
 | `templates/hackforger/credits/admin/orders.tmpl` | Batch fulfill UI, delivery fields in fulfill modal |
 | `templates/hackforger/credits/admin/options.tmpl` | FulfillMode selector, key pool link |
-| `templates/hackforger/hackathon/manage_tracks.tmpl` | Prize distribution mode + ratios UI |
+| `templates/hackforger/hackathon/manage.tmpl` | Prize distribution mode + ratios UI in track section |
 | `options/locale/locale_en-US.ini` | New i18n keys |
 | `options/locale/locale_zh-CN.ini` | Complete credits zh-CN translations |
 
@@ -385,3 +426,16 @@ All keys go under the `[hackforger]` section in both locale files.
 - Credits transfer between users (explicitly out of scope per plan)
 - Webhook events for credits (Week 5 scope)
 - Swagger annotations (Week 5 scope)
+
+---
+
+## 8. E2E Testing
+
+A manual E2E test prompt and report template will be created in `docs/tests/e2e/` as part of the implementation plan. The E2E scenarios must cover:
+
+1. **Hackathon credits distribution**: Create hackathon with 3 tracks (one per mode), finalize, verify deposits
+2. **Manual fulfill with delivery**: Redeem option, admin fulfills with license key, user sees key on orders page
+3. **Auto-fulfill**: Admin creates option with key pool, user redeems, gets key immediately
+4. **Batch fulfill**: Multiple pending orders, admin batch-fulfills, verify all statused
+5. **Order notification**: After fulfill/cancel, verify feed event visible to order owner
+6. **i18n**: Switch to zh-CN, verify all credits pages render correctly
