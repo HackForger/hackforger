@@ -20,6 +20,7 @@ type Reputation struct {
 	GrantsReceived     int                `xorm:"NOT NULL DEFAULT 0"`
 	TotalStars         int64              `xorm:"NOT NULL DEFAULT 0"`
 	TotalCreditsEarned int64              `xorm:"NOT NULL DEFAULT 0"`
+	Tier               string             `xorm:"VARCHAR(20) NOT NULL DEFAULT 'Bronze'"`
 	UpdatedUnix        timeutil.TimeStamp `xorm:"updated"`
 }
 
