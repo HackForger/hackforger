@@ -120,7 +120,7 @@ sqlite3 /Users/h2oslabs/Workspace/hackforger/data/forgejo.db \
 2. **Verify:** "Spring 2026 Grants" appears in the list.
 3. Click "Open" status tab → verify it filters correctly.
 4. Search for "Spring" → verify it appears.
-5. Sort by "Most funded" → verify no error.
+5. Sort by "Alphabetical" → verify sorting works.
 
 ### C. Project Submission (Hacker)
 
@@ -132,21 +132,22 @@ sqlite3 /Users/h2oslabs/Workspace/hackforger/data/forgejo.db \
 4. Fill in:
    - Title: `Open Source Widget`
    - Description: `A widget that does amazing things.`
-   - Repository: (optional, leave empty or select one)
+   - Repository: **(required)** select one of hacker_eve's repos from the dropdown
 5. Submit.
 6. **Verify:** Project status is **Pending**.
 7. **Verify:** Success flash message.
+8. **Verify:** Project list shows repo link (clickable, links to the repo page).
 
 **C2. Duplicate Submission (Error Case)**
 
 1. While still logged in as `hacker_eve`, navigate to `/grants/spring-2026/submit` again.
-2. Submit another project.
-3. **Verify:** Error message about already having submitted.
+2. Fill in title and select a repo, submit.
+3. **Verify:** Flash error message: "You have already submitted a project to this round." (redirects to round detail page).
 
 **C3. Second Hacker Submits**
 
 1. Log in as `hacker_frank`.
-2. Submit a project to the same round (Title: `Another Widget`).
+2. Submit a project to the same round (Title: `Another Widget`, select one of frank's repos).
 3. **Verify:** Submission succeeds.
 
 ### D. Review + Allocation (Admin)
@@ -286,14 +287,15 @@ sqlite3 /Users/h2oslabs/Workspace/hackforger/data/forgejo.db \
 1. As admin, navigate to `/grants/spring-2026/export`.
 2. **Verify:** CSV file downloads.
 3. **Verify:** Contains columns: id, title, user_id, status, award_amount, award_credits.
-4. **Verify:** Both projects are listed with correct data.
+4. **Verify:** Status column shows string values (`funded`, not numbers).
+5. **Verify:** Both projects are listed with correct award data.
 
 ### J. Cancel Round (Separate Test)
 
 1. Create a new round (e.g., slug `cancel-test`), open it.
 2. Navigate to manage, click "Cancel Round".
 3. **Verify:** Status → **Cancelled**.
-4. **Verify:** Cannot submit projects to a cancelled round.
+4. **Verify:** Cannot submit projects to a cancelled round (flash error: round not open).
 
 ---
 
