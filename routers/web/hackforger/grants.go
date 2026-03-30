@@ -287,6 +287,9 @@ func GrantRoundProjects(ctx *context.Context) {
 		}
 	}
 
+	pager := context.NewPagination(int(total), 20, page, 5)
+	pager.SetDefaultParams(ctx)
+
 	ctx.Data["Title"] = fmt.Sprintf("%s - %s", round.Name, ctx.Tr("hackforger.grant.projects"))
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["Round"] = round
@@ -294,7 +297,7 @@ func GrantRoundProjects(ctx *context.Context) {
 	ctx.Data["UserMap"] = userMap
 	ctx.Data["RepoMap"] = repoMap
 	ctx.Data["Total"] = total
-	ctx.Data["Page"] = page
+	ctx.Data["Page"] = pager
 	ctx.HTML(http.StatusOK, tplGrantProjects)
 }
 
