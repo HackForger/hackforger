@@ -12,6 +12,281 @@
 
 ---
 
+## ⚠ Errata (Post-Review Corrections)
+
+The plan was reviewed by 3 subagents after initial writing. Below are corrections that MUST be applied during implementation. Implementers: read this section first and apply corrections to the relevant task code.
+
+### E1. Chunk 1 already implemented — fixtures differ from plan
+
+Chunk 1 (Tasks 1-7) was implemented before this review. The actual committed fixtures differ from the plan's code blocks:
+
+- **hackathon.yml**: status=3 (Judging), not 4 as plan says (plan had wrong enum: 3=Judging, 4=Finished)
+- **hackathon_track.yml**: Tiered track uses ratios `60/30/10`, not `50/30/20`
+- **hackathon_submission.yml**: Users are reused across tracks: track 1 = {user 2, user 4}, track 2 = {user 2, user 4, user 5}, track 3 = {user 2, user 4}
+- **redeem_option.yml**: Option 2 has cost=2000, stock=-1 (not cost=100, stock=2)
+- **redeem_order.yml**: Order 2 has user_id=4/option_id=2, Order 3 has user_id=5/option_id=1
+- **ClaimKey**: ForUpdate() was missing; fixed in commit 906306a162
+
+**Action for Task 8**: Tests must use actual fixture user IDs and ratios. See corrected tests below in the errata for Task 8.
+
+### E2. Task 8: Corrected test code matching actual fixtures
+
+Replace the plan's Task 8 test code with:
+
+```go
+func TestDistributeHackathonCredits_WinnerTakesAll(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	err := distributeHackathonCredits(db.DefaultContext, 1)
+	require.NoError(t, err)
+
+	// Track 1: winner_takes_all, 1000 credits
+	// Fixtures: user 2 (score 95.0) rank 1, user 4 (score 80.0) rank 2
+	// Only user 2 should get track 1 deposit
+	txns2, _, _ := ListTransactions(db.DefaultContext, 2, db.ListOptions{Page: 1, PageSize: 50})
+	var track1u2 int64
+	for _, tx := range txns2 {
+		if tx.Reference == "hackathon:1/track:1:rank:1" {
+			track1u2 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(1000), track1u2)
+
+	// User 4 should NOT get credits from track 1 (rank 2)
+	txns4, _, _ := ListTransactions(db.DefaultContext, 4, db.ListOptions{Page: 1, PageSize: 50})
+	for _, tx := range txns4 {
+		assert.NotEqual(t, "hackathon:1/track:1:rank:2", tx.Reference)
+	}
+}
+
+func TestDistributeHackathonCredits_Tiered(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	err := distributeHackathonCredits(db.DefaultContext, 1)
+	require.NoError(t, err)
+
+	// Track 2: tiered [60/30/10] with 1000 credits
+	// Fixtures: user 2 (90.0) rank 1, user 4 (85.0) rank 2, user 5 (70.0) rank 3
+	txns2, _, _ := ListTransactions(db.DefaultContext, 2, db.ListOptions{Page: 1, PageSize: 50})
+	var t2u2 int64
+	for _, tx := range txns2 {
+		if tx.Reference == "hackathon:1/track:2:rank:1" {
+			t2u2 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(600), t2u2)
+
+	txns4, _, _ := ListTransactions(db.DefaultContext, 4, db.ListOptions{Page: 1, PageSize: 50})
+	var t2u4 int64
+	for _, tx := range txns4 {
+		if tx.Reference == "hackathon:1/track:2:rank:2" {
+			t2u4 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(300), t2u4)
+
+	txns5, _, _ := ListTransactions(db.DefaultContext, 5, db.ListOptions{Page: 1, PageSize: 50})
+	var t2u5 int64
+	for _, tx := range txns5 {
+		if tx.Reference == "hackathon:1/track:2:rank:3" {
+			t2u5 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(100), t2u5)
+}
+
+func TestDistributeHackathonCredits_Equal(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	err := distributeHackathonCredits(db.DefaultContext, 1)
+	require.NoError(t, err)
+
+	// Track 3: equal, 1000 credits, 2 users (user 2 score 88.0, user 4 score 88.0)
+	txns2, _, _ := ListTransactions(db.DefaultContext, 2, db.ListOptions{Page: 1, PageSize: 50})
+	var t3u2 int64
+	for _, tx := range txns2 {
+		if tx.Reference == "hackathon:1/track:3:rank:1" {
+			t3u2 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(500), t3u2)
+
+	txns4, _, _ := ListTransactions(db.DefaultContext, 4, db.ListOptions{Page: 1, PageSize: 50})
+	var t3u4 int64
+	for _, tx := range txns4 {
+		if tx.Reference == "hackathon:1/track:3:rank:2" {
+			t3u4 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(500), t3u4)
+}
+
+func TestDistributeHackathonCredits_EqualRemainder(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	track := unittest.AssertExistsAndLoadBean(t, &hackforger_model.HackathonTrack{ID: 3})
+	track.PrizeCredits = 999
+	require.NoError(t, hackforger_model.UpdateTrack(db.DefaultContext, track))
+
+	err := distributeHackathonCredits(db.DefaultContext, 1)
+	require.NoError(t, err)
+
+	// 999 / 2 = 499, remainder 1 → rank 1 (user 2) gets 500
+	txns2, _, _ := ListTransactions(db.DefaultContext, 2, db.ListOptions{Page: 1, PageSize: 50})
+	var t3u2 int64
+	for _, tx := range txns2 {
+		if tx.Reference == "hackathon:1/track:3:rank:1" {
+			t3u2 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(500), t3u2)
+
+	txns4, _, _ := ListTransactions(db.DefaultContext, 4, db.ListOptions{Page: 1, PageSize: 50})
+	var t3u4 int64
+	for _, tx := range txns4 {
+		if tx.Reference == "hackathon:1/track:3:rank:2" {
+			t3u4 += tx.Amount
+		}
+	}
+	assert.Equal(t, int64(499), t3u4)
+}
+```
+
+### E3. Tasks 10/14/15: `ctx.PathParamInt64` does not exist
+
+Forgejo uses `ctx.ParamsInt64(":id")` (with colon prefix), NOT `ctx.PathParamInt64("id")`. Fix all occurrences in:
+- Task 14 web handlers: `ctx.ParamsInt64(":id")` for option ID, `ctx.ParamsInt64(":oid")` for order ID
+- Task 15 API handlers: same pattern
+
+### E4. Task 10: Complete CancelOrder refactoring
+
+The plan's note about CancelOrder is incomplete. Here is the full replacement:
+
+```go
+func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+
+	var order *hackforger_model.RedeemOrder
+	var optName string
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		order, err = hackforger_model.GetRedeemOrderByID(ctx, orderID)
+		if err != nil {
+			return err
+		}
+		if order.Status != hackforger_model.OrderStatusPending {
+			return ErrOrderNotPending{OrderID: orderID, Status: order.Status}
+		}
+
+		order.Status = hackforger_model.OrderStatusCancelled
+		if err := hackforger_model.UpdateRedeemOrder(ctx, order); err != nil {
+			return err
+		}
+
+		acct, err := GetOrCreateCreditAccount(ctx, order.UserID)
+		if err != nil {
+			return err
+		}
+		acct.Balance += order.Cost
+		if _, err := db.GetEngine(ctx).ID(acct.ID).Cols("balance").Update(acct); err != nil {
+			return err
+		}
+
+		tx := &hackforger_model.CreditTransaction{
+			UserID:    order.UserID,
+			Type:      hackforger_model.TransactionTypeRefund,
+			Amount:    order.Cost,
+			Balance:   acct.Balance,
+			Reference: fmt.Sprintf("order_%d_refund", orderID),
+			Note:      "Order cancelled and refunded",
+		}
+		_, err = db.GetEngine(ctx).Insert(tx)
+
+		if opt, _ := hackforger_model.GetRedeemOptionByID(ctx, order.OptionID); opt != nil {
+			optName = opt.Name
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	notifyOrderStatusChange(ctx, order, admin.ID, hackforger_model.ActionOrderCancelled, optName)
+	return nil
+}
+```
+
+### E5. Task 10 Step 6: Web handler must read form delivery fields
+
+The plan incorrectly passes `""` for delivery fields. The web handler should read form values:
+
+```go
+note := ctx.Req.FormValue("note")
+deliveryType := ctx.Req.FormValue("delivery_type")
+deliveryValue := ctx.Req.FormValue("delivery_value")
+hackforger_service.FulfillOrder(ctx, ctx.Doer, orderID, note, deliveryType, deliveryValue)
+```
+
+### E6. Task 10: Update existing TestFulfillOrder
+
+The existing test at `services/hackforger/credits_test.go` calls FulfillOrder with 4 args. Update to 6:
+
+```go
+hackforger_service.FulfillOrder(db.DefaultContext, admin, 1, "Fulfilled by admin", "", "")
+```
+
+### E7. Task 11/13: Redeem() variable hoisting for option
+
+Declare `var capturedOption *hackforger_model.RedeemOption` before `db.WithTx`. Inside the tx, after `db.GetEngine(ctx).Get(option)`, assign `capturedOption = option`. After the tx block, use `capturedOption.FulfillMode` for the stock sync check.
+
+### E8. Task 14: Use base.TplName constant and http.StatusOK
+
+Add constant: `tplAdminRedeemOptionKeys base.TplName = "hackforger/credits/admin/keys"`
+Use: `ctx.HTML(http.StatusOK, tplAdminRedeemOptionKeys)` instead of `ctx.HTML(200, "...")`
+
+### E9. Task 18: Do not show err.Error() to users
+
+Replace `ctx.Flash.Error(err.Error())` with:
+```go
+if hackforger_model.IsErrInvalidDistRatios(err) {
+	ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+} else {
+	ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+}
+```
+
+### E10. Task 19: i18n key format — strip `hackforger.` prefix
+
+Keys under `[hackforger]` section must NOT include the section name. The template `ctx.Locale.Tr "hackforger.credits.admin.key_pool"` resolves to section `[hackforger]` key `credits.admin.key_pool`.
+
+**Wrong:** `hackforger.credits.admin.key_pool = Key Pool`
+**Correct:** `credits.admin.key_pool = Key Pool`
+
+Strip `hackforger.` prefix from ALL keys in Task 19 Steps 1-2.
+
+### E11. Task 19: Add feed action locale keys for types 58/59
+
+The feed rendering uses keys from a different section (not `[hackforger]`). Add near the other `hackforger_xxx` action keys in the locale files:
+
+**en-US** (near line 3505):
+```ini
+hackforger_order_fulfilled = fulfilled a redeem order
+hackforger_order_cancelled = cancelled a redeem order
+```
+
+**zh-CN** (same location):
+```ini
+hackforger_order_fulfilled = 完成了一个兑换订单
+hackforger_order_cancelled = 取消了一个兑换订单
+```
+
+Also add rendering branches in `templates/user/dashboard/feeds.tmpl` for `"hackforger_order_fulfilled"` and `"hackforger_order_cancelled"`.
+
+### E12. Task 20: Add full Prerequisites section to E2E prompt
+
+Follow the pattern from existing E2E prompts (e.g., `phase1-grant-e2e.md`) — include server startup sequence, app.ini copy, test accounts, and data cleanup instructions.
+
+---
+
 ## Chunk 1: Migration + Model Layer
 
 ### Task 1: Database Migration
