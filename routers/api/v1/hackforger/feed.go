@@ -95,9 +95,11 @@ func GetFeed(ctx *context.APIContext) {
 
 	switch feedType {
 	case "global", "following", "entity", "user":
-		// valid types, handled below
+		// valid types
 	default:
-		ctx.Error(http.StatusBadRequest, "InvalidFeedType", nil)
+		ctx.JSON(http.StatusBadRequest, map[string]string{
+			"message": "invalid feed type: " + feedType + ". Valid values: global, following, entity, user",
+		})
 		return
 	}
 
