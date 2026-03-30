@@ -41,7 +41,7 @@ type HackforgerAction struct {
     ID          int64              `xorm:"pk autoincr"`
     UserID      int64              `xorm:"NOT NULL INDEX(idx_user_created)"`
     ActUserID   int64              `xorm:"NOT NULL INDEX(idx_actuser_created)"`
-    OpType      int                `xorm:"NOT NULL"`
+    OpType      activities_model.ActionType `xorm:"NOT NULL"` // reuses ActionType (int alias) from models/activities
     EntityType  string             `xorm:"VARCHAR(20) NOT NULL INDEX(idx_entity)"`
     EntityID    int64              `xorm:"NOT NULL DEFAULT 0"`
     EntityName  string             `xorm:"VARCHAR(255)"`
@@ -127,7 +127,7 @@ The `Tier` field is denormalized — computed from `Score` + tier thresholds dur
 A single migration file in `models/forgejo_migrations/`:
 1. Create `hackforger_action` table
 2. Create `hackforger_setting` table
-3. Add `tier` column to `hackforger_reputation` table
+3. Add `tier` column to `reputation` table (XORM default name for `Reputation` struct)
 4. Seed default settings
 
 ### 1.5 Cleanup: Existing `action` Table Data
@@ -184,6 +184,17 @@ type HackforgerActionOpts struct {
 }
 ```
 
+**Fix pre-existing AudienceType bug:** The current `AudienceType` uses sequential `iota` (0,1,2,3), but callers in `bounty.go` use bitwise OR (`AudienceFollowers | AudienceRepoWatchers`). This silently collapses to a single audience. Fix during this refactor:
+```go
+const (
+    AudienceGlobal       AudienceType = 1 << iota  // 1
+    AudienceFollowers                                // 2
+    AudienceOrgMembers                               // 4
+    AudienceRepoWatchers                             // 8
+)
+```
+Change the `switch` in `PublishHackforgerAction` to `if opts.AudienceType&AudienceX != 0` flag checks.
+
 **All existing callers** in `services/hackforger/bounty.go`, `hackathon.go`, `grants.go`, `credits.go` must be updated to pass the new entity fields. The Content struct is still used for extended data (phase changes, etc.) but entity metadata is no longer solely in Content.
 
 ### 2.2 Feed Query Layer
@@ -211,10 +222,12 @@ GET /api/v1/hackforger/feed
     &page=1&limit=20
 ```
 
-- `global`: `UserID = 0` records
-- `following`: `ActUserID IN (users I follow)` — same subquery approach
-- `entity`: `EntityType + EntityID` filter
-- `user`: `ActUserID = user_id` filter
+- `global`: `UserID = 0` records only
+- `following`: `UserID = doer.ID OR UserID = 0` — leverages pre-distributed audience records (the notifier already inserts rows for each follower), plus global events. This is the same query as the Dashboard Community tab.
+- `entity`: `EntityType + EntityID` filter (deduplicated: `GROUP BY` or `DISTINCT` on action content, since audience distribution creates multiple rows per event)
+- `user`: `ActUserID = user_id` filter (deduplicated similarly)
+
+**Note on deduplication:** For `entity` and `user` API modes, audience distribution means the same logical event may have multiple rows (one per audience member). These modes should deduplicate by grouping on `(act_user_id, op_type, entity_type, entity_id, created_unix)`.
 
 Response format unchanged (same `feedItem` struct).
 
@@ -237,16 +250,19 @@ All 22 HackForger `.InActions` branches (lines 83-127 of current file). These wi
 // RecalculateReputation recomputes a single user's reputation score and tier.
 func RecalculateReputation(ctx context.Context, userID int64) error {
     // 1. Load or create reputation record
-    // 2. Count metrics from DB:
-    //    - BountiesCompleted: COUNT(*) FROM hackforger_bounty WHERE claimer_id=? AND status=Completed/Paid
-    //    - HackathonWins: COUNT(*) FROM hackathon_submission WHERE submitter_id=? AND rank=1
-    //    - GrantsReceived: COUNT(*) FROM hackforger_grant_project WHERE owner_id=? AND status=Approved
+    // 2. Count metrics from DB (using actual XORM table/column names):
+    //    - BountiesCompleted: COUNT(*) FROM bounty WHERE claimer_id=? AND status IN (3,4)
+    //      (BountyStatusCompleted=3, BountyStatusPaid=4)
+    //    - HackathonWins: COUNT(*) FROM hackathon_submission WHERE user_id=? AND rank=1
+    //    - GrantsReceived: COUNT(*) FROM grant_project WHERE user_id=? AND status IN (1,3)
+    //      (GrantProjectStatusApproved=1, GrantProjectStatusDistributed=3)
     //    - TotalStars: SUM(num_stars) FROM repository WHERE owner_id=?
-    //    - TotalCreditsEarned: SUM(amount) FROM hackforger_credit_transaction WHERE user_id=? AND type IN (deposit types)
+    //    - TotalCreditsEarned: SUM(amount) FROM credit_transaction
+    //      WHERE user_id=? AND type IN ('deposit','reward')
     // 3. Load weights from hackforger_setting
-    // 4. Compute Score = sum(metric × weight)
+    // 4. Compute Score = sum(metric × weight)  (float64, then round to int64)
     // 5. Derive Tier from Score + tier thresholds
-    // 6. Update reputation record
+    // 6. Update reputation record (Score, Tier, and all metric fields)
 }
 
 // RecalculateAllReputations batch-recalculates all users with reputation records.
@@ -266,10 +282,11 @@ type ReputationTier struct {
 
 ### 3.2 Cron Task
 
-Register in `services/cron/tasks_extended.go`:
+Register in `services/cron/tasks_extended.go` inside `initExtendedTasks()`:
 
 ```go
-registerTaskFatal("hackforger_reputation_recalc", &OlderThanConfig{
+// Inside initExtendedTasks():
+RegisterTaskFatal("hackforger_reputation_recalc", &OlderThanConfig{
     BaseConfig: BaseConfig{Enabled: true, RunAtStart: false, Schedule: "@every 1h"},
     OlderThan:  0,
 }, func(ctx context.Context, _ *user_model.User, _ Config) error {
@@ -320,7 +337,13 @@ Add a tab bar between heatmap and feed content in `templates/user/dashboard/dash
     </a>
 </div>
 {{if eq .FeedType "community"}}
-    {{template "hackforger/feed/community_feeds" .}}
+    {{if .HackforgerFeeds}}
+        {{template "hackforger/feed/community_feeds" .}}
+    {{else}}
+        <div class="tw-py-8 tw-text-center text grey">
+            {{ctx.Locale.Tr "hackforger.feed.community_empty"}}
+        </div>
+    {{end}}
 {{else}}
     {{if .Feeds}}
         {{template "user/dashboard/feeds" .}}
@@ -404,20 +427,28 @@ In `templates/user/profile.tmpl`, add:
     {{template "hackforger/reputation/detail" .}}
 ```
 
-In `routers/web/user/profile.go` — `prepareUserProfileTabData()`, add cases:
+In `routers/web/user/profile.go` — `prepareUserProfileTabData()`:
 
+**Before the `switch tab` block**, load reputation unconditionally (so sidebar card appears on all tabs):
+```go
+// Load reputation for sidebar card (all tabs)
+if rep, err := hackforger_model.GetOrCreateReputation(ctx, ctx.ContextUser.ID); err == nil {
+    ctx.Data["Reputation"] = rep
+}
+```
+
+**Add tab cases:**
 ```go
 case "community":
     feeds, count, err := hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
         ActUserID: ctx.ContextUser.ID,
         ListOptions: db.ListOptions{Page: page, PageSize: setting.UI.FeedPagingNum},
     })
-    // ... LoadActUsers, set ctx.Data, pagination ...
+    // ... LoadActUsers, set ctx.Data["HackforgerFeeds"], pagination ...
 
 case "reputation":
-    rep, err := hackforger_model.GetOrCreateReputation(ctx, ctx.ContextUser.ID)
-    ctx.Data["Reputation"] = rep
-    // Load tier info, detailed metrics breakdown
+    // Reputation already loaded above for sidebar
+    // Load additional detail: weights breakdown, rank
 ```
 
 ### 5.4 Reputation Detail Template
@@ -431,11 +462,11 @@ case "reputation":
 ### 5.5 Web Route: Leaderboard Page
 
 ```
-GET /reputation/leaderboard — Public leaderboard page
+GET /explore/reputation — Public leaderboard page
 ```
 
 **Template:** `templates/hackforger/reputation/leaderboard.tmpl`
-**Router:** Add to `web.go` explore group (public, no login required)
+**Router:** Add to `web.go` explore group (inherits `ignExploreSignIn` middleware, consistent with `/explore/hackathons`, `/explore/bounties`, `/explore/grants`)
 
 ---
 
@@ -476,7 +507,7 @@ Renders `HackforgerAction` records. Unlike `feeds.tmpl` which uses Forgejo's `Ac
 
 ### 6.2 Template Helper Functions
 
-Register in Go (template function map):
+Register in `modules/templates/helper.go` → `NewFuncMap()`:
 
 ```go
 // HackforgerEntityURL generates the URL for a HackForger entity.
@@ -510,8 +541,9 @@ func HackforgerActionIcon(opType int) string {
 | `templates/user/profile.tmpl` | Add community + reputation tab content | ~10 |
 | `templates/user/overview/header.tmpl` | Add 2 tab links | ~8 |
 | `services/cron/tasks_extended.go` | Register reputation cron | ~6 |
+| `modules/templates/helper.go` | Register `HackforgerEntityURL`, `HackforgerActionIcon` | ~5 |
 
-**Total Forgejo-file changes: ~10 files, ~140 lines added, ~45 lines removed.**
+**Total Forgejo-file changes: ~11 files, ~150 lines added, ~45 lines removed.**
 
 ---
 
@@ -548,7 +580,10 @@ Both `options/locale/locale_en-US.ini` and `options/locale/locale_zh-CN.ini` und
 **Feed event messages** (22 keys, pattern: `hackforger.feed.<event_name>`):
 - `hackforger.feed.hackathon_created` = created hackathon %s / 创建了 Hackathon %s
 - `hackforger.feed.hackathon_registered` = registered for %s / 报名了 %s
-- ... (all 22 event types)
+- ... (all 22 active event types; `milestone` (type 60) excluded — reserved for future use)
+
+**Empty states:**
+- `hackforger.feed.community_empty` = No community activity yet / 暂无社区动态
 
 **Reputation:**
 - `hackforger.reputation.score` = Score / 声誉分
