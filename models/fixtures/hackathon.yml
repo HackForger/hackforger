@@ -1,1 +1,11 @@
-[]
+-
+  id: 1
+  org_id: 3
+  owner_id: 1
+  name: "Test Hackathon"
+  slug: "test-hackathon"
+  description: "A hackathon for testing prize distribution"
+  status: 3
+  max_team_size: 5
+  created_unix: 1609459200
+  updated_unix: 1609459200

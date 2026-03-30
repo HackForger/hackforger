@@ -1,1 +1,36 @@
-[]
+-
+  id: 1
+  hackathon_id: 1
+  name: "Winner Takes All Track"
+  description: "First place wins everything"
+  prize_credits: 1000
+  prize_dist_mode: "winner_takes_all"
+  prize_dist_ratios: ""
+  created_unix: 1609459200
+-
+  id: 2
+  hackathon_id: 1
+  name: "Tiered Track"
+  description: "Prizes split by rank"
+  prize_credits: 1000
+  prize_dist_mode: "tiered"
+  prize_dist_ratios: '[{"rank":1,"pct":60},{"rank":2,"pct":30},{"rank":3,"pct":10}]'
+  created_unix: 1609459200
+-
+  id: 3
+  hackathon_id: 1
+  name: "Equal Track"
+  description: "Prizes split equally"
+  prize_credits: 1000
+  prize_dist_mode: "equal"
+  prize_dist_ratios: ""
+  created_unix: 1609459200
+-
+  id: 4
+  hackathon_id: 1
+  name: "Zero Prize Track"
+  description: "No prize credits"
+  prize_credits: 0
+  prize_dist_mode: "winner_takes_all"
+  prize_dist_ratios: ""
+  created_unix: 1609459200
