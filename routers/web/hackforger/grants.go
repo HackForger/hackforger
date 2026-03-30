@@ -11,6 +11,7 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	org_model "forgejo.org/models/organization"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
@@ -261,10 +262,22 @@ func GrantRoundProjects(ctx *context.Context) {
 		return
 	}
 
+	// Load user info for each project
+	userMap := make(map[int64]*user_model.User)
+	for _, p := range projects {
+		if _, ok := userMap[p.UserID]; !ok {
+			u, err := user_model.GetUserByID(ctx, p.UserID)
+			if err == nil {
+				userMap[p.UserID] = u
+			}
+		}
+	}
+
 	ctx.Data["Title"] = fmt.Sprintf("%s - %s", round.Name, ctx.Tr("hackforger.grant.projects"))
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["Round"] = round
 	ctx.Data["Projects"] = projects
+	ctx.Data["UserMap"] = userMap
 	ctx.Data["Total"] = total
 	ctx.Data["Page"] = page
 	ctx.HTML(http.StatusOK, tplGrantProjects)

@@ -9,36 +9,46 @@
 		{{template "base/alert" .}}
 
 		{{if .Projects}}
-			<table class="ui striped table">
-				<thead>
-					<tr>
-						<th>{{ctx.Locale.Tr "hackforger.grant.project.title"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.grant.project.user"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.grant.project.award"}}</th>
-					</tr>
-				</thead>
-				<tbody>
-					{{range .Projects}}
-						<tr>
-							<td>{{.Title}}</td>
-							<td>{{.UserID}}</td>
-							<td>
-								<span class="ui label {{if eq .Status 0}}grey{{else if eq .Status 1}}green{{else if eq .Status 2}}red{{else if eq .Status 3}}blue{{end}}">
-									{{if eq .Status 0}}pending{{else if eq .Status 1}}approved{{else if eq .Status 2}}rejected{{else if eq .Status 3}}funded{{end}}
-								</span>
-							</td>
-							<td>
-								{{if or (gt .AwardAmount 0.0) (gt .AwardCredits 0)}}
-									{{.AwardAmount}} + {{.AwardCredits}} credits
-								{{else}}
-									&mdash;
+			<div class="ui relaxed divided list">
+				{{range .Projects}}
+				<div class="item tw-py-4">
+					<div class="content">
+						<div class="tw-flex tw-items-center tw-justify-between">
+							<div>
+								<div class="header tw-text-lg">{{.Title}}</div>
+								{{$user := index $.UserMap .UserID}}
+								{{if $user}}
+								<div class="tw-text-sm tw-mt-1">
+									{{ctx.AvatarUtils.Avatar $user 20}}
+									<a href="{{AppSubUrl}}/{{$user.Name}}">{{$user.Name}}</a>
+								</div>
 								{{end}}
-							</td>
-						</tr>
-					{{end}}
-				</tbody>
-			</table>
+								{{if .Description}}
+								<div class="tw-text-sm tw-text-gray tw-mt-1">{{.Description}}</div>
+								{{end}}
+							</div>
+							<div class="tw-flex tw-items-center tw-gap-2">
+								{{if or (gt .AwardAmount 0.0) (gt .AwardCredits 0)}}
+								<span class="tw-text-sm">
+									{{if gt .AwardAmount 0.0}}{{printf "%.0f" .AwardAmount}} {{$.Round.Currency}}{{end}}
+									{{if and (gt .AwardAmount 0.0) (gt .AwardCredits 0)}} + {{end}}
+									{{if gt .AwardCredits 0}}{{.AwardCredits}} {{ctx.Locale.Tr "hackforger.credits.balance"}}{{end}}
+								</span>
+								{{end}}
+								<span class="ui small label {{if eq .Status 0}}grey{{else if eq .Status 1}}green{{else if eq .Status 2}}red{{else if eq .Status 3}}blue{{end}}">
+									{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.grant.project.status.pending"}}
+									{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.grant.project.status.approved"}}
+									{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.grant.project.status.rejected"}}
+									{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.grant.project.status.funded"}}
+									{{end}}
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				{{end}}
+			</div>
+			{{template "base/paginate" .}}
 		{{else}}
 			<div class="ui placeholder segment">
 				<div class="ui icon header">
@@ -49,7 +59,7 @@
 			</div>
 		{{end}}
 
-		<a class="ui button" href="/grants/{{.Round.Slug}}">{{ctx.Locale.Tr "hackforger.grant.back_to_round"}}</a>
+		<a class="ui button tw-mt-4" href="/grants/{{.Round.Slug}}">{{ctx.Locale.Tr "hackforger.grant.back_to_round"}}</a>
 	</div>
 </div>
 {{template "base/footer" .}}
