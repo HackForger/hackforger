@@ -12,15 +12,19 @@ import (
 	hackforger_service "forgejo.org/services/hackforger"
 )
 
-// AddJudgeForm is the form for assigning a judge to a hackathon.
+// AddJudgeForm is the form for assigning a judge to a hackathon track.
 type AddJudgeForm struct {
-	UserID int64 `json:"user_id" binding:"Required"`
+	UserID  int64 `json:"user_id" binding:"Required"`
+	TrackID int64 `json:"track_id" binding:"Required"`
 }
 
-// SubmitScoreForm is the form for submitting a judge's score.
-type SubmitScoreForm struct {
-	Score   float64 `json:"score"`
-	Comment string  `json:"comment"`
+// SubmitScoresForm is the form for submitting a judge's scores for all criteria.
+type SubmitScoresForm struct {
+	Scores []struct {
+		CriteriaID int64   `json:"criteria_id"`
+		Score      float64 `json:"score"`
+		Comment    string  `json:"comment"`
+	} `json:"scores"`
 }
 
 // ListJudges returns all judge assignments for a hackathon.
@@ -33,10 +37,10 @@ func ListJudges(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, judges)
 }
 
-// AddJudge assigns a user as a judge for a hackathon.
+// AddJudge assigns a user as a judge for a hackathon track.
 func AddJudge(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*AddJudgeForm)
-	if err := hackforger_model.AddJudge(ctx, ctx.ParamsInt64(":id"), f.UserID); err != nil {
+	if err := hackforger_model.AddJudge(ctx, ctx.ParamsInt64(":id"), f.TrackID, f.UserID); err != nil {
 		if hackforger_model.IsErrDuplicateJudge(err) {
 			ctx.Error(http.StatusConflict, "DuplicateJudge", err)
 			return
@@ -47,20 +51,25 @@ func AddJudge(ctx *context.APIContext) {
 	ctx.Status(http.StatusCreated)
 }
 
-// RemoveJudge removes a judge assignment from a hackathon.
+// RemoveJudge removes a judge assignment from a hackathon track.
 func RemoveJudge(ctx *context.APIContext) {
-	if err := hackforger_model.RemoveJudge(ctx, ctx.ParamsInt64(":id"), ctx.ParamsInt64(":uid")); err != nil {
+	trackID := ctx.FormInt64("track_id")
+	if err := hackforger_model.RemoveJudge(ctx, ctx.ParamsInt64(":id"), trackID, ctx.ParamsInt64(":uid")); err != nil {
 		ctx.InternalServerError(err)
 		return
 	}
 	ctx.Status(http.StatusNoContent)
 }
 
-// SubmitScore records a judge's score for a submission.
+// SubmitScore records a judge's scores for all criteria on a submission.
 func SubmitScore(ctx *context.APIContext) {
-	f := web.GetForm(ctx).(*SubmitScoreForm)
-	if err := hackforger_service.SubmitScore(ctx, ctx.Doer.ID, ctx.ParamsInt64(":sid"), f.Score, f.Comment); err != nil {
-		ctx.Error(http.StatusBadRequest, "SubmitScore", err)
+	f := web.GetForm(ctx).(*SubmitScoresForm)
+	scores := make([]hackforger_service.CriteriaScore, len(f.Scores))
+	for i, s := range f.Scores {
+		scores[i] = hackforger_service.CriteriaScore{CriteriaID: s.CriteriaID, Score: s.Score, Comment: s.Comment}
+	}
+	if err := hackforger_service.SubmitScores(ctx, ctx.Doer.ID, ctx.ParamsInt64(":sid"), scores); err != nil {
+		ctx.Error(http.StatusBadRequest, "SubmitScores", err)
 		return
 	}
 	ctx.Status(http.StatusCreated)

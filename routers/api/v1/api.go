@@ -1788,7 +1788,7 @@ func Routes() *web.Route {
 				m.Get("/judges", hackforger_api.ListJudges)
 				m.Post("/judges", reqToken(), bind(hackforger_api.AddJudgeForm{}), hackforger_api.AddJudge)
 				m.Delete("/judges/{uid}", reqToken(), hackforger_api.RemoveJudge)
-				m.Post("/submissions/{sid}/score", reqToken(), bind(hackforger_api.SubmitScoreForm{}), hackforger_api.SubmitScore)
+				m.Post("/submissions/{sid}/score", reqToken(), bind(hackforger_api.SubmitScoresForm{}), hackforger_api.SubmitScore)
 				m.Get("/submissions/{sid}/scores", hackforger_api.ListScores)
 				m.Get("/leaderboard", hackforger_api.GetLeaderboard)
 			})
