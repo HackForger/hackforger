@@ -639,6 +639,14 @@ hackathon.error.no_criteria = Please define at least one scoring criterion befor
 - `ActionHackathonScored` (existing, type 33) — published per submission when judge submits scores. Content extra: `{"submission_id": N, "track_id": N}`.
 - `ActionHackathonFinalized` (existing, type 51) — published on ConfirmFinalize. Content extra: `{"tracks": [{"track_id": N, "winner_submission_id": N, "winner_user_id": N}]}`.
 
+## Merge Order Dependency
+
+**Feed refactor (Week4-Line B) merges FIRST**, then judge system merges.
+
+The feed refactor rewrites `PublishHackforgerAction` to use a new `hackforger_action` table with explicit entity fields and bitmask `AudienceType`. The judge system has only 2 call sites (`SubmitScores`, `ConfirmFinalize`).
+
+**Development strategy:** Build the entire judge system in parallel with feed development. For the 2 `PublishHackforgerAction` calls, use a `// TODO: update to new feed API after feed refactor merges` placeholder or use the current format. Fix at merge time (2 lines of code).
+
 ## Migration Notes
 
 ### Schema Migration
