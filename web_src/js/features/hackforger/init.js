@@ -22,4 +22,22 @@ export function initHackforger() {
       }).mount(bountyEl);
     })();
   }
+
+  // JudgeScoreCard
+  const judgeEl = document.getElementById('hackforger-judge-scorecard');
+  if (judgeEl) {
+    (async () => {
+      const {default: JudgeScoreCard} = await import(
+        /* webpackChunkName: "hackforger-judge" */
+        '../../components/hackforger/JudgeScoreCard.vue'
+      );
+      const {createApp} = await import('vue');
+      createApp(JudgeScoreCard, {
+        hackathonSlug: judgeEl.dataset.hackathonSlug,
+        tracks: JSON.parse(judgeEl.dataset.tracks || '[]'),
+        submissions: JSON.parse(judgeEl.dataset.submissions || '{}'),
+        rubrics: JSON.parse(judgeEl.dataset.rubrics || '{}'),
+      }).mount(judgeEl);
+    })();
+  }
 }
