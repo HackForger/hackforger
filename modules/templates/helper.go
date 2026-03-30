@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	activities_model "forgejo.org/models/activities"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/markup"
@@ -233,7 +234,7 @@ func NewFuncMap() template.FuncMap {
 				return ""
 			}
 		},
-		"HackforgerActionIcon": func(opType int) string {
+		"HackforgerActionIcon": func(opType activities_model.ActionType) string {
 			switch {
 			case opType >= 30 && opType <= 33:
 				return "octicon-rocket"
