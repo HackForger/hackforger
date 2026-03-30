@@ -1,0 +1,30 @@
+<div class="ui card tw-w-full tw-mt-4">
+	<div class="content">
+		<div class="header tw-flex tw-items-center tw-gap-2">
+			{{svg "octicon-star" 16}}
+			<span>{{ctx.Locale.Tr "hackforger.reputation.tier"}}: {{.Reputation.Tier}}</span>
+		</div>
+		<div class="meta">
+			{{ctx.Locale.Tr "hackforger.reputation.score"}}: <strong>{{.Reputation.Score}}</strong>
+		</div>
+		<div class="description tw-text-sm tw-mt-2">
+			{{if gt .Reputation.BountiesCompleted 0}}
+				<div>{{svg "octicon-gift" 14}} {{.Reputation.BountiesCompleted}} {{ctx.Locale.Tr "hackforger.reputation.bounties_completed"}}</div>
+			{{end}}
+			{{if gt .Reputation.HackathonWins 0}}
+				<div>{{svg "octicon-rocket" 14}} {{.Reputation.HackathonWins}} {{ctx.Locale.Tr "hackforger.reputation.hackathon_wins"}}</div>
+			{{end}}
+			{{if gt .Reputation.GrantsReceived 0}}
+				<div>{{svg "octicon-heart" 14}} {{.Reputation.GrantsReceived}} {{ctx.Locale.Tr "hackforger.reputation.grants_received"}}</div>
+			{{end}}
+			{{if gt .Reputation.TotalStars 0}}
+				<div>{{svg "octicon-star" 14}} {{.Reputation.TotalStars}} {{ctx.Locale.Tr "hackforger.reputation.total_stars"}}</div>
+			{{end}}
+		</div>
+	</div>
+	<div class="extra content">
+		<a href="{{.ContextUser.HomeLink}}?tab=reputation">
+			{{ctx.Locale.Tr "hackforger.reputation.view_leaderboard"}} →
+		</a>
+	</div>
+</div>
