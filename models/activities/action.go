@@ -171,6 +171,10 @@ func (at ActionType) String() string {
 		return "hackforger_grant_round_finalized"
 	case 57:
 		return "hackforger_grant_round_cancelled"
+	case 58:
+		return "hackforger_order_fulfilled"
+	case 59:
+		return "hackforger_order_cancelled"
 	default:
 		// HackForger action types (30+) are registered via RegisterActionTypeName
 		if name, ok := extraActionTypeNames[at]; ok {

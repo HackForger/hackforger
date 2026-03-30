@@ -82,6 +82,10 @@
 						{{$index := index .GetIssueInfos 0}}
 						{{$reviewer := index .GetIssueInfos 1}}
 						{{ctx.Locale.Tr "action.review_dismissed" (printf "%s/pulls/%s" (.GetRepoLink ctx) $index) $index (.ShortRepoPath ctx) $reviewer}}
+					{{else if .GetOpType.InActions "hackforger_order_fulfilled"}}
+						{{ctx.Locale.Tr "action.hackforger_order_fulfilled"}}
+					{{else if .GetOpType.InActions "hackforger_order_cancelled"}}
+						{{ctx.Locale.Tr "action.hackforger_order_cancelled"}}
 					{{end}}
 					{{DateUtils.TimeSince .GetCreate}}
 				</div>
