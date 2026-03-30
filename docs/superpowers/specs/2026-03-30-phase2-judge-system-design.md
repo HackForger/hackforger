@@ -71,6 +71,8 @@ type HackathonJudgeCriteria struct {
 }
 ```
 
+Must include `func init() { db.RegisterModel(new(HackathonJudgeCriteria)) }` for XORM auto-migration.
+
 CRUD functions:
 - `CreateCriteria(ctx, c *HackathonJudgeCriteria) error`
 - `UpdateCriteria(ctx, c *HackathonJudgeCriteria) error`
@@ -94,6 +96,8 @@ type HackathonTrackCriteria struct {
     Weight     float64 `xorm:"NOT NULL DEFAULT 0"` // 0 means "use criteria default"
 }
 ```
+
+Must include `func init() { db.RegisterModel(new(HackathonTrackCriteria)) }` for XORM auto-migration.
 
 CRUD functions:
 - `CreateTrackCriteria(ctx, tc *HackathonTrackCriteria) error`
@@ -327,6 +331,11 @@ The existing `/manage/finalize` POST route is **replaced** by:
 - `GET /manage/finalize-preview` → `PreviewFinalize`
 - `POST /manage/finalize-confirm` → `ConfirmFinalize`
 
+Implementation notes:
+- Remove the `"finalize"` case from `ManagePhasePost` switch statement
+- Replace `m.Post("/finalize", hackforger_web.ManagePhasePost)` in `web.go` with the two new routes
+- Add `IsErrNoCriteria` handling to `ManagePhasePost`'s `"start-judging"` case error block
+
 #### StartJudging validation
 
 Add check in `StartJudging`: require at least 1 criterion defined for the hackathon. If no criteria exist, return `ErrNoCriteria{HackathonID}`. This prevents entering judging phase with nothing to score.
@@ -428,8 +437,11 @@ POST /hackathon/{slug}/manage/judges/{uid}/remove — now accepts track_id
 3. For each track: load submissions + effective rubric + judge's existing scores
 4. JSON-encode data into `data-*` attributes for Vue mount point
 
-**JudgeScorePost** → **JudgeScoresPost** — parse JSON body:
-The Vue component sends JSON via `POST` from `modules/fetch.js`. The web handler must parse JSON from the request body using `json.NewDecoder(ctx.Req.Body)`, not `ctx.FormString`. This matches how BountyPanel.vue works — it uses `POST()` from `fetch.js` which sends `Content-Type: application/json`.
+**JudgeScorePost** → **JudgeScoresPost** — JSON request and response:
+The Vue component sends JSON via `POST` from `modules/fetch.js`. The web handler must:
+- **Request**: parse JSON body using `json.NewDecoder(ctx.Req.Body)`, not `ctx.FormString`
+- **Response**: return JSON (not flash+redirect), since the Vue component reads `resp.ok` and `resp.json()`. Return `ctx.JSON(http.StatusOK, map[string]string{"message": "ok"})` on success, `ctx.JSON(http.StatusBadRequest, map[string]string{"message": "..."})` on error.
+This matches the BountyPanel.vue pattern where `POST()` from `fetch.js` expects JSON responses.
 
 **ManageHackathon** — add criteria and track criteria data to template context:
 - `ctx.Data["Criteria"]` — all hackathon criteria

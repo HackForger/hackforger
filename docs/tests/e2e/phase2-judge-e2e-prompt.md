@@ -141,9 +141,23 @@ Clean up any leftover data if needed.
 - [ ] Submissions created and visible on hackathon page
 - [ ] Each submission linked to correct track
 
-### TC-07: Start Judging
+### TC-07a: Start Judging — No Criteria Edge Case
 
 **As:** `hackforger` (admin)
+
+> **Setup**: Create a separate hackathon with tracks and submissions but NO criteria defined, and advance it to Hacking phase.
+
+1. Attempt to transition to Judging phase (Hacking → Judging)
+
+**Expected:**
+- [ ] Transition blocked with error "Please define at least one scoring criterion before starting judging"
+- [ ] Hackathon remains in Hacking status
+
+### TC-07b: Start Judging
+
+**As:** `hackforger` (admin)
+
+> **Context**: Back to the main "Phase2 Judge Test" hackathon (which has criteria).
 
 1. Transition to Judging phase (Hacking → Judging)
 
@@ -287,7 +301,8 @@ curl -s "$BASE/hackathons/{id}/finalize-preview" -H "Authorization: token $TOKEN
 | 04 | Per-Track Judges | | |
 | 05 | Publish + Register + Hack | | |
 | 06 | Submit Projects | | |
-| 07 | Start Judging | | |
+| 07a | Start Judging — No Criteria | | |
+| 07b | Start Judging | | |
 | 08 | Judge Scoring (Carol) | | |
 | 09 | Judge Scoring (Dave) | | |
 | 10 | Permission Checks | | |
@@ -296,7 +311,7 @@ curl -s "$BASE/hackathons/{id}/finalize-preview" -H "Authorization: token $TOKEN
 | 13 | Leaderboard | | |
 | 14 | API Endpoints | | |
 
-**Total:** X/14 passed
+**Total:** X/15 passed
 
 ## Issues Found
 
