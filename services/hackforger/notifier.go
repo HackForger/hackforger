@@ -30,31 +30,36 @@ func Init() error {
 }
 
 // AudienceType determines how feed events are distributed.
+// Values are bit flags and may be combined with bitwise OR.
 type AudienceType int
 
 const (
-	AudienceGlobal       AudienceType = iota // UserID=0, visible to everyone
-	AudienceFollowers                        // Visible to ActUser's followers
-	AudienceOrgMembers                       // Visible to org members
-	AudienceRepoWatchers                     // Visible to repo watchers
+	AudienceGlobal       AudienceType = 1 << iota // 1 — UserID=0, visible to everyone
+	AudienceFollowers                              // 2 — Visible to ActUser's followers
+	AudienceOrgMembers                             // 4 — Visible to org members
+	AudienceRepoWatchers                           // 8 — Visible to repo watchers
 )
 
 // HackforgerActionOpts holds the parameters for publishing a HackForger feed event.
 type HackforgerActionOpts struct {
 	ActUserID    int64
 	OpType       activities_model.ActionType
+	EntityType   string
+	EntityID     int64
+	EntityName   string
+	EntitySlug   string
 	RepoID       int64
 	Content      any
 	AudienceType AudienceType
-	OrgID        int64 // used when AudienceType == AudienceOrgMembers
+	OrgID        int64 // used when AudienceRepoWatchers or AudienceOrgMembers flag is set
 }
 
-// PublishHackforgerAction writes HackForger events to the action table.
+// PublishHackforgerAction writes HackForger events to the hackforger_action table.
 // Unlike Forgejo's NotifyWatchers (which only handles repo watchers),
-// this supports 4 audience strategies per the spec.
+// this supports 4 audience strategies as bit flags per the spec.
 //
-// P0 skeleton: inserts for actor + global (UserID=0) only.
-// Phase 1: adds full audience resolution (followers, org members, repo watchers).
+// Always inserts an actor record. Additional records are inserted for each
+// enabled audience flag: global (user_id=0), followers, org members, repo watchers.
 func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) error {
 	contentBytes, err := json.Marshal(opts.Content)
 	if err != nil {
@@ -63,119 +68,90 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	contentStr := string(contentBytes)
 	now := timeutil.TimeStampNow()
 
-	// Always insert the actor's own action record
-	actorAction := &activities_model.Action{
-		ActUserID:   opts.ActUserID,
-		UserID:      opts.ActUserID,
-		OpType:      opts.OpType,
-		RepoID:      opts.RepoID,
-		Content:     contentStr,
-		CreatedUnix: now,
-	}
-	if _, err := db.GetEngine(ctx).Insert(actorAction); err != nil {
-		log.Error("PublishHackforgerAction (actor): %v", err)
-		return err
-	}
-
-	// For global events, also insert a UserID=0 record
-	if opts.AudienceType == AudienceGlobal {
-		globalAction := &activities_model.Action{
+	insert := func(userID int64) error {
+		rec := &hackforger_model.HackforgerAction{
+			UserID:      userID,
 			ActUserID:   opts.ActUserID,
-			UserID:      0,
 			OpType:      opts.OpType,
+			EntityType:  opts.EntityType,
+			EntityID:    opts.EntityID,
+			EntityName:  opts.EntityName,
+			EntitySlug:  opts.EntitySlug,
+			OrgID:       opts.OrgID,
 			RepoID:      opts.RepoID,
 			Content:     contentStr,
 			CreatedUnix: now,
 		}
-		if _, err := db.GetEngine(ctx).Insert(globalAction); err != nil {
-			log.Error("PublishHackforgerAction (global): %v", err)
+		if _, err := db.GetEngine(ctx).Insert(rec); err != nil {
+			log.Error("PublishHackforgerAction (user_id=%d): %v", userID, err)
+			return err
+		}
+		return nil
+	}
+
+	// Always insert the actor's own feed record.
+	if err := insert(opts.ActUserID); err != nil {
+		return err
+	}
+
+	// Global flag: insert a user_id=0 record visible to everyone.
+	if opts.AudienceType&AudienceGlobal != 0 {
+		if err := insert(0); err != nil {
 			return err
 		}
 	}
 
-	// Phase 1: resolve audience based on opts.AudienceType
-	switch opts.AudienceType {
-	case AudienceFollowers:
+	// Followers flag: insert for each follower of the acting user.
+	if opts.AudienceType&AudienceFollowers != 0 {
 		var followerIDs []int64
-		err := db.GetEngine(ctx).Table("follow").
+		if err := db.GetEngine(ctx).Table("follow").
 			Where("follow_id = ?", opts.ActUserID).
-			Cols("user_id").Find(&followerIDs)
-		if err != nil {
+			Cols("user_id").Find(&followerIDs); err != nil {
 			log.Error("PublishHackforgerAction (followers query): %v", err)
-			break
-		}
-		for _, uid := range followerIDs {
-			if uid == opts.ActUserID {
-				continue
-			}
-			fa := &activities_model.Action{
-				ActUserID:   opts.ActUserID,
-				UserID:      uid,
-				OpType:      opts.OpType,
-				RepoID:      opts.RepoID,
-				Content:     contentStr,
-				CreatedUnix: now,
-			}
-			if _, err := db.GetEngine(ctx).Insert(fa); err != nil {
-				log.Error("PublishHackforgerAction (follower %d): %v", uid, err)
+		} else {
+			for _, uid := range followerIDs {
+				if uid == opts.ActUserID {
+					continue
+				}
+				_ = insert(uid)
 			}
 		}
+	}
 
-	case AudienceOrgMembers:
-		if opts.OrgID == 0 {
-			break
-		}
-		var memberIDs []int64
-		err := db.GetEngine(ctx).Table("org_user").
-			Where("org_id = ?", opts.OrgID).
-			Cols("uid").Find(&memberIDs)
-		if err != nil {
-			log.Error("PublishHackforgerAction (org members query): %v", err)
-			break
-		}
-		for _, uid := range memberIDs {
-			if uid == opts.ActUserID {
-				continue
-			}
-			ma := &activities_model.Action{
-				ActUserID:   opts.ActUserID,
-				UserID:      uid,
-				OpType:      opts.OpType,
-				RepoID:      opts.RepoID,
-				Content:     contentStr,
-				CreatedUnix: now,
-			}
-			if _, err := db.GetEngine(ctx).Insert(ma); err != nil {
-				log.Error("PublishHackforgerAction (org member %d): %v", uid, err)
+	// OrgMembers flag: insert for each member of the target org.
+	if opts.AudienceType&AudienceOrgMembers != 0 {
+		if opts.OrgID > 0 {
+			var memberIDs []int64
+			if err := db.GetEngine(ctx).Table("org_user").
+				Where("org_id = ?", opts.OrgID).
+				Cols("uid").Find(&memberIDs); err != nil {
+				log.Error("PublishHackforgerAction (org members query): %v", err)
+			} else {
+				for _, uid := range memberIDs {
+					if uid == opts.ActUserID {
+						continue
+					}
+					_ = insert(uid)
+				}
 			}
 		}
+	}
 
-	case AudienceRepoWatchers:
-		if opts.RepoID == 0 {
-			break
-		}
-		var watcherIDs []int64
-		err := db.GetEngine(ctx).Table("watch").
-			Where("repo_id = ? AND mode != 2", opts.RepoID).
-			Cols("user_id").Find(&watcherIDs)
-		if err != nil {
-			log.Error("PublishHackforgerAction (watchers query): %v", err)
-			break
-		}
-		for _, uid := range watcherIDs {
-			if uid == opts.ActUserID {
-				continue
-			}
-			wa := &activities_model.Action{
-				ActUserID:   opts.ActUserID,
-				UserID:      uid,
-				OpType:      opts.OpType,
-				RepoID:      opts.RepoID,
-				Content:     contentStr,
-				CreatedUnix: now,
-			}
-			if _, err := db.GetEngine(ctx).Insert(wa); err != nil {
-				log.Error("PublishHackforgerAction (watcher %d): %v", uid, err)
+	// RepoWatchers flag: insert for each watcher of the target repo.
+	if opts.AudienceType&AudienceRepoWatchers != 0 {
+		if opts.RepoID > 0 {
+			var watcherIDs []int64
+			if err := db.GetEngine(ctx).Table("watch").
+				Where("repo_id = ? AND mode != 2", opts.RepoID).
+				Cols("user_id").Find(&watcherIDs); err != nil {
+				log.Error("PublishHackforgerAction (watchers query): %v", err)
+			} else {
+				for _, uid := range watcherIDs {
+					if uid == opts.ActUserID {
+						continue
+					}
+					_ = insert(uid)
+				}
 			}
 		}
 	}
