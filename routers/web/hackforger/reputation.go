@@ -7,10 +7,19 @@ import (
 	"net/http"
 
 	hackforger_model "forgejo.org/models/hackforger"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/graceful"
 	"forgejo.org/services/context"
 	hackforger_service "forgejo.org/services/hackforger"
 )
+
+// ReputationWithUser wraps a Reputation record with its associated user,
+// used for leaderboard display. Avoids adding a transient field to the model.
+type ReputationWithUser struct {
+	*hackforger_model.Reputation
+	User *user_model.User
+	Rank int
+}
 
 // AdminReputation renders the reputation settings admin page.
 func AdminReputation(ctx *context.Context) {
@@ -54,4 +63,31 @@ func AdminReputationRecalc(ctx *context.Context) {
 	go hackforger_service.RecalculateAllReputations(graceful.GetManager().HammerContext())
 	ctx.Flash.Success(ctx.Tr("hackforger.admin.reputation.recalc_success"))
 	ctx.Redirect("/admin/hackforger/reputation")
+}
+
+// ExploreReputation renders the public reputation leaderboard page.
+func ExploreReputation(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("hackforger.reputation.leaderboard")
+	ctx.Data["PageIsExplore"] = true
+
+	const pageSize = 50
+	records, err := hackforger_model.ReputationLeaderboard(ctx, pageSize)
+	if err != nil {
+		ctx.ServerError("ReputationLeaderboard", err)
+		return
+	}
+
+	leaderboard := make([]*ReputationWithUser, 0, len(records))
+	for i, r := range records {
+		entry := &ReputationWithUser{
+			Reputation: r,
+			Rank:       i + 1,
+		}
+		u, _ := user_model.GetUserByID(ctx, r.UserID)
+		entry.User = u
+		leaderboard = append(leaderboard, entry)
+	}
+
+	ctx.Data["Leaderboard"] = leaderboard
+	ctx.HTML(http.StatusOK, "hackforger/reputation/leaderboard")
 }

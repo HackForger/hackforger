@@ -14,21 +14,21 @@
 				</tr>
 			</thead>
 			<tbody>
-				{{range $idx, $rep := .Leaderboard}}
+				{{range .Leaderboard}}
 				<tr>
-					<td>{{Add $idx 1}}</td>
+					<td>{{.Rank}}</td>
 					<td>
-						{{if $rep.User}}
-							{{ctx.AvatarUtils.Avatar $rep.User 20}}
-							<a href="{{AppSubUrl}}/{{$rep.User.Name}}">{{$rep.User.Name}}</a>
+						{{if .User}}
+							{{ctx.AvatarUtils.Avatar .User 20}}
+							<a href="{{AppSubUrl}}/{{.User.Name}}">{{.User.Name}}</a>
 						{{else}}
-							#{{$rep.UserID}}
+							#{{.UserID}}
 						{{end}}
 					</td>
-					<td>{{$rep.Score}}</td>
+					<td>{{.Score}}</td>
 					<td>
-						<span class="ui label {{if eq $rep.Tier "Diamond"}}purple{{else if eq $rep.Tier "Gold"}}yellow{{else if eq $rep.Tier "Silver"}}grey{{else}}brown{{end}}">
-							{{$rep.Tier}}
+						<span class="ui label {{if eq .Tier "Diamond"}}purple{{else if eq .Tier "Gold"}}yellow{{else if eq .Tier "Silver"}}grey{{else}}brown{{end}}">
+							{{.Tier}}
 						</span>
 					</td>
 				</tr>
