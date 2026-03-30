@@ -1,5 +1,7 @@
 <div id="activity-feed" class="flex-list">
 	{{range .Feeds}}
+		{{/* Skip HackForger events (op_type >= 30) — they belong in the Community tab */}}
+		{{if ge .GetOpType 30}}{{continue}}{{end}}
 		<div class="flex-item">
 			<div class="flex-item-leading">
 				{{ctx.AvatarUtils.AvatarByAction .}}
