@@ -68,7 +68,16 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	contentStr := string(contentBytes)
 	now := timeutil.TimeStampNow()
 
+	// inserted tracks which user_ids have already received a feed record for
+	// this event, preventing duplicate rows when a user appears in multiple
+	// audience sets (e.g., both follower and repo watcher).
+	inserted := make(map[int64]bool)
+
 	insert := func(userID int64) error {
+		if inserted[userID] {
+			return nil
+		}
+		inserted[userID] = true
 		rec := &hackforger_model.HackforgerAction{
 			UserID:      userID,
 			ActUserID:   opts.ActUserID,
