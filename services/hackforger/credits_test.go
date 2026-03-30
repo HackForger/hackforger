@@ -126,3 +126,61 @@ func TestCancelOrder_RefundsBalance(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, hackforger_model.OrderStatusCancelled, order.Status)
 }
+
+func TestRedeem_AutoFulfill(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Option 2 is auto-fulfill with cost=2000. User 4 has balance=1000.
+	// Deposit 1500 extra so user 4 has 2500 (enough for the 2000 cost).
+	err := hackforger_service.Deposit(db.DefaultContext, 4, 1500, "test_topup", "Top up for auto-fulfill test")
+	require.NoError(t, err)
+
+	acct, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2500), acct.Balance)
+
+	// Add keys to option 2 (auto-fulfill pool)
+	err = hackforger_model.AddKeys(db.DefaultContext, 2, []string{"AUTO-KEY-001", "AUTO-KEY-002"})
+	require.NoError(t, err)
+
+	// Redeem option 2 — should auto-fulfill
+	order, err := hackforger_service.Redeem(db.DefaultContext, 4, 2)
+	require.NoError(t, err)
+	require.NotNil(t, order)
+
+	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order.Status)
+	assert.Equal(t, "license_key", order.DeliveryType)
+	assert.Equal(t, "AUTO-KEY-001", order.DeliveryValue)
+
+	// Verify balance was deducted
+	acctAfter, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(500), acctAfter.Balance)
+
+	// Verify key was claimed
+	avail, err := hackforger_model.CountAvailableKeys(db.DefaultContext, 2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), avail)
+}
+
+func TestRedeem_AutoFulfill_NoKeys(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Option 2 is auto-fulfill with cost=2000. User 4 has balance=1000.
+	// Deposit so user has enough.
+	err := hackforger_service.Deposit(db.DefaultContext, 4, 1500, "test_topup", "Top up")
+	require.NoError(t, err)
+
+	// Do NOT add any keys to option 2 — pool is empty
+
+	// Redeem should fail with ErrOutOfStock because no keys available
+	order, err := hackforger_service.Redeem(db.DefaultContext, 4, 2)
+	require.Error(t, err)
+	assert.Nil(t, order)
+	assert.True(t, hackforger_model.IsErrOutOfStock(err))
+
+	// Verify balance is unchanged (tx rolled back)
+	acctAfter, err := hackforger_service.GetOrCreateCreditAccount(db.DefaultContext, 4)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2500), acctAfter.Balance)
+}

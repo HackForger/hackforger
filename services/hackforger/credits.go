@@ -58,9 +58,12 @@ func Deposit(ctx context.Context, userID int64, amount int64, reference, note st
 }
 
 // Redeem deducts credits and creates an order within a transaction.
+// If the option's FulfillMode is "auto", a key is claimed and the order
+// is immediately fulfilled inside the same transaction.
 func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_model.RedeemOrder, error) {
 	var order *hackforger_model.RedeemOrder
 	var optionName string
+	var capturedOption *hackforger_model.RedeemOption
 
 	err := db.WithTx(ctx, func(ctx context.Context) error {
 		// Get option
@@ -79,6 +82,7 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 		}
 
 		optionName = option.Name
+		capturedOption = option
 
 		// Get account
 		acct, err := GetOrCreateCreditAccount(ctx, userID)
@@ -128,11 +132,34 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 			Cost:     option.Cost,
 			Status:   hackforger_model.OrderStatusPending,
 		}
-		_, err = db.GetEngine(ctx).Insert(order)
-		return err
+		if _, err := db.GetEngine(ctx).Insert(order); err != nil {
+			return err
+		}
+
+		// Auto-fulfill if option is configured for it
+		if option.FulfillMode == "auto" {
+			key, err := hackforger_model.ClaimKey(ctx, optionID, order.ID)
+			if err != nil {
+				return err // rolls back entire tx
+			}
+			order.Status = hackforger_model.OrderStatusFulfilled
+			order.DeliveryType = "license_key"
+			order.DeliveryValue = key.KeyValue
+			if _, err := db.GetEngine(ctx).ID(order.ID).
+				Cols("status", "delivery_type", "delivery_value").Update(order); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// Sync stock from key pool after auto-fulfill
+	if capturedOption != nil && capturedOption.FulfillMode == "auto" {
+		_ = syncOptionStock(ctx, optionID)
 	}
 
 	// Publish feed event for the redemption
@@ -368,6 +395,23 @@ func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) err
 
 	notifyOrderStatusChange(ctx, order, admin.ID, hackforger_model.ActionOrderCancelled, optName)
 	return nil
+}
+
+// syncOptionStock updates the option's Stock and IsActive based on available keys.
+func syncOptionStock(ctx context.Context, optionID int64) error {
+	avail, err := hackforger_model.CountAvailableKeys(ctx, optionID)
+	if err != nil {
+		return err
+	}
+	opt, err := hackforger_model.GetRedeemOptionByID(ctx, optionID)
+	if err != nil {
+		return err
+	}
+	opt.Stock = int(avail)
+	if avail == 0 {
+		opt.IsActive = false
+	}
+	return hackforger_model.UpdateRedeemOption(ctx, opt)
 }
 
 // CreateRedeemOptionAsAdmin creates a new redeem option. Only site admins can call this.
