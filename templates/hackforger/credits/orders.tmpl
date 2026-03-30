@@ -13,6 +13,7 @@
 						<th>{{ctx.Locale.Tr "hackforger.credits.option"}}</th>
 						<th>{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
 						<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.delivery"}}</th>
 						<th>{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
 					</tr>
 				</thead>
@@ -26,6 +27,14 @@
 								<span class="ui label {{if eq .Status "pending"}}yellow{{else if eq .Status "fulfilled"}}green{{else if eq .Status "cancelled"}}red{{end}}">
 									{{.Status}}
 								</span>
+							</td>
+							<td>
+								{{if and (eq .Status "fulfilled") .DeliveryType (ne .DeliveryType "")}}
+									<span class="ui small label">{{.DeliveryType}}</span>
+									{{.DeliveryValue}}
+								{{else}}
+									&mdash;
+								{{end}}
 							</td>
 							<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
 						</tr>

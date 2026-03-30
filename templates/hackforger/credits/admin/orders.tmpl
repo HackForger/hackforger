@@ -5,50 +5,102 @@
 		</h4>
 
 		{{if .Orders}}
-			<table class="ui attached segment striped table">
-				<thead>
-					<tr>
-						<th>ID</th>
-						<th>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.credits.option"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
-						<th>{{ctx.Locale.Tr "hackforger.grant.actions"}}</th>
-					</tr>
-				</thead>
-				<tbody>
-					{{range .Orders}}
+			<form id="batchFulfillForm" action="/-/admin/credits/orders/batch-fulfill" method="post">
+				{{/* Batch action bar */}}
+				<div id="batchActions" class="ui attached segment tw-hidden">
+					<div class="tw-flex tw-items-end tw-gap-2">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type"}}</label>
+							<select name="delivery_type" class="ui dropdown">
+								<option value="">--</option>
+								<option value="license_key">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.license_key"}}</option>
+								<option value="download_link">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.download_link"}}</option>
+								<option value="tracking">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.tracking"}}</option>
+								<option value="custom">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.custom"}}</option>
+							</select>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.delivery_value"}}</label>
+							<input type="text" name="delivery_value" placeholder="{{ctx.Locale.Tr "hackforger.credits.admin.delivery_value"}}">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.note"}}</label>
+							<input type="text" name="note" placeholder="{{ctx.Locale.Tr "hackforger.credits.note"}}">
+						</div>
+						<button type="submit" class="ui mini green button">{{ctx.Locale.Tr "hackforger.credits.admin.batch.fulfill"}}</button>
+					</div>
+				</div>
+
+				<table class="ui attached segment striped table">
+					<thead>
 						<tr>
-							<td>{{.ID}}</td>
-							<td>{{.UserID}}</td>
-							<td>{{.OptionID}}</td>
-							<td>{{.Cost}}</td>
-							<td>
-								<span class="ui label {{if eq .Status "pending"}}yellow{{else if eq .Status "fulfilled"}}green{{else if eq .Status "cancelled"}}red{{end}}">
-									{{.Status}}
-								</span>
-							</td>
-							<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
-							<td>
-								{{if eq .Status "pending"}}
-									<div class="tw-flex tw-gap-1">
-										<form action="/-/admin/credits/orders/{{.ID}}/fulfill" method="post" class="tw-inline">
-											<input type="text" name="note" placeholder="{{ctx.Locale.Tr "hackforger.credits.note"}}" class="tw-w-24">
-											<button class="ui mini green button">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill"}}</button>
-										</form>
-										<form action="/-/admin/credits/orders/{{.ID}}/cancel" method="post" class="tw-inline">
-											<button class="ui mini red button">{{ctx.Locale.Tr "cancel"}}</button>
-										</form>
-									</div>
-								{{else}}
-									&mdash;
-								{{end}}
-							</td>
+							<th><input type="checkbox" id="selectAll" onchange="toggleBatchActions()"></th>
+							<th>ID</th>
+							<th>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.credits.option"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.credits.delivery"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.grant.actions"}}</th>
 						</tr>
-					{{end}}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{{range .Orders}}
+							<tr>
+								<td>
+									{{if eq .Status "pending"}}
+										<input type="checkbox" name="order_ids" value="{{.ID}}" class="batch-checkbox" onchange="toggleBatchActions()">
+									{{end}}
+								</td>
+								<td>{{.ID}}</td>
+								<td>{{.UserID}}</td>
+								<td>{{.OptionID}}</td>
+								<td>{{.Cost}}</td>
+								<td>
+									<span class="ui label {{if eq .Status "pending"}}yellow{{else if eq .Status "fulfilled"}}green{{else if eq .Status "cancelled"}}red{{end}}">
+										{{.Status}}
+									</span>
+								</td>
+								<td>
+									{{if and .DeliveryType (ne .DeliveryType "")}}
+										<span class="ui small label">{{.DeliveryType}}</span>
+										{{.DeliveryValue}}
+									{{else}}
+										&mdash;
+									{{end}}
+								</td>
+								<td>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
+								<td>
+									{{if eq .Status "pending"}}
+										<div class="tw-flex tw-gap-1">
+											<form action="/-/admin/credits/orders/{{.ID}}/fulfill" method="post" class="tw-inline">
+												<div class="tw-flex tw-gap-1 tw-items-center">
+													<select name="delivery_type" class="tw-w-24">
+														<option value="">--</option>
+														<option value="license_key">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.license_key"}}</option>
+														<option value="download_link">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.download_link"}}</option>
+														<option value="tracking">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.tracking"}}</option>
+														<option value="custom">{{ctx.Locale.Tr "hackforger.credits.admin.delivery_type.custom"}}</option>
+													</select>
+													<input type="text" name="delivery_value" placeholder="{{ctx.Locale.Tr "hackforger.credits.admin.delivery_value"}}" class="tw-w-24">
+													<input type="text" name="note" placeholder="{{ctx.Locale.Tr "hackforger.credits.note"}}" class="tw-w-24">
+													<button class="ui mini green button">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill"}}</button>
+												</div>
+											</form>
+											<form action="/-/admin/credits/orders/{{.ID}}/cancel" method="post" class="tw-inline">
+												<button class="ui mini red button">{{ctx.Locale.Tr "cancel"}}</button>
+											</form>
+										</div>
+									{{else}}
+										&mdash;
+									{{end}}
+								</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</form>
 		{{else}}
 			<div class="ui attached segment">
 				<p class="tw-text-center">{{ctx.Locale.Tr "hackforger.credits.no_orders"}}</p>
@@ -59,4 +111,18 @@
 			<a class="ui button" href="/-/admin/credits">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
 		</div>
 	</div>
+	<script>
+		function toggleBatchActions() {
+			var checkboxes = document.querySelectorAll('.batch-checkbox');
+			var selectAll = document.getElementById('selectAll');
+			var batchActions = document.getElementById('batchActions');
+			if (selectAll && selectAll.checked) {
+				checkboxes.forEach(function(cb) { cb.checked = true; });
+			}
+			var anyChecked = Array.from(checkboxes).some(function(cb) { return cb.checked; });
+			if (batchActions) {
+				batchActions.classList.toggle('tw-hidden', !anyChecked);
+			}
+		}
+	</script>
 {{template "admin/layout_footer" .}}

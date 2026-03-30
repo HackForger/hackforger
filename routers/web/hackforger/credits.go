@@ -221,6 +221,7 @@ func AdminRedeemOptionsCreate(ctx *context.Context) {
 	description := ctx.Req.FormValue("description")
 	cost, _ := strconv.ParseInt(ctx.Req.FormValue("cost"), 10, 64)
 	stock, _ := strconv.Atoi(ctx.Req.FormValue("stock"))
+	fulfillMode := ctx.Req.FormValue("fulfill_mode")
 
 	if name == "" || cost <= 0 {
 		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.option_invalid"))
@@ -228,11 +229,16 @@ func AdminRedeemOptionsCreate(ctx *context.Context) {
 		return
 	}
 
+	if fulfillMode != "auto" {
+		fulfillMode = "manual"
+	}
+
 	opt := &hackforger_model.RedeemOption{
 		Name:        name,
 		Description: description,
 		Cost:        cost,
 		Stock:       stock,
+		FulfillMode: fulfillMode,
 		IsActive:    true,
 	}
 
@@ -259,6 +265,9 @@ func AdminRedeemOptionsUpdate(ctx *context.Context) {
 	option.Cost, _ = strconv.ParseInt(ctx.Req.FormValue("cost"), 10, 64)
 	option.Stock, _ = strconv.Atoi(ctx.Req.FormValue("stock"))
 	option.IsActive = ctx.Req.FormValue("is_active") == "on"
+	if fm := ctx.Req.FormValue("fulfill_mode"); fm == "auto" || fm == "manual" {
+		option.FulfillMode = fm
+	}
 
 	if err := hackforger_service.UpdateRedeemOptionAsAdmin(ctx, ctx.Doer, option); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to update option: %v", err))
