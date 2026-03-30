@@ -432,6 +432,28 @@ func syncOptionStock(ctx context.Context, optionID int64) error {
 	return hackforger_model.UpdateRedeemOption(ctx, opt)
 }
 
+// AddKeysToOption bulk-inserts keys into the pool for a given option, then
+// syncs the option's stock to reflect available keys. Only site admins can call this.
+func AddKeysToOption(ctx context.Context, admin *user_model.User, optionID int64, keys []string) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+	if err := hackforger_model.AddKeys(ctx, optionID, keys); err != nil {
+		return err
+	}
+	return syncOptionStock(ctx, optionID)
+}
+
+// GetKeyPoolStatus returns the total and available key counts for a given option.
+func GetKeyPoolStatus(ctx context.Context, optionID int64) (total, available int64, err error) {
+	total, err = hackforger_model.CountTotalKeys(ctx, optionID)
+	if err != nil {
+		return
+	}
+	available, err = hackforger_model.CountAvailableKeys(ctx, optionID)
+	return
+}
+
 // CreateRedeemOptionAsAdmin creates a new redeem option. Only site admins can call this.
 func CreateRedeemOptionAsAdmin(ctx context.Context, admin *user_model.User, opt *hackforger_model.RedeemOption) error {
 	if !admin.IsAdmin {
