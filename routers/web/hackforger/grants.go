@@ -10,11 +10,11 @@ import (
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	org_model "forgejo.org/models/organization"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/timeutil"
-	hackforger_service "forgejo.org/services/hackforger"
-
 	"forgejo.org/services/context"
+	hackforger_service "forgejo.org/services/hackforger"
 )
 
 const (
@@ -37,29 +37,74 @@ func ExploreGrants(ctx *context.Context) {
 		page = 1
 	}
 
-	var statusFilter *hackforger_model.GrantRoundStatus
-	if statusStr := ctx.FormString("status"); statusStr != "" {
-		for s, name := range hackforger_model.GrantRoundStatusNames {
-			if name == statusStr {
-				statusFilter = &s
-				break
-			}
-		}
-	}
-
 	keyword := ctx.FormTrim("q")
 	sortType := ctx.FormString("sort")
+	if sortType == "" {
+		sortType = "newest"
+	}
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["SortType"] = sortType
+
 	var orderBy string
 	switch sortType {
 	case "oldest":
 		orderBy = "created_unix ASC"
-	case "mostfunded":
-		orderBy = "budget DESC"
-	case "alphabetical":
+	case "alphabetically":
 		orderBy = "name ASC"
 	default:
 		sortType = "newest"
 		orderBy = "created_unix DESC"
+	}
+
+	// Status filter
+	statusFilterStr := ctx.FormString("status")
+	ctx.Data["StatusFilter"] = statusFilterStr
+	ctx.Data["SearchPlaceholderKey"] = "hackforger.grant.search_placeholder"
+
+	type statusOption struct {
+		Value    string
+		LabelKey string
+	}
+	ctx.Data["StatusOptions"] = []statusOption{
+		{"draft", "hackforger.grant.round.status.draft"},
+		{"open", "hackforger.grant.round.status.open"},
+		{"review", "hackforger.grant.round.status.review"},
+		{"finalized", "hackforger.grant.round.status.finalized"},
+		{"distributed", "hackforger.grant.round.status.distributed"},
+		{"cancelled", "hackforger.grant.round.status.cancelled"},
+	}
+	statusLabelKeys := map[string]string{
+		"draft":       "hackforger.grant.round.status.draft",
+		"open":        "hackforger.grant.round.status.open",
+		"review":      "hackforger.grant.round.status.review",
+		"finalized":   "hackforger.grant.round.status.finalized",
+		"distributed": "hackforger.grant.round.status.distributed",
+		"cancelled":   "hackforger.grant.round.status.cancelled",
+	}
+	ctx.Data["StatusLabelKey"] = statusLabelKeys[statusFilterStr]
+
+	var statusFilter *hackforger_model.GrantRoundStatus
+	if statusFilterStr != "" {
+		switch statusFilterStr {
+		case "draft":
+			st := hackforger_model.GrantRoundStatusDraft
+			statusFilter = &st
+		case "open":
+			st := hackforger_model.GrantRoundStatusOpen
+			statusFilter = &st
+		case "review":
+			st := hackforger_model.GrantRoundStatusReview
+			statusFilter = &st
+		case "finalized":
+			st := hackforger_model.GrantRoundStatusFinalized
+			statusFilter = &st
+		case "distributed":
+			st := hackforger_model.GrantRoundStatusDistributed
+			statusFilter = &st
+		case "cancelled":
+			st := hackforger_model.GrantRoundStatusCancelled
+			statusFilter = &st
+		}
 	}
 
 	rounds, total, err := hackforger_model.ListGrantRounds(ctx, hackforger_model.ListGrantRoundsOptions{
@@ -73,15 +118,13 @@ func ExploreGrants(ctx *context.Context) {
 		return
 	}
 
-	ctx.Data["Rounds"] = rounds
+	ctx.Data["Grants"] = rounds
 	ctx.Data["Total"] = total
-	ctx.Data["Page"] = page
-	ctx.Data["PrevPage"] = page - 1
-	ctx.Data["NextPage"] = page + 1
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["SortType"] = sortType
-	ctx.Data["StatusFilter"] = ctx.FormString("status")
-	ctx.Data["GrantRoundStatusNames"] = hackforger_model.GrantRoundStatusNames
+
+	pager := context.NewPagination(int(total), 20, page, 5)
+	pager.SetDefaultParams(ctx)
+	ctx.Data["Page"] = pager
+
 	ctx.HTML(http.StatusOK, tplGrantExplore)
 }
 
@@ -169,6 +212,17 @@ func GrantRoundDetail(ctx *context.Context) {
 		return
 	}
 
+	isOwner := false
+	if ctx.Doer != nil {
+		if ctx.Doer.ID == round.OwnerID {
+			isOwner = true
+		} else {
+			isOrgOwner, _ := org_model.IsOrganizationOwner(ctx, round.OrgID, ctx.Doer.ID)
+			isOrgAdmin, _ := org_model.IsOrganizationAdmin(ctx, round.OrgID, ctx.Doer.ID)
+			isOwner = isOrgOwner || isOrgAdmin
+		}
+	}
+
 	ctx.Data["Title"] = round.Name
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["Round"] = round
@@ -176,7 +230,7 @@ func GrantRoundDetail(ctx *context.Context) {
 	ctx.Data["UsedAmount"] = usedAmount
 	ctx.Data["UsedCredits"] = usedCredits
 	ctx.Data["StatusName"] = hackforger_model.GrantRoundStatusNames[round.Status]
-	ctx.Data["IsOwner"] = ctx.Doer != nil && ctx.Doer.ID == round.OwnerID
+	ctx.Data["IsOwner"] = isOwner
 	ctx.HTML(http.StatusOK, tplGrantDetail)
 }
 
