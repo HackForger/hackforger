@@ -114,6 +114,12 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 		return err
 	}
 
+	// Auto-seed track criteria for any existing hackathon criteria
+	criteria, err := hackforger_model.ListCriteriaByHackathon(ctx, h.ID)
+	if err == nil && len(criteria) > 0 {
+		_ = hackforger_model.SeedTrackCriteria(ctx, track.ID, criteria)
+	}
+
 	// Auto-create phase milestones on the track repo
 	milestones := []struct {
 		Name     string
@@ -156,7 +162,7 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 // StartHacking transitions Open → Hacking.
 func StartHacking(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
 	if h.Status != hackforger_model.HackathonStatusOpen {
-		return fmt.Errorf("hackathon must be in Open status to start hacking [id: %d, status: %d]", h.ID, h.Status)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusOpen}
 	}
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusHacking); err != nil {
 		return err
@@ -170,7 +176,7 @@ func StartHacking(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 // StartJudging transitions Hacking → Judging. Requires >= 1 submission.
 func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
 	if h.Status != hackforger_model.HackathonStatusHacking {
-		return fmt.Errorf("hackathon must be in Hacking status to start judging [id: %d, status: %d]", h.ID, h.Status)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusHacking}
 	}
 	subCount, err := hackforger_model.CountSubmissions(ctx, h.ID)
 	if err != nil {
@@ -179,6 +185,13 @@ func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 	if subCount == 0 {
 		return ErrNoSubmissions{HackathonID: h.ID}
 	}
+	criteriaCount, err := hackforger_model.CountCriteriaByHackathon(ctx, h.ID)
+	if err != nil {
+		return err
+	}
+	if criteriaCount == 0 {
+		return hackforger_model.ErrNoCriteria{HackathonID: h.ID}
+	}
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusJudging); err != nil {
 		return err
 	}
@@ -186,21 +199,62 @@ func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 	return nil
 }
 
-// FinalizeHackathon transitions Judging → Finished. Calculates ranks.
-func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status != hackforger_model.HackathonStatusJudging {
-		return fmt.Errorf("hackathon must be in Judging status to finalize [id: %d, status: %d]", h.ID, h.Status)
+// PreviewFinalize calculates rankings for all tracks without changing status.
+// Idempotent — can be called multiple times.
+func PreviewFinalize(ctx context.Context, hackathonID int64) (map[int64][]RankedSubmission, error) {
+	h, err := hackforger_model.GetHackathonByID(ctx, hackathonID)
+	if err != nil {
+		return nil, err
 	}
-	// Tag track repos with submission-deadline snapshot before rank calculation
+	if h.Status != hackforger_model.HackathonStatusJudging {
+		return nil, hackforger_model.ErrInvalidHackathonPhase{
+			HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusJudging,
+		}
+	}
+	return CalculateRanks(ctx, hackathonID)
+}
+
+// ConfirmFinalize locks status to Finished, persists ranks, creates releases.
+func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
+	if h.Status != hackforger_model.HackathonStatusJudging {
+		return hackforger_model.ErrInvalidHackathonPhase{
+			HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusJudging,
+		}
+	}
+	// Tag track repos (preserves existing behavior)
 	tagTrackRepos(ctx, doerID, h.ID, "submission-deadline", "Submission deadline snapshot")
-	if err := CalculateRanks(ctx, h.ID); err != nil {
+
+	// Calculate and persist ranks
+	rankings, err := CalculateRanks(ctx, h.ID)
+	if err != nil {
 		return err
 	}
+	if err := PersistRanks(ctx, rankings); err != nil {
+		return err
+	}
+
+	// Update status
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusFinished); err != nil {
 		return err
 	}
-	// Create v1-results release (also creates the tag) on each track repo
+
+	// Create releases (preserves existing behavior)
 	createTrackReleases(ctx, doerID, h)
+
+	// Build winners summary
+	trackWinners := make([]map[string]any, 0)
+	for trackID, subs := range rankings {
+		if len(subs) > 0 {
+			trackWinners = append(trackWinners, map[string]any{
+				"track_id": trackID, "winner_submission_id": subs[0].SubmissionID, "winner_user_id": subs[0].UserID,
+			})
+		}
+	}
+
+	// Publish feed event
+	// NOTE: Deliberately using HackforgerActionContent (not HackforgerPhaseContent)
+	// because ActionHackathonFinalized now carries results summary.
+	// TODO: update to new feed API format after feed refactor merges
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionHackathonFinalized,
@@ -209,11 +263,9 @@ func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Ha
 		EntityName:   h.Name,
 		EntitySlug:   h.Slug,
 		AudienceType: AudienceGlobal,
-		Content: hackforger_model.HackforgerPhaseContent{
-			HackforgerActionContent: hackforger_model.HackforgerActionContent{
-				EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
-			},
-			OldStatus: "judging", NewStatus: "finished",
+		Content: hackforger_model.HackforgerActionContent{
+			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+			Extra: map[string]any{"tracks": trackWinners},
 		},
 	})
 	return nil
@@ -222,10 +274,10 @@ func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Ha
 // CancelHackathon transitions to Cancelled. Any non-Finished status.
 func CancelHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
 	if h.Status == hackforger_model.HackathonStatusFinished {
-		return fmt.Errorf("cannot cancel a finished hackathon [id: %d]", h.ID)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: 0}
 	}
 	if h.Status == hackforger_model.HackathonStatusCancelled {
-		return fmt.Errorf("hackathon is already cancelled [id: %d]", h.ID)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: 0}
 	}
 	oldStatus := h.Status
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusCancelled); err != nil {
