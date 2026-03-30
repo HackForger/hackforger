@@ -292,8 +292,10 @@ func AdminCreditOrders(ctx *context.Context) {
 func AdminCreditOrdersFulfill(ctx *context.Context) {
 	orderID := ctx.ParamsInt64(":oid")
 	note := ctx.Req.FormValue("note")
+	deliveryType := ctx.Req.FormValue("delivery_type")
+	deliveryValue := ctx.Req.FormValue("delivery_value")
 
-	if err := hackforger_service.FulfillOrder(ctx, ctx.Doer, orderID, note); err != nil {
+	if err := hackforger_service.FulfillOrder(ctx, ctx.Doer, orderID, note, deliveryType, deliveryValue); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to fulfill order: %v", err))
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.order_fulfilled"))

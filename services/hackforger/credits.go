@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	user_model "forgejo.org/models/user"
@@ -264,7 +265,7 @@ func AdminDeduct(ctx context.Context, admin *user_model.User, userID, amount int
 }
 
 // FulfillOrder marks a pending order as fulfilled. Only site admins can call this.
-func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, note string) error {
+func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, note, deliveryType, deliveryValue string) error {
 	if !admin.IsAdmin {
 		return ErrNotAdmin{UserID: admin.ID}
 	}
@@ -280,7 +281,33 @@ func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, no
 
 	order.Status = hackforger_model.OrderStatusFulfilled
 	order.FulfillNote = note
-	return hackforger_model.UpdateRedeemOrder(ctx, order)
+	order.DeliveryType = deliveryType
+	order.DeliveryValue = deliveryValue
+	if err := hackforger_model.UpdateRedeemOrder(ctx, order); err != nil {
+		return err
+	}
+
+	var optName string
+	if opt, _ := hackforger_model.GetRedeemOptionByID(ctx, order.OptionID); opt != nil {
+		optName = opt.Name
+	}
+	notifyOrderStatusChange(ctx, order, admin.ID, hackforger_model.ActionOrderFulfilled, optName)
+	return nil
+}
+
+// notifyOrderStatusChange publishes a feed event when an order status changes.
+func notifyOrderStatusChange(ctx context.Context, order *hackforger_model.RedeemOrder, adminID int64, actionType activities_model.ActionType, optionName string) {
+	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
+		ActUserID:    adminID,
+		OpType:       actionType,
+		AudienceType: AudienceDirectUser,
+		TargetUserID: order.UserID,
+		Content: &hackforger_model.HackforgerActionContent{
+			EntityType: "credits",
+			EntityName: optionName,
+			Extra:      map[string]any{"order_id": order.ID},
+		},
+	})
 }
 
 // CancelOrder cancels a pending order and refunds the credits. Only site admins can call this.
@@ -289,8 +316,12 @@ func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) err
 		return ErrNotAdmin{UserID: admin.ID}
 	}
 
-	return db.WithTx(ctx, func(ctx context.Context) error {
-		order, err := hackforger_model.GetRedeemOrderByID(ctx, orderID)
+	var order *hackforger_model.RedeemOrder
+	var optName string
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		order, err = hackforger_model.GetRedeemOrderByID(ctx, orderID)
 		if err != nil {
 			return err
 		}
@@ -326,8 +357,17 @@ func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) err
 			Note:      "Order cancelled and refunded",
 		}
 		_, err = db.GetEngine(ctx).Insert(tx)
+		if opt, _ := hackforger_model.GetRedeemOptionByID(ctx, order.OptionID); opt != nil {
+			optName = opt.Name
+		}
 		return err
 	})
+	if err != nil {
+		return err
+	}
+
+	notifyOrderStatusChange(ctx, order, admin.ID, hackforger_model.ActionOrderCancelled, optName)
+	return nil
 }
 
 // CreateRedeemOptionAsAdmin creates a new redeem option. Only site admins can call this.

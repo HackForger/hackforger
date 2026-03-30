@@ -77,13 +77,30 @@ func TestFulfillOrder(t *testing.T) {
 	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 	// Order 1 is Pending
-	err := hackforger_service.FulfillOrder(db.DefaultContext, admin, 1, "Fulfilled by admin")
+	err := hackforger_service.FulfillOrder(db.DefaultContext, admin, 1, "Fulfilled by admin", "", "")
 	require.NoError(t, err)
 
 	order, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 1)
 	require.NoError(t, err)
 	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order.Status)
 	assert.Equal(t, "Fulfilled by admin", order.FulfillNote)
+}
+
+func TestFulfillOrder_WithDelivery(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	// Order 3 is pending (user 5, cost 500)
+	err := hackforger_service.FulfillOrder(db.DefaultContext, admin, 3, "License delivered", "license_key", "ABCD-1234")
+	require.NoError(t, err)
+
+	order, err := hackforger_model.GetRedeemOrderByID(db.DefaultContext, 3)
+	require.NoError(t, err)
+	assert.Equal(t, hackforger_model.OrderStatusFulfilled, order.Status)
+	assert.Equal(t, "License delivered", order.FulfillNote)
+	assert.Equal(t, "license_key", order.DeliveryType)
+	assert.Equal(t, "ABCD-1234", order.DeliveryValue)
 }
 
 func TestCancelOrder_RefundsBalance(t *testing.T) {

@@ -58,7 +58,9 @@ type UpdateRedeemOptionForm struct {
 
 // FulfillOrderForm represents the JSON body for fulfilling an order.
 type FulfillOrderForm struct {
-	Note string `json:"note"`
+	Note          string `json:"note"`
+	DeliveryType  string `json:"delivery_type"`
+	DeliveryValue string `json:"delivery_value"`
 }
 
 // --- Helpers ---
@@ -375,7 +377,7 @@ func FulfillOrder(ctx *context.APIContext) {
 
 	form := web.GetForm(ctx).(*FulfillOrderForm)
 
-	if err := hackforger_service.FulfillOrder(ctx, ctx.Doer, ctx.ParamsInt64(":oid"), form.Note); err != nil {
+	if err := hackforger_service.FulfillOrder(ctx, ctx.Doer, ctx.ParamsInt64(":oid"), form.Note, form.DeliveryType, form.DeliveryValue); err != nil {
 		handleCreditsError(ctx, err)
 		return
 	}
