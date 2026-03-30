@@ -80,6 +80,13 @@ func GetHackforgerFeeds(ctx context.Context, opts GetHackforgerFeedsOptions) ([]
 
 	opts.SetDefaultValues()
 	sess := db.GetEngine(ctx).Where(cond)
+
+	// Deduplicate: an actor may have both a personal record (UserID=actorID)
+	// and a global record (UserID=0) for the same event. Group to avoid dupes.
+	if opts.IncludeGlobal && opts.UserID > 0 {
+		sess = sess.GroupBy("act_user_id, op_type, entity_type, entity_id, created_unix")
+	}
+
 	sess = db.SetSessionPagination(sess, &opts.ListOptions)
 
 	actions := make([]*HackforgerAction, 0, opts.PageSize)

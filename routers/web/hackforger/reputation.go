@@ -4,6 +4,7 @@
 package hackforger
 
 import (
+	"encoding/json"
 	"net/http"
 
 	hackforger_model "forgejo.org/models/hackforger"
@@ -41,12 +42,22 @@ func AdminReputationPost(ctx *context.Context) {
 	tiers := ctx.FormString("tiers")
 
 	if weights != "" {
+		if !json.Valid([]byte(weights)) {
+			ctx.Flash.Error(ctx.Tr("hackforger.admin.reputation.invalid_json"))
+			ctx.Redirect(ctx.Req.URL.Path)
+			return
+		}
 		if err := hackforger_model.SetSetting(ctx, "reputation.weights", weights); err != nil {
 			ctx.ServerError("SetSetting weights", err)
 			return
 		}
 	}
 	if tiers != "" {
+		if !json.Valid([]byte(tiers)) {
+			ctx.Flash.Error(ctx.Tr("hackforger.admin.reputation.invalid_json"))
+			ctx.Redirect(ctx.Req.URL.Path)
+			return
+		}
 		if err := hackforger_model.SetSetting(ctx, "reputation.tiers", tiers); err != nil {
 			ctx.ServerError("SetSetting tiers", err)
 			return

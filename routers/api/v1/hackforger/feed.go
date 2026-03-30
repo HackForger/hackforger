@@ -94,6 +94,14 @@ func GetFeed(ctx *context.APIContext) {
 	var err error
 
 	switch feedType {
+	case "global", "following", "entity", "user":
+		// valid types, handled below
+	default:
+		ctx.Error(http.StatusBadRequest, "InvalidFeedType", nil)
+		return
+	}
+
+	switch feedType {
 	case "following":
 		if ctx.Doer == nil {
 			ctx.Error(http.StatusUnauthorized, "following feed requires authentication", nil)
