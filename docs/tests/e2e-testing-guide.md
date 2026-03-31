@@ -82,25 +82,39 @@ E2E 测试应以 Web 界面操作为核心，因为大部分用户通过 UI 交�
 2. **批量操作可用 API** — 创建多个 criteria、批量评分等重复性操作
 3. **通过 browser eval 调用 fetch** — Web-only 端点（如评分 POST）需要 session auth，用 `agent-browser eval` 执行 `fetch()` 调用
 
-### agent-browser 使用模式
+### 多用户并行 Session
+
+使用 `--session` 为每个测试用户创建独立浏览器 session，避免反复登录/登出：
 
 ```bash
-# 启动并登录
-agent-browser open http://localhost:3000/user/login
-agent-browser snapshot -i
-agent-browser fill @e6 "hackforger"
-agent-browser fill @e7 "admin1234"
-agent-browser click @e9
-agent-browser wait --load networkidle
+# 一次性登录所有用户（每个用户一个 session）
+agent-browser --session admin open "http://localhost:3000/user/login"
+agent-browser --session admin fill @e13 "hackforger" && fill @e14 "admin1234" && click @e17
 
+agent-browser --session judge_carol open "http://localhost:3000/user/login"
+agent-browser --session judge_carol fill @e13 "judge_carol" && fill @e14 "admin1234" && click @e17
+
+# 之后直接用 session 名操作，无需再登录
+agent-browser --session admin open "http://localhost:3000/hackathon/my-hack/manage"
+agent-browser --session judge_carol open "http://localhost:3000/hackathon/my-hack/judge"
+```
+
+**`--session` vs `--profile`：**
+- `--session` — 命名 session，在 daemon 生命周期内保持独立 cookie/state。适合并行多用户测试。
+- `--profile` — 持久化浏览器 profile（磁盘保存）。需要在 daemon 启动时指定，无法中途切换。适合长期复用。
+- **E2E 测试推荐用 `--session`**，因为需要同时操作多个用户。
+
+### 常用操作模式
+
+```bash
 # 页面验证 + 截图
-agent-browser screenshot /tmp/hackforger-e2e-tc01.png
+agent-browser --session admin screenshot /tmp/hackforger-e2e-tc01.png
 
-# Vue 组件交互（tab 切换）
-agent-browser find text "Web Track" click
+# Vue 组件交互（tab 切换 — Vue 渲染的元素不在 accessibility tree，用 find text）
+agent-browser --session judge_carol find text "Web Track" click
 
 # Session-auth API 调用（通过浏览器 fetch）
-agent-browser eval --stdin <<'EVALEOF'
+agent-browser --session judge_carol eval --stdin <<'EVALEOF'
 (async () => {
   const resp = await fetch('/hackathon/slug/judge/123/scores', {
     method: 'POST',
