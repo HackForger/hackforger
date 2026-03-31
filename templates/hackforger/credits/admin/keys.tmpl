@@ -20,7 +20,7 @@
 		{{/* Add keys form */}}
 		<div class="ui attached segment">
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.keys.add"}}</h5>
-			<form class="ui form" action="/-/admin/credits/options/{{.Option.ID}}/keys" method="post">
+			<form class="ui form" action="{{AppSubUrl}}/admin/credits/options/{{.Option.ID}}/keys" method="post">
 				<div class="field">
 					<label>{{ctx.Locale.Tr "hackforger.credits.admin.keys.add_hint"}}</label>
 					<textarea name="keys" rows="6" placeholder="KEY-001&#10;KEY-002&#10;KEY-003"></textarea>
@@ -64,7 +64,7 @@
 		{{end}}
 
 		<div class="tw-mt-4">
-			<a class="ui button" href="/-/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
+			<a class="ui button" href="{{AppSubUrl}}/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
 		</div>
 	</div>
 {{template "admin/layout_footer" .}}

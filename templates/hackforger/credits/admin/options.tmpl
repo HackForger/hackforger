@@ -7,7 +7,7 @@
 		<div class="ui attached segment">
 			{{/* Create option form */}}
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.option_create"}}</h5>
-			<form class="ui form" action="/-/admin/credits/options" method="post">
+			<form class="ui form" action="{{AppSubUrl}}/admin/credits/options" method="post">
 				<div class="five fields">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.credits.admin.option_name"}}</label>
@@ -67,7 +67,7 @@
 						<td>{{if .IsActive}}{{svg "octicon-check" 16}}{{else}}{{svg "octicon-x" 16}}{{end}}</td>
 						<td>
 							<div class="tw-flex tw-gap-1">
-								<form class="ui form tw-inline" action="/-/admin/credits/options/{{.ID}}" method="post">
+								<form class="ui form tw-inline" action="{{AppSubUrl}}/admin/credits/options/{{.ID}}" method="post">
 									<input type="hidden" name="name" value="{{.Name}}">
 									<input type="hidden" name="description" value="{{.Description}}">
 									<input type="hidden" name="cost" value="{{.Cost}}">
@@ -87,7 +87,7 @@
 									{{end}}
 								</form>
 								{{if eq .FulfillMode "auto"}}
-									<a class="ui mini blue button" href="/-/admin/credits/options/{{.ID}}/keys">
+									<a class="ui mini blue button" href="{{AppSubUrl}}/admin/credits/options/{{.ID}}/keys">
 										{{ctx.Locale.Tr "hackforger.credits.admin.keys.manage"}}
 									</a>
 								{{end}}
@@ -101,7 +101,7 @@
 		</table>
 
 		<div class="tw-mt-4">
-			<a class="ui button" href="/-/admin/credits">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
+			<a class="ui button" href="{{AppSubUrl}}/admin/credits">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
 		</div>
 	</div>
 {{template "admin/layout_footer" .}}

@@ -12,6 +12,7 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/setting"
 	hackforger_service "forgejo.org/services/hackforger"
 
 	"forgejo.org/services/context"
@@ -163,7 +164,7 @@ func AdminCreditsDeposit(ctx *context.Context) {
 
 	if userID <= 0 || amount <= 0 {
 		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.invalid_input"))
-		ctx.Redirect("/-/admin/credits")
+		ctx.Redirect(setting.AppSubURL + "/admin/credits")
 		return
 	}
 
@@ -172,7 +173,7 @@ func AdminCreditsDeposit(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.deposited"))
 	}
-	ctx.Redirect("/-/admin/credits")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits")
 }
 
 // AdminCreditsDeduct handles admin deduction of credits from a user.
@@ -184,7 +185,7 @@ func AdminCreditsDeduct(ctx *context.Context) {
 
 	if userID <= 0 || amount <= 0 {
 		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.invalid_input"))
-		ctx.Redirect("/-/admin/credits")
+		ctx.Redirect(setting.AppSubURL + "/admin/credits")
 		return
 	}
 
@@ -197,7 +198,7 @@ func AdminCreditsDeduct(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.deducted"))
 	}
-	ctx.Redirect("/-/admin/credits")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits")
 }
 
 // AdminRedeemOptions renders the admin redeem options management page.
@@ -225,7 +226,7 @@ func AdminRedeemOptionsCreate(ctx *context.Context) {
 
 	if name == "" || cost <= 0 {
 		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.option_invalid"))
-		ctx.Redirect("/-/admin/credits/options")
+		ctx.Redirect(setting.AppSubURL + "/admin/credits/options")
 		return
 	}
 
@@ -247,7 +248,7 @@ func AdminRedeemOptionsCreate(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.option_created"))
 	}
-	ctx.Redirect("/-/admin/credits/options")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits/options")
 }
 
 // AdminRedeemOptionsUpdate handles updating an existing redeem option.
@@ -256,7 +257,7 @@ func AdminRedeemOptionsUpdate(ctx *context.Context) {
 	option, err := hackforger_model.GetRedeemOptionByID(ctx, optionID)
 	if err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Option not found: %v", err))
-		ctx.Redirect("/-/admin/credits/options")
+		ctx.Redirect(setting.AppSubURL + "/admin/credits/options")
 		return
 	}
 
@@ -274,7 +275,7 @@ func AdminRedeemOptionsUpdate(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.option_updated"))
 	}
-	ctx.Redirect("/-/admin/credits/options")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits/options")
 }
 
 // AdminCreditOrders renders the admin orders management page.
@@ -311,7 +312,7 @@ func AdminCreditOrdersFulfill(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.order_fulfilled"))
 	}
-	ctx.Redirect("/-/admin/credits/orders")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits/orders")
 }
 
 // AdminCreditOrdersCancel handles cancelling a pending order.
@@ -323,7 +324,7 @@ func AdminCreditOrdersCancel(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.order_cancelled"))
 	}
-	ctx.Redirect("/-/admin/credits/orders")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits/orders")
 }
 
 // AdminRedeemOptionKeys renders the key pool management page for an option.
@@ -375,7 +376,7 @@ func AdminRedeemOptionKeysAdd(ctx *context.Context) {
 
 	if len(keys) == 0 {
 		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.keys.empty"))
-		ctx.Redirect(fmt.Sprintf("/-/admin/credits/options/%d/keys", optionID))
+		ctx.Redirect(fmt.Sprintf("%s/admin/credits/options/%d/keys", setting.AppSubURL, optionID))
 		return
 	}
 
@@ -384,7 +385,7 @@ func AdminRedeemOptionKeysAdd(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.keys.added", len(keys)))
 	}
-	ctx.Redirect(fmt.Sprintf("/-/admin/credits/options/%d/keys", optionID))
+	ctx.Redirect(fmt.Sprintf("%s/admin/credits/options/%d/keys", setting.AppSubURL, optionID))
 }
 
 // AdminCreditOrdersBatchFulfill handles batch fulfillment of multiple pending orders.
@@ -397,7 +398,7 @@ func AdminCreditOrdersBatchFulfill(ctx *context.Context) {
 	orderIDStrs := ctx.Req.Form["order_ids"]
 	if len(orderIDStrs) == 0 {
 		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.batch.no_selection"))
-		ctx.Redirect("/-/admin/credits/orders")
+		ctx.Redirect(setting.AppSubURL + "/admin/credits/orders")
 		return
 	}
 
@@ -422,5 +423,5 @@ func AdminCreditOrdersBatchFulfill(ctx *context.Context) {
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.batch.success", success))
 	}
-	ctx.Redirect("/-/admin/credits/orders")
+	ctx.Redirect(setting.AppSubURL + "/admin/credits/orders")
 }
