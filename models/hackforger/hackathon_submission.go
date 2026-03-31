@@ -116,6 +116,12 @@ func UpdateSubmission(ctx context.Context, s *HackathonSubmission) error {
 	return err
 }
 
+// DeleteSubmission deletes a submission by ID.
+func DeleteSubmission(ctx context.Context, id int64) error {
+	_, err := db.GetEngine(ctx).ID(id).Delete(new(HackathonSubmission))
+	return err
+}
+
 // CountSubmissions returns the number of submissions for a given hackathon.
 func CountSubmissions(ctx context.Context, hackathonID int64) (int64, error) {
 	return db.GetEngine(ctx).Where("hackathon_id = ?", hackathonID).Count(new(HackathonSubmission))

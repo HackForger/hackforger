@@ -1785,6 +1785,7 @@ func Routes() *web.Route {
 				m.Get("/submissions", hackforger_api.ListSubmissions)
 				m.Get("/submissions/{sid}", hackforger_api.GetSubmission)
 				m.Put("/submissions/{sid}", reqToken(), bind(hackforger_api.UpdateSubmissionForm{}), hackforger_api.UpdateSubmission)
+				m.Delete("/submissions/{sid}", reqToken(), hackforger_api.DeleteSubmission)
 				m.Get("/judges", hackforger_api.ListJudges)
 				m.Post("/judges", reqToken(), bind(hackforger_api.AddJudgeForm{}), hackforger_api.AddJudge)
 				m.Delete("/judges/{uid}", reqToken(), hackforger_api.RemoveJudge)

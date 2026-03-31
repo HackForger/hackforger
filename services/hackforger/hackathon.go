@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	organization_model "forgejo.org/models/organization"
@@ -159,24 +160,40 @@ jobs:
           git commit -m "Update submission index"
           git push origin "$BRANCH" --force
 
-      - name: Create or update PR
+      - name: Create or update PR and auto-merge
         env:
           GITHUB_TOKEN: ${{ github.token }}
           API_BASE: ${{ github.server_url }}/api/v1
           REPO: ${{ github.repository }}
         run: |
-          # Check if PR already exists
-          EXISTING=$(curl -sf "${API_BASE}/repos/${REPO}/pulls?state=open&head=submission-index-update&base=main" 2>/dev/null || echo '[]')
+          # Check if PR already exists for this branch
+          EXISTING=$(curl -sf "${API_BASE}/repos/${REPO}/pulls?state=open&head=submission-index-update&base=main" \
+            -H "Authorization: token ${GITHUB_TOKEN}" 2>/dev/null || echo '[]')
           PR_COUNT=$(echo "$EXISTING" | jq 'length')
+
           if [ "$PR_COUNT" -gt "0" ]; then
-            echo "PR already exists, push updated it"
-            exit 0
+            # PR exists — it was auto-updated by the force-push
+            PR_NUMBER=$(echo "$EXISTING" | jq '.[0].number')
+            echo "Existing PR #${PR_NUMBER} updated by push"
+          else
+            # Create new PR
+            PR_RESPONSE=$(curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls" \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"title":"Update submission index","head":"submission-index-update","base":"main","body":"Automated update of SUBMISSIONS.md and submissions.json"}' 2>/dev/null || echo '{}')
+            PR_NUMBER=$(echo "$PR_RESPONSE" | jq '.number // empty')
+            if [ -z "$PR_NUMBER" ]; then
+              echo "PR creation failed, skipping merge"
+              exit 0
+            fi
+            echo "Created PR #${PR_NUMBER}"
           fi
-          # Create new PR
-          curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls" \
+
+          # Auto-merge the PR
+          curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls/${PR_NUMBER}/merge" \
             -H "Authorization: token ${GITHUB_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "{\"title\":\"Update submission index\",\"head\":\"submission-index-update\",\"base\":\"main\",\"body\":\"Automated update of SUBMISSIONS.md and submissions.json\"}" || echo "PR creation skipped"
+            -d '{"Do":"merge","merge_message_field":"Auto-merge submission index update"}' || echo "Merge failed (may need manual intervention)"
 `
 
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
@@ -463,6 +480,37 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 	}
 
 	publishSubmissionEvent(ctx, doer, h, sub)
+	return nil
+}
+
+// DeleteSubmission deletes a submission and triggers index re-sync on the track repo.
+func DeleteSubmission(ctx context.Context, doer *user_model.User, submissionID int64) error {
+	sub, err := hackforger_model.GetSubmissionByID(ctx, submissionID)
+	if err != nil {
+		return err
+	}
+	h, err := hackforger_model.GetHackathonByID(ctx, sub.HackathonID)
+	if err != nil {
+		return err
+	}
+
+	// Delete associated judge scores first
+	if _, err := db.GetEngine(ctx).Where("submission_id = ?", sub.ID).Delete(new(hackforger_model.HackathonJudgeScore)); err != nil {
+		return fmt.Errorf("delete submission scores: %w", err)
+	}
+
+	if err := hackforger_model.DeleteSubmission(ctx, sub.ID); err != nil {
+		return err
+	}
+
+	// Re-sync track index (the workflow will regenerate without the deleted submission)
+	if sub.TrackID > 0 {
+		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
+		if err == nil && track.RepoID > 0 {
+			triggerSubmissionIndexUpdate(ctx, doer, h, track)
+		}
+	}
+
 	return nil
 }
 
