@@ -464,18 +464,30 @@ func updateTrackSubmissionIndex(ctx context.Context, actor, submitter *user_mode
 	if err != nil {
 		return fmt.Errorf("open git repo: %w", err)
 	}
-	defer closer.Close()
+	// Note: closer.Close() is called manually before ChangeRepoFiles (which opens its own handle)
 
 	if err := repo_service.CreateNewBranch(ctx, actor, baseRepo, gitRepo, baseRepo.DefaultBranch, branchName); err != nil {
 		return fmt.Errorf("create branch: %w", err)
 	}
 
+	// Get the latest commit ID on the new branch for the update operation.
+	// ChangeRepoFiles requires LastCommitID or SHA for "update" to prevent conflicts.
+	branchCommit, err := gitRepo.GetBranchCommit(branchName)
+	if err != nil {
+		return fmt.Errorf("get branch commit: %w", err)
+	}
+	lastCommitID := branchCommit.ID.String()
+
+	// Close the gitRepo before ChangeRepoFiles opens its own handle
+	closer.Close()
+
 	// Commit both files to the new branch (actor = org owner)
 	mdContent := mdBuf.String()
 	_, err = files_service.ChangeRepoFiles(ctx, baseRepo, actor, &files_service.ChangeRepoFilesOptions{
-		OldBranch: branchName,
-		NewBranch: branchName,
-		Message:   fmt.Sprintf("Add submission: %s by %s", sub.Title, submitter.Name),
+		LastCommitID: lastCommitID,
+		OldBranch:    branchName,
+		NewBranch:    branchName,
+		Message:      fmt.Sprintf("Add submission: %s by %s", sub.Title, submitter.Name),
 		Files: []*files_service.ChangeRepoFile{
 			{
 				Operation:     "update",
