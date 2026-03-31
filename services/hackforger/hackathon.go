@@ -5,8 +5,8 @@ package hackforger
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	hackforger_model "forgejo.org/models/hackforger"
@@ -16,10 +16,9 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
-	pull_service "forgejo.org/services/pull"
+	actions_service "forgejo.org/services/actions"
 	release_service "forgejo.org/services/release"
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
@@ -87,6 +86,99 @@ func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_m
 	return nil
 }
 
+// submissionIndexWorkflow is the Forgejo Actions workflow committed into every
+// track repo. It is dispatched via workflow_dispatch whenever a new submission
+// is created, and regenerates SUBMISSIONS.md + submissions.json from the API.
+const submissionIndexWorkflow = `name: Update Submission Index
+on:
+  workflow_dispatch:
+    inputs:
+      hackathon_id:
+        description: 'Hackathon ID'
+        required: true
+        type: string
+      track_id:
+        description: 'Track ID'
+        required: true
+        type: string
+      hackathon_slug:
+        description: 'Hackathon slug for URLs'
+        required: true
+        type: string
+      track_name:
+        description: 'Track name for index header'
+        required: true
+        type: string
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch submissions and generate index
+        env:
+          API_BASE: ${{ github.server_url }}/api/v1/hackforger
+          HACKATHON_ID: ${{ inputs.hackathon_id }}
+          TRACK_ID: ${{ inputs.track_id }}
+          HACKATHON_SLUG: ${{ inputs.hackathon_slug }}
+          TRACK_NAME: ${{ inputs.track_name }}
+          INSTANCE_URL: ${{ github.server_url }}
+        run: |
+          # Fetch all submissions for this track
+          SUBS=$(curl -sf "${API_BASE}/hackathons/${HACKATHON_ID}/submissions" 2>/dev/null || echo '[]')
+
+          # Filter submissions for this track
+          TRACK_SUBS=$(echo "$SUBS" | jq --argjson tid "$TRACK_ID" '[.[] | select(.track_id == $tid)]')
+
+          # Generate SUBMISSIONS.md
+          {
+            echo "# ${TRACK_NAME} — Submissions"
+            echo ""
+            echo "Track for [hackathon](${INSTANCE_URL}/hackathon/${HACKATHON_SLUG})"
+            echo ""
+            echo "| # | Project | Author | Repo | Demo |"
+            echo "|---|---------|--------|------|------|"
+            echo "$TRACK_SUBS" | jq -r 'to_entries[] | "| \(.key + 1) | \(.value.title) | User #\(.value.user_id) | \(if .value.repo_id > 0 then \"repo\" else \"-\" end) | \(if .value.demo_url != \"\" then \"[Demo](\(.value.demo_url))\" else \"-\" end) |"'
+          } > SUBMISSIONS.md
+
+          # Generate submissions.json
+          echo "$TRACK_SUBS" | jq '[.[] | {id, title, description, user_id, repo_id, demo_url}]' > submissions.json
+
+      - name: Commit and push
+        run: |
+          git config user.name "HackForger Bot"
+          git config user.email "noreply@hackforger"
+          BRANCH="submission-index-update"
+          git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
+          git add SUBMISSIONS.md submissions.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Update submission index"
+          git push origin "$BRANCH" --force
+
+      - name: Create or update PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          API_BASE: ${{ github.server_url }}/api/v1
+          REPO: ${{ github.repository }}
+        run: |
+          # Check if PR already exists
+          EXISTING=$(curl -sf "${API_BASE}/repos/${REPO}/pulls?state=open&head=submission-index-update&base=main" 2>/dev/null || echo '[]')
+          PR_COUNT=$(echo "$EXISTING" | jq 'length')
+          if [ "$PR_COUNT" -gt "0" ]; then
+            echo "PR already exists, push updated it"
+            exit 0
+          fi
+          # Create new PR
+          curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls" \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"title\":\"Update submission index\",\"head\":\"submission-index-update\",\"base\":\"main\",\"body\":\"Automated update of SUBMISSIONS.md and submissions.json\"}" || echo "PR creation skipped"
+`
+
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
 // Organization for the track, then inserts the track record.
 func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack) error {
@@ -135,6 +227,11 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 					Operation:     "create",
 					TreePath:      "submissions.json",
 					ContentReader: strings.NewReader("[]\n"),
+				},
+				{
+					Operation:     "create",
+					TreePath:      ".forgejo/workflows/update-submission-index.yml",
+					ContentReader: strings.NewReader(submissionIndexWorkflow),
 				},
 			},
 		})
@@ -334,8 +431,8 @@ func HackathonStatusLabel(status hackforger_model.HackathonStatus) string {
 
 // CreateSubmission creates a hackathon submission. When the user provides a
 // repo_id, it is validated to belong to the user (or an org they are a member
-// of). If the submission targets a track with a linked repository, a PR is
-// created on the track repo updating SUBMISSIONS.md and submissions.json.
+// of). If the submission targets a track with a linked repository, a Forgejo
+// Actions workflow is dispatched to update SUBMISSIONS.md and submissions.json.
 func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) error {
 	// 1. If user provided a repo_id, validate it exists and belongs to the doer
 	if sub.RepoID > 0 {
@@ -357,21 +454,11 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 		return err
 	}
 
-	// 3. If track has a repo, create a PR updating the submission index.
-	//    Use the hackathon org owner (not the submitter) to create the branch/PR,
-	//    because submitters may not have write access to the track repo.
+	// 3. If track has a repo, trigger workflow to update submission index
 	if sub.TrackID > 0 {
 		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
 		if err == nil && track.RepoID > 0 {
-			orgOwner, ownerErr := user_model.GetUserByID(ctx, h.OwnerID)
-			if ownerErr != nil {
-				log.Warn("CreateSubmission: failed to load hackathon owner: %v", ownerErr)
-			} else {
-				if err := updateTrackSubmissionIndex(ctx, orgOwner, doer, h, track, sub); err != nil {
-					// Log but don't fail the submission — the DB record is already saved
-					log.Warn("CreateSubmission: failed to update track index: %v", err)
-				}
-			}
+			triggerSubmissionIndexUpdate(ctx, doer, h, track)
 		}
 	}
 
@@ -379,163 +466,56 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 	return nil
 }
 
-// updateTrackSubmissionIndex creates a PR to the track repo that updates
-// SUBMISSIONS.md and submissions.json with the new submission entry.
-// actor: the user performing git operations (hackathon org owner, has write access).
-// submitter: the actual submission author (used for PR content attribution).
-func updateTrackSubmissionIndex(ctx context.Context, actor, submitter *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack, sub *hackforger_model.HackathonSubmission) error {
+// triggerSubmissionIndexUpdate dispatches the update-submission-index workflow
+// in the track repo via the Forgejo Actions internal API. The workflow handles
+// fetching submissions, regenerating SUBMISSIONS.md + submissions.json, and
+// creating a PR -- all within the Actions runner, not in Go code.
+func triggerSubmissionIndexUpdate(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack) {
+	if track.RepoID == 0 {
+		return
+	}
 	baseRepo, err := repo_model.GetRepositoryByID(ctx, track.RepoID)
 	if err != nil {
-		return fmt.Errorf("get track repo: %w", err)
+		log.Warn("triggerSubmissionIndexUpdate: get track repo: %v", err)
+		return
 	}
 	if err := baseRepo.LoadOwner(ctx); err != nil {
-		return fmt.Errorf("load track repo owner: %w", err)
+		log.Warn("triggerSubmissionIndexUpdate: load repo owner: %v", err)
+		return
 	}
 
-	// Build submission repo URL for the PR body
-	var repoURL string
-	if sub.RepoID > 0 {
-		if userRepo, err := repo_model.GetRepositoryByID(ctx, sub.RepoID); err == nil {
-			repoURL = setting.AppURL + userRepo.FullName()
-		}
-	}
-
-	// Load ALL current submissions for this track to rebuild the full index
-	allSubs, _, err := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{
-		HackathonID: sub.HackathonID,
-		TrackID:     track.ID,
-	})
-	if err != nil {
-		return fmt.Errorf("list submissions: %w", err)
-	}
-
-	// Generate SUBMISSIONS.md content
-	var mdBuf strings.Builder
-	mdBuf.WriteString(fmt.Sprintf("# %s — Submissions\n\n", track.Name))
-	mdBuf.WriteString(fmt.Sprintf("Track for [%s](%shackathon/%s)\n\n", h.Name, setting.AppURL, h.Slug))
-	mdBuf.WriteString("| # | Project | Author | Repo | Demo |\n")
-	mdBuf.WriteString("|---|---------|--------|------|------|\n")
-	for i, s := range allSubs {
-		repoLink := "-"
-		if s.RepoID > 0 {
-			if r, err := repo_model.GetRepositoryByID(ctx, s.RepoID); err == nil {
-				repoLink = fmt.Sprintf("[%s](%s%s)", r.FullName(), setting.AppURL, r.FullName())
-			}
-		}
-		demoLink := "-"
-		if s.DemoURL != "" {
-			demoLink = fmt.Sprintf("[Demo](%s)", s.DemoURL)
-		}
-		authorName := fmt.Sprintf("User #%d", s.UserID)
-		if u, err := user_model.GetUserByID(ctx, s.UserID); err == nil {
-			authorName = fmt.Sprintf("[%s](%s%s)", u.Name, setting.AppURL, u.Name)
-		}
-		mdBuf.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n", i+1, s.Title, authorName, repoLink, demoLink))
-	}
-
-	// Generate submissions.json content
-	type jsonEntry struct {
-		ID          int64  `json:"id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		UserID      int64  `json:"user_id"`
-		RepoURL     string `json:"repo_url,omitempty"`
-		DemoURL     string `json:"demo_url,omitempty"`
-	}
-	jsonEntries := make([]jsonEntry, 0, len(allSubs))
-	for _, s := range allSubs {
-		entry := jsonEntry{
-			ID: s.ID, Title: s.Title, Description: s.Description,
-			UserID: s.UserID, DemoURL: s.DemoURL,
-		}
-		if s.RepoID > 0 {
-			if r, err := repo_model.GetRepositoryByID(ctx, s.RepoID); err == nil {
-				entry.RepoURL = setting.AppURL + r.FullName()
-			}
-		}
-		jsonEntries = append(jsonEntries, entry)
-	}
-	jsonBytes, _ := json.MarshalIndent(jsonEntries, "", "  ")
-
-	// Create a new branch for this submission's PR (actor = org owner with write access)
-	branchName := fmt.Sprintf("submission/%d-%s", sub.ID, submitter.LowerName)
-
+	// Open the git repo to locate the workflow file on the default branch
 	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, baseRepo)
 	if err != nil {
-		return fmt.Errorf("open git repo: %w", err)
+		log.Warn("triggerSubmissionIndexUpdate: open git repo: %v", err)
+		return
 	}
-	// Note: closer.Close() is called manually before ChangeRepoFiles (which opens its own handle)
+	defer closer.Close()
 
-	if err := repo_service.CreateNewBranch(ctx, actor, baseRepo, gitRepo, baseRepo.DefaultBranch, branchName); err != nil {
-		return fmt.Errorf("create branch: %w", err)
-	}
-
-	// Get the latest commit ID on the new branch for the update operation.
-	// ChangeRepoFiles requires LastCommitID or SHA for "update" to prevent conflicts.
-	branchCommit, err := gitRepo.GetBranchCommit(branchName)
+	workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, baseRepo.DefaultBranch, "update-submission-index.yml")
 	if err != nil {
-		return fmt.Errorf("get branch commit: %w", err)
+		log.Warn("triggerSubmissionIndexUpdate: get workflow: %v", err)
+		return
 	}
-	lastCommitID := branchCommit.ID.String()
 
-	// Close the gitRepo before ChangeRepoFiles opens its own handle
-	closer.Close()
+	// Build the inputs map for the workflow_dispatch event
+	inputs := map[string]string{
+		"hackathon_id":   strconv.FormatInt(h.ID, 10),
+		"track_id":       strconv.FormatInt(track.ID, 10),
+		"hackathon_slug": h.Slug,
+		"track_name":     track.Name,
+	}
+	inputGetter := func(key string) string {
+		return inputs[key]
+	}
 
-	// Commit both files to the new branch (actor = org owner)
-	mdContent := mdBuf.String()
-	_, err = files_service.ChangeRepoFiles(ctx, baseRepo, actor, &files_service.ChangeRepoFilesOptions{
-		LastCommitID: lastCommitID,
-		OldBranch:    branchName,
-		NewBranch:    branchName,
-		Message:      fmt.Sprintf("Add submission: %s by %s", sub.Title, submitter.Name),
-		Files: []*files_service.ChangeRepoFile{
-			{
-				Operation:     "update",
-				TreePath:      "SUBMISSIONS.md",
-				ContentReader: strings.NewReader(mdContent),
-			},
-			{
-				Operation:     "update",
-				TreePath:      "submissions.json",
-				ContentReader: strings.NewReader(string(jsonBytes)),
-			},
-		},
-	})
+	_, _, err = workflow.Dispatch(ctx, inputGetter, baseRepo, doer)
 	if err != nil {
-		return fmt.Errorf("commit files: %w", err)
+		log.Warn("triggerSubmissionIndexUpdate: dispatch workflow: %v", err)
+		return
 	}
 
-	// Create PR from the branch to the default branch (poster = actor, content credits submitter)
-	issue := &issues_model.Issue{
-		RepoID:   baseRepo.ID,
-		Title:    fmt.Sprintf("Submission: %s", sub.Title),
-		Content:  fmt.Sprintf("**Author:** @%s\n**Project:** %s\n\n%s", submitter.Name, sub.Title, sub.Description),
-		PosterID: actor.ID,
-	}
-	if repoURL != "" {
-		issue.Content += fmt.Sprintf("\n\n**Repository:** %s", repoURL)
-	}
-	if sub.DemoURL != "" {
-		issue.Content += fmt.Sprintf("\n**Demo:** %s", sub.DemoURL)
-	}
-
-	pr := &issues_model.PullRequest{
-		HeadRepoID: baseRepo.ID,
-		BaseRepoID: baseRepo.ID,
-		HeadBranch: branchName,
-		BaseBranch: baseRepo.DefaultBranch,
-		Type:       issues_model.PullRequestGitea,
-	}
-	if err := pull_service.NewPullRequest(ctx, baseRepo, issue, nil, nil, pr, nil); err != nil {
-		log.Warn("updateTrackSubmissionIndex: PR creation failed: %v", err)
-	} else {
-		// Save PR reference back to submission
-		sub.PRID = pr.ID
-		sub.PullIndex = issue.Index
-		_ = hackforger_model.UpdateSubmission(ctx, sub)
-	}
-
-	return nil
+	log.Info("triggerSubmissionIndexUpdate: dispatched workflow for hackathon %d track %d", h.ID, track.ID)
 }
 
 func publishSubmissionEvent(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) {
