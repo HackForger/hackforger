@@ -250,11 +250,10 @@ func FinalizeConfirmAPI(ctx *context.APIContext) {
 	ctx.Status(http.StatusOK)
 }
 
-// GetLeaderboard returns ranked submissions for a hackathon.
+// GetLeaderboard returns ranked submissions for a hackathon, grouped by track.
 func GetLeaderboard(ctx *context.APIContext) {
-	subs, _, err := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{
-		HackathonID: ctx.ParamsInt64(":id"),
-	})
+	hackathonID := ctx.ParamsInt64(":id")
+	tracks, err := hackforger_model.ListTracksByHackathon(ctx, hackathonID)
 	if err != nil {
 		ctx.InternalServerError(err)
 		return
@@ -264,17 +263,40 @@ func GetLeaderboard(ctx *context.APIContext) {
 		Rank       int     `json:"rank"`
 		Title      string  `json:"title"`
 		UserID     int64   `json:"user_id"`
+		TrackID    int64   `json:"track_id"`
 		TotalScore float64 `json:"total_score"`
 		DemoURL    string  `json:"demo_url"`
 	}
-	result := make([]entry, 0, len(subs))
-	for _, s := range subs {
-		result = append(result, entry{
-			Rank:       s.Rank,
-			Title:      s.Title,
-			UserID:     s.UserID,
-			TotalScore: s.TotalScore,
-			DemoURL:    s.DemoURL,
+	type trackLeaderboard struct {
+		TrackID   int64   `json:"track_id"`
+		TrackName string  `json:"track_name"`
+		Entries   []entry `json:"entries"`
+	}
+
+	result := make([]trackLeaderboard, 0, len(tracks))
+	for _, t := range tracks {
+		subs, _, err := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{
+			HackathonID: hackathonID, TrackID: t.ID,
+		})
+		if err != nil {
+			ctx.InternalServerError(err)
+			return
+		}
+		entries := make([]entry, 0, len(subs))
+		for _, s := range subs {
+			entries = append(entries, entry{
+				Rank:       s.Rank,
+				Title:      s.Title,
+				UserID:     s.UserID,
+				TrackID:    s.TrackID,
+				TotalScore: s.TotalScore,
+				DemoURL:    s.DemoURL,
+			})
+		}
+		result = append(result, trackLeaderboard{
+			TrackID:   t.ID,
+			TrackName: t.Name,
+			Entries:   entries,
 		})
 	}
 	ctx.JSON(http.StatusOK, result)

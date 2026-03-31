@@ -44,7 +44,7 @@
 					{{range .Criteria}}
 					<tr>
 						<td>
-							<form class="ui form" method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}">
+							<form class="ui form" method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}/update">
 								<input name="name" value="{{.Name}}" required>
 						</td>
 						<td><input name="description" value="{{.Description}}"></td>

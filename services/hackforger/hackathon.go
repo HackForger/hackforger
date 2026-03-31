@@ -178,19 +178,19 @@ func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 	if h.Status != hackforger_model.HackathonStatusHacking {
 		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusHacking}
 	}
-	subCount, err := hackforger_model.CountSubmissions(ctx, h.ID)
-	if err != nil {
-		return err
-	}
-	if subCount == 0 {
-		return ErrNoSubmissions{HackathonID: h.ID}
-	}
 	criteriaCount, err := hackforger_model.CountCriteriaByHackathon(ctx, h.ID)
 	if err != nil {
 		return err
 	}
 	if criteriaCount == 0 {
 		return hackforger_model.ErrNoCriteria{HackathonID: h.ID}
+	}
+	subCount, err := hackforger_model.CountSubmissions(ctx, h.ID)
+	if err != nil {
+		return err
+	}
+	if subCount == 0 {
+		return ErrNoSubmissions{HackathonID: h.ID}
 	}
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusJudging); err != nil {
 		return err
