@@ -233,8 +233,8 @@ This scenario tests prize distribution across hackathon tracks using three diffe
 
 1. Redeem "Game Key" twice more (as hacker_eve or other users) to use all 3 keys.
 2. Try to redeem again.
-3. **Verify:** Redemption still succeeds (stock is -1 = unlimited) but order stays **Pending** because no keys are available.
-4. **Verify:** Admin can see the pending order in `/-/admin/credits/orders`.
+3. **Verify:** Redemption **fails** with an "out of stock" error — the entire transaction rolls back (balance unchanged).
+4. **Verify:** Option is auto-deactivated (no longer visible in redeem options list).
 
 ### D. Batch Fulfill
 
@@ -267,8 +267,8 @@ This scenario tests prize distribution across hackathon tracks using three diffe
 1. Log in as admin.
 2. Fulfill a pending order (if any remain) for `hacker_eve`.
 3. Log in as `hacker_eve`.
-4. Navigate to the dashboard (home page).
-5. **Verify:** Activity feed shows "fulfilled a redeem order" event.
+4. Navigate to the dashboard, click the **Community** tab (Line-B feed refactor renders HackForger events there).
+5. **Verify:** Community feed shows "fulfilled a redeem order" event.
 
 **E2. Cancel Notification**
 
@@ -279,8 +279,8 @@ This scenario tests prize distribution across hackathon tracks using three diffe
 5. **Verify:** Order status changes to **Cancelled**.
 6. **Verify:** hacker_eve's credits are refunded (check balance).
 7. Log in as `hacker_eve`.
-8. Navigate to the dashboard.
-9. **Verify:** Activity feed shows "cancelled a redeem order" event.
+8. Navigate to the dashboard, click the **Community** tab.
+9. **Verify:** Community feed shows "cancelled a redeem order" event.
 
 ### F. i18n Verification (zh-CN)
 
@@ -340,12 +340,12 @@ This scenario tests prize distribution across hackathon tracks using three diffe
 | C2 | Add keys to pool | [ ] Pass / [ ] Fail | |
 | C3 | Redeem auto-fulfilled instantly | [ ] Pass / [ ] Fail | |
 | C4 | Key pool shows used key | [ ] Pass / [ ] Fail | |
-| C5 | Exhausted pool: order stays pending | [ ] Pass / [ ] Fail | |
+| C5 | Exhausted pool: redeem fails + option deactivated | [ ] Pass / [ ] Fail | |
 | D1 | Multiple pending orders exist | [ ] Pass / [ ] Fail | |
 | D2 | Batch fulfill with download link | [ ] Pass / [ ] Fail | |
 | D3 | Partial batch (already fulfilled) | [ ] Pass / [ ] Fail | |
-| E1 | Feed shows "fulfilled a redeem order" | [ ] Pass / [ ] Fail | |
-| E2 | Cancel order + refund + feed event | [ ] Pass / [ ] Fail | |
+| E1 | Community tab shows "fulfilled a redeem order" | [ ] Pass / [ ] Fail | |
+| E2 | Cancel order + refund + Community tab event | [ ] Pass / [ ] Fail | |
 | F1 | Switch to zh-CN | [ ] Pass / [ ] Fail | |
 | F2 | Credits pages in Chinese | [ ] Pass / [ ] Fail | |
 | F3 | Admin credits pages in Chinese | [ ] Pass / [ ] Fail | |
