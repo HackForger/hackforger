@@ -155,42 +155,21 @@ jobs:
           API_BASE: ${{ github.server_url }}/api/v1
           REPO: ${{ github.repository }}
         run: |
-          BRANCH="submission-index-update"
-          git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
           git add SUBMISSIONS.md submissions.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
           git commit -m "Update submission index"
-          git push "http://x-access-token:${GITHUB_TOKEN}@$(echo '${{ github.server_url }}' | sed 's|https\?://||')/${{ github.repository }}.git" "$BRANCH" --force
 
-          # Create or update PR
-          EXISTING=$(curl -sf "${API_BASE}/repos/${REPO}/pulls?state=open&head=${BRANCH}&base=main" \
-            -H "Authorization: token ${GITHUB_TOKEN}" 2>/dev/null || echo '[]')
-          PR_COUNT=$(echo "$EXISTING" | jq 'length')
-
-          if [ "$PR_COUNT" -gt "0" ]; then
-            PR_NUMBER=$(echo "$EXISTING" | jq '.[0].number')
-            echo "Existing PR #${PR_NUMBER} updated"
-          else
-            PR_RESPONSE=$(curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls" \
-              -H "Authorization: token ${GITHUB_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "{\"title\":\"Update submission index\",\"head\":\"${BRANCH}\",\"base\":\"main\",\"body\":\"Automated update\"}" 2>/dev/null || echo '{}')
-            PR_NUMBER=$(echo "$PR_RESPONSE" | jq '.number // empty')
-            if [ -z "$PR_NUMBER" ]; then
-              echo "PR creation failed"
-              exit 0
-            fi
-            echo "Created PR #${PR_NUMBER}"
-          fi
-
-          # Auto-merge
-          curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls/${PR_NUMBER}/merge" \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{"Do":"merge","merge_message_field":"Auto-merge submission index update"}' || echo "Merge skipped"
+          # Push directly to main (action token has push access).
+          # No PR flow needed — this is an automated index update.
+          SERVER_HOST="${{ github.server_url }}"
+          SERVER_HOST="${SERVER_HOST#http://}"
+          SERVER_HOST="${SERVER_HOST#https://}"
+          PUSH_URL="http://x-access-token:${GITHUB_TOKEN}@${SERVER_HOST}/${{ github.repository }}.git"
+          git push "$PUSH_URL" main
+          echo "Pushed index update to main"
 `
 
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
@@ -554,7 +533,15 @@ func triggerSubmissionIndexUpdate(ctx context.Context, doer *user_model.User, h 
 		return inputs[key]
 	}
 
-	_, _, err = workflow.Dispatch(ctx, inputGetter, baseRepo, doer)
+	// Dispatch as the hackathon owner (a human user with admin privileges on the org).
+	// baseRepo.Owner is the org itself (type=1), which cannot merge PRs.
+	// Using the submitter (doer) would also fail because hackers lack write access.
+	hackathonOwner, err := user_model.GetUserByID(ctx, h.OwnerID)
+	if err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: get hackathon owner: %v", err)
+		return
+	}
+	_, _, err = workflow.Dispatch(ctx, inputGetter, baseRepo, hackathonOwner)
 	if err != nil {
 		log.Warn("triggerSubmissionIndexUpdate: dispatch workflow: %v", err)
 		return

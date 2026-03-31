@@ -140,6 +140,7 @@ type RankedSubmission struct {
 	Title          string
 	UserID         int64
 	TrackID        int64
+	DemoURL        string
 	WeightedTotal  float64
 	CriteriaScores map[int64]float64 // criteriaID -> average score across judges
 	Rank           int
@@ -213,6 +214,7 @@ func CalculateRanks(ctx context.Context, hackathonID int64) (map[int64][]RankedS
 				Title:          sub.Title,
 				UserID:         sub.UserID,
 				TrackID:        track.ID,
+				DemoURL:        sub.DemoURL,
 				WeightedTotal:  weightedTotal,
 				CriteriaScores: criteriaScores,
 			})

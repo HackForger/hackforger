@@ -14,9 +14,9 @@
 		{{/* Tab content for each track */}}
 		{{range $i, $t := .Tracks}}
 		<div class="ui bottom attached tab segment {{if eq $i 0}}active{{end}}" data-tab="track-{{$t.ID}}">
-			{{$subs := index $.SubsByTrack $t.ID}}
+			{{$ranked := index $.Rankings $t.ID}}
 			{{$rubric := index $.Rubrics $t.ID}}
-			{{if $subs}}
+			{{if $ranked}}
 			<table class="ui celled table">
 				<thead>
 					<tr>
@@ -31,16 +31,16 @@
 					</tr>
 				</thead>
 				<tbody>
-					{{range $subs}}
+					{{range $sub := $ranked}}
 					<tr {{if eq .Rank 1}}class="positive"{{else if and (ge .Rank 2) (le .Rank 3)}}class="warning"{{end}}>
 						<td>#{{.Rank}}</td>
 						<td>{{.Title}}{{if .DemoURL}} — <a href="{{.DemoURL}}">Demo</a>{{end}}</td>
 						{{if $.ShowBreakdown}}
-							{{range $rubric}}
-							<td>-</td>
+							{{range $c := $rubric}}
+							<td>{{printf "%.1f" (index $sub.CriteriaScores $c.CriteriaID)}}</td>
 							{{end}}
 						{{end}}
-						<td>{{printf "%.1f" .TotalScore}}</td>
+						<td>{{printf "%.1f" .WeightedTotal}}</td>
 					</tr>
 					{{end}}
 				</tbody>

@@ -811,13 +811,12 @@ func Leaderboard(ctx *context.Context) {
 		return
 	}
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
-	subsByTrack := make(map[int64][]*hackforger_model.HackathonSubmission)
-	for _, t := range tracks {
-		subs, _, _ := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{
-			HackathonID: h.ID, TrackID: t.ID,
-		})
-		subsByTrack[t.ID] = subs
-	}
+
+	showBreakdown := h.Status == hackforger_model.HackathonStatusFinished
+
+	// Use CalculateRanks to get per-criteria scores for the breakdown view.
+	rankings, _ := hackforger_service.CalculateRanks(ctx, h.ID)
+
 	rubrics := make(map[int64][]*hackforger_service.EffectiveCriteria)
 	for _, t := range tracks {
 		r, _ := hackforger_service.GetEffectiveRubric(ctx, t.ID)
@@ -826,8 +825,8 @@ func Leaderboard(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.leaderboard")
 	ctx.Data["Hackathon"] = h
 	ctx.Data["Tracks"] = tracks
-	ctx.Data["SubsByTrack"] = subsByTrack
+	ctx.Data["Rankings"] = rankings
 	ctx.Data["Rubrics"] = rubrics
-	ctx.Data["ShowBreakdown"] = h.Status == hackforger_model.HackathonStatusFinished
+	ctx.Data["ShowBreakdown"] = showBreakdown
 	ctx.HTML(http.StatusOK, tplLeaderboard)
 }
