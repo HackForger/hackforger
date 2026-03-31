@@ -357,13 +357,20 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 		return err
 	}
 
-	// 3. If track has a repo, create a PR updating the submission index
+	// 3. If track has a repo, create a PR updating the submission index.
+	//    Use the hackathon org owner (not the submitter) to create the branch/PR,
+	//    because submitters may not have write access to the track repo.
 	if sub.TrackID > 0 {
 		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
 		if err == nil && track.RepoID > 0 {
-			if err := updateTrackSubmissionIndex(ctx, doer, h, track, sub); err != nil {
-				// Log but don't fail the submission — the DB record is already saved
-				log.Warn("CreateSubmission: failed to update track index: %v", err)
+			orgOwner, ownerErr := user_model.GetUserByID(ctx, h.OwnerID)
+			if ownerErr != nil {
+				log.Warn("CreateSubmission: failed to load hackathon owner: %v", ownerErr)
+			} else {
+				if err := updateTrackSubmissionIndex(ctx, orgOwner, doer, h, track, sub); err != nil {
+					// Log but don't fail the submission — the DB record is already saved
+					log.Warn("CreateSubmission: failed to update track index: %v", err)
+				}
 			}
 		}
 	}
@@ -374,7 +381,9 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 
 // updateTrackSubmissionIndex creates a PR to the track repo that updates
 // SUBMISSIONS.md and submissions.json with the new submission entry.
-func updateTrackSubmissionIndex(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack, sub *hackforger_model.HackathonSubmission) error {
+// actor: the user performing git operations (hackathon org owner, has write access).
+// submitter: the actual submission author (used for PR content attribution).
+func updateTrackSubmissionIndex(ctx context.Context, actor, submitter *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack, sub *hackforger_model.HackathonSubmission) error {
 	baseRepo, err := repo_model.GetRepositoryByID(ctx, track.RepoID)
 	if err != nil {
 		return fmt.Errorf("get track repo: %w", err)
@@ -448,8 +457,8 @@ func updateTrackSubmissionIndex(ctx context.Context, doer *user_model.User, h *h
 	}
 	jsonBytes, _ := json.MarshalIndent(jsonEntries, "", "  ")
 
-	// Create a new branch for this submission's PR
-	branchName := fmt.Sprintf("submission/%d-%s", sub.ID, doer.LowerName)
+	// Create a new branch for this submission's PR (actor = org owner with write access)
+	branchName := fmt.Sprintf("submission/%d-%s", sub.ID, submitter.LowerName)
 
 	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, baseRepo)
 	if err != nil {
@@ -457,16 +466,16 @@ func updateTrackSubmissionIndex(ctx context.Context, doer *user_model.User, h *h
 	}
 	defer closer.Close()
 
-	if err := repo_service.CreateNewBranch(ctx, doer, baseRepo, gitRepo, baseRepo.DefaultBranch, branchName); err != nil {
+	if err := repo_service.CreateNewBranch(ctx, actor, baseRepo, gitRepo, baseRepo.DefaultBranch, branchName); err != nil {
 		return fmt.Errorf("create branch: %w", err)
 	}
 
-	// Commit both files to the new branch
+	// Commit both files to the new branch (actor = org owner)
 	mdContent := mdBuf.String()
-	_, err = files_service.ChangeRepoFiles(ctx, baseRepo, doer, &files_service.ChangeRepoFilesOptions{
+	_, err = files_service.ChangeRepoFiles(ctx, baseRepo, actor, &files_service.ChangeRepoFilesOptions{
 		OldBranch: branchName,
 		NewBranch: branchName,
-		Message:   fmt.Sprintf("Add submission: %s by %s", sub.Title, doer.Name),
+		Message:   fmt.Sprintf("Add submission: %s by %s", sub.Title, submitter.Name),
 		Files: []*files_service.ChangeRepoFile{
 			{
 				Operation:     "update",
@@ -484,12 +493,12 @@ func updateTrackSubmissionIndex(ctx context.Context, doer *user_model.User, h *h
 		return fmt.Errorf("commit files: %w", err)
 	}
 
-	// Create PR from the branch to the default branch
+	// Create PR from the branch to the default branch (poster = actor, content credits submitter)
 	issue := &issues_model.Issue{
 		RepoID:   baseRepo.ID,
 		Title:    fmt.Sprintf("Submission: %s", sub.Title),
-		Content:  fmt.Sprintf("**Author:** @%s\n**Project:** %s\n\n%s", doer.Name, sub.Title, sub.Description),
-		PosterID: doer.ID,
+		Content:  fmt.Sprintf("**Author:** @%s\n**Project:** %s\n\n%s", submitter.Name, sub.Title, sub.Description),
+		PosterID: actor.ID,
 	}
 	if repoURL != "" {
 		issue.Content += fmt.Sprintf("\n\n**Repository:** %s", repoURL)
