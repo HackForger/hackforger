@@ -142,7 +142,7 @@ Ensure `hacker_eve` and `hacker_frank` each own at least one repo (e.g., `hacker
 - [ ] Registrations appear in manage page
 - [ ] Hacking phase starts successfully
 
-### TC-06: Submit Projects (New: User-Owned Repo + Track Index PR)
+### TC-06: Submit Projects (User-Owned Repo + Workflow Index Update)
 
 **As:** `hacker_eve` and `hacker_frank`
 
@@ -161,17 +161,61 @@ Ensure `hacker_eve` and `hacker_frank` each own at least one repo (e.g., `hacker
    - Title: "Eve's Web Tool"
    - Repo: select a repo or "No repository"
    - Track: Web Track
-5. Check the AI Track repo's SUBMISSIONS.md and submissions.json
+5. Wait ~30 seconds for workflow to execute
 
 **Expected:**
 - [ ] Submit form shows repo dropdown with user's repositories
 - [ ] "No repository (description only)" option available
 - [ ] Submissions created and visible on hackathon page
 - [ ] Each submission shows linked repo name (if provided)
-- [ ] AI Track repo has updated SUBMISSIONS.md with Eve's AI Bot entry
-- [ ] AI Track repo has updated submissions.json with structured entry
-- [ ] A PR was created in AI Track repo for the submission index update
 - [ ] No fork operations occurred (no orphaned git directories)
+
+### TC-06a: Verify Workflow Execution + Auto-Merge
+
+**As:** `hackforger` (admin)
+
+> After TC-06 submissions are created, verify the Actions workflow ran and auto-merged.
+
+1. Navigate to AI Track repo → Actions tab
+2. Check workflow run status
+3. Navigate to AI Track repo → default branch (main)
+4. Check SUBMISSIONS.md content
+5. Check submissions.json content
+6. Repeat for Web Track repo
+
+**Expected:**
+- [ ] Actions tab shows workflow run(s) with status "success"
+- [ ] Workflow triggered by `workflow_dispatch` event
+- [ ] AI Track `SUBMISSIONS.md` on main contains Eve's AI Bot entry (table row with title, user, demo link)
+- [ ] AI Track `submissions.json` on main contains structured entry with correct fields
+- [ ] Web Track `SUBMISSIONS.md` on main contains Frank's Web App + Eve's Web Tool entries
+- [ ] Web Track `submissions.json` on main contains 2 entries
+- [ ] PR was created and auto-merged (check closed PRs or merge commits)
+
+### TC-06b: Delete Submission + Index Re-Sync
+
+**As:** `hackforger` (admin)
+
+> Test that deleting a submission triggers workflow to remove it from the index.
+
+```bash
+TOKEN="your-api-token"
+BASE="https://hackforger.inside.h2os.cloud/api/v1/hackforger"
+
+# Delete Eve's Web Tool submission
+curl -s -X DELETE "$BASE/hackathons/{id}/submissions/{eve_web_tool_sid}" \
+  -H "Authorization: token $TOKEN"
+```
+
+1. Wait ~30 seconds for workflow to execute
+2. Check Web Track repo's SUBMISSIONS.md and submissions.json
+
+**Expected:**
+- [ ] DELETE returns 204 No Content
+- [ ] Workflow triggered again on Web Track repo
+- [ ] Web Track `SUBMISSIONS.md` on main now contains only Frank's Web App (Eve's Web Tool removed)
+- [ ] Web Track `submissions.json` on main contains 1 entry (was 2)
+- [ ] AI Track unchanged (different track)
 
 ### TC-07a: Start Judging — No Criteria Edge Case
 
@@ -431,7 +475,9 @@ These were bugs found in Round 1 — verify they are fixed:
 | 03 | Track Criteria Overrides | | |
 | 04 | Per-Track Judges | | |
 | 05 | Publish + Register + Hack | | |
-| 06 | Submit Projects (user-owned repo + index PR) | | |
+| 06 | Submit Projects (user-owned repo) | | |
+| 06a | Workflow Execution + Auto-Merge | | |
+| 06b | Delete Submission + Index Re-Sync | | |
 | 07a | Start Judging — No Criteria | | |
 | 07b | Start Judging | | |
 | 08 | Judge Scoring (Carol) | | |
@@ -447,7 +493,7 @@ These were bugs found in Round 1 — verify they are fixed:
 | BF2 | Submission Without Fork | | |
 | BF3 | Criteria Check Order | | |
 
-**Total:** X/20 passed
+**Total:** X/22 passed
 
 ## Issues Found
 
