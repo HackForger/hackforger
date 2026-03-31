@@ -1791,6 +1791,14 @@ func Routes() *web.Route {
 				m.Post("/submissions/{sid}/score", reqToken(), bind(hackforger_api.SubmitScoresForm{}), hackforger_api.SubmitScore)
 				m.Get("/submissions/{sid}/scores", hackforger_api.ListScores)
 				m.Get("/leaderboard", hackforger_api.GetLeaderboard)
+				m.Get("/criteria", hackforger_api.ListCriteria)
+				m.Post("/criteria", reqToken(), bind(hackforger_api.AddCriteriaForm{}), hackforger_api.AddCriteriaAPI)
+				m.Put("/criteria/{cid}", reqToken(), bind(hackforger_api.UpdateCriteriaForm{}), hackforger_api.UpdateCriteriaAPI)
+				m.Delete("/criteria/{cid}", reqToken(), hackforger_api.DeleteCriteriaAPI)
+				m.Get("/tracks/{tid}/criteria", hackforger_api.GetTrackEffectiveRubric)
+				m.Put("/tracks/{tid}/criteria/{cid}", reqToken(), bind(hackforger_api.TrackCriteriaOverrideForm{}), hackforger_api.SetTrackCriteriaOverrideAPI)
+				m.Get("/finalize-preview", reqToken(), hackforger_api.FinalizePreviewAPI)
+				m.Post("/finalize-confirm", reqToken(), hackforger_api.FinalizeConfirmAPI)
 			})
 
 			// Bounty global routes
