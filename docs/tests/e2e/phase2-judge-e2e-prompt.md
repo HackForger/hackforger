@@ -252,32 +252,87 @@ Clean up any leftover data if needed.
 - [ ] Weighted total shown
 - [ ] Top entry highlighted
 
-### TC-14: API Endpoints
+### TC-14: API — Criteria CRUD
 
-Using `curl` or API client:
+Using `curl` or API client. Replace `{id}` with the hackathon ID, `{tid}` with a track ID.
 
 ```bash
 TOKEN="your-api-token"
 BASE="https://hackforger.inside.h2os.cloud/api/v1/hackforger"
 
 # List criteria
-curl -s "$BASE/hackathons/{id}/criteria" -H "Authorization: token $TOKEN" | jq
+curl -s "$BASE/hackathons/{id}/criteria" | jq
 
-# Get effective rubric for a track
-curl -s "$BASE/hackathons/{id}/tracks/{tid}/criteria" -H "Authorization: token $TOKEN" | jq
+# Add a criterion via API
+curl -s -X POST "$BASE/hackathons/{id}/criteria" \
+  -H "Authorization: token $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"API-Created","description":"Test","max_score":10,"weight":20,"sort_order":5}' | jq
 
-# Get leaderboard (grouped by track)
-curl -s "$BASE/hackathons/{id}/leaderboard" -H "Authorization: token $TOKEN" | jq
+# Update criterion
+curl -s -X PUT "$BASE/hackathons/{id}/criteria/{cid}" \
+  -H "Authorization: token $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"API-Updated","weight":30}' | jq
 
-# Preview finalize
-curl -s "$BASE/hackathons/{id}/finalize-preview" -H "Authorization: token $TOKEN" | jq
+# Delete criterion
+curl -s -X DELETE "$BASE/hackathons/{id}/criteria/{cid}" \
+  -H "Authorization: token $TOKEN"
 ```
 
 **Expected:**
-- [ ] Criteria API returns all 4 criteria
-- [ ] Effective rubric for AI Track returns 3 (Presentation excluded)
-- [ ] Leaderboard grouped by track with criteria breakdown
-- [ ] Finalize preview returns ranked results
+- [ ] List returns all criteria for the hackathon
+- [ ] Add returns 201 Created, criterion appears in subsequent list
+- [ ] Update returns 200 with updated criterion JSON
+- [ ] Delete returns 204 No Content
+- [ ] All write operations blocked (409 Conflict) when hackathon is in Judging/Finished status
+
+### TC-15: API — Track Effective Rubric
+
+```bash
+# Get effective rubric for AI Track (should exclude Presentation)
+curl -s "$BASE/hackathons/{id}/tracks/{ai_tid}/criteria" | jq
+
+# Get effective rubric for Web Track (should include all 4)
+curl -s "$BASE/hackathons/{id}/tracks/{web_tid}/criteria" | jq
+
+# Set track criteria override via API
+curl -s -X PUT "$BASE/hackathons/{id}/tracks/{tid}/criteria/{cid}" \
+  -H "Authorization: token $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":false,"weight":0}' | jq
+```
+
+**Expected:**
+- [ ] AI Track rubric returns 3 criteria (Presentation excluded)
+- [ ] Web Track rubric returns 4 criteria with custom weights
+- [ ] Override PUT returns 200
+- [ ] Subsequent GET reflects the override change
+
+### TC-16: API — Finalize Preview + Confirm
+
+> **Note**: Run these AFTER TC-09 (both judges have scored) and BEFORE TC-12 (confirm finalize via web).
+
+```bash
+# Preview finalize (does NOT change status)
+curl -s "$BASE/hackathons/{id}/finalize-preview" \
+  -H "Authorization: token $TOKEN" | jq
+
+# Confirm finalize (locks results)
+curl -s -X POST "$BASE/hackathons/{id}/finalize-confirm" \
+  -H "Authorization: token $TOKEN" | jq
+
+# Verify leaderboard (grouped by track)
+curl -s "$BASE/hackathons/{id}/leaderboard" | jq
+```
+
+**Expected:**
+- [ ] Preview returns `map[trackID][]RankedSubmission` with weighted totals and per-criteria scores
+- [ ] Preview is idempotent (calling twice returns same results)
+- [ ] Preview does NOT change hackathon status (still Judging)
+- [ ] Confirm returns 200, hackathon transitions to Finished
+- [ ] Confirm on non-Judging hackathon returns 409 Conflict
+- [ ] Leaderboard returns per-track grouped results with rankings
 
 ---
 
@@ -309,9 +364,11 @@ curl -s "$BASE/hackathons/{id}/finalize-preview" -H "Authorization: token $TOKEN
 | 11 | Preview Finalize | | |
 | 12 | Confirm Finalize | | |
 | 13 | Leaderboard | | |
-| 14 | API Endpoints | | |
+| 14 | API — Criteria CRUD | | |
+| 15 | API — Track Effective Rubric | | |
+| 16 | API — Finalize Preview + Confirm | | |
 
-**Total:** X/15 passed
+**Total:** X/17 passed
 
 ## Issues Found
 
