@@ -327,6 +327,8 @@ func notifyOrderStatusChange(ctx context.Context, order *hackforger_model.Redeem
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    adminID,
 		OpType:       actionType,
+		EntityType:   "credits",
+		EntityName:   optionName,
 		AudienceType: AudienceDirectUser,
 		TargetUserID: order.UserID,
 		Content: &hackforger_model.HackforgerActionContent{

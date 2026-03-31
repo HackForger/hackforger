@@ -31,6 +31,8 @@
 				{{else if eq .OpType 55}}{{ctx.Locale.Tr "hackforger.feed.grant_round_closed" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 56}}{{ctx.Locale.Tr "hackforger.feed.grant_round_finalized" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 57}}{{ctx.Locale.Tr "hackforger.feed.grant_round_cancelled" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
+				{{else if eq .OpType 58}}{{ctx.Locale.Tr "hackforger.feed.order_fulfilled" .EntityName}}
+				{{else if eq .OpType 59}}{{ctx.Locale.Tr "hackforger.feed.order_cancelled" .EntityName}}
 				{{end}}
 				{{DateUtils.TimeSince .CreatedUnix}}
 			</div>
