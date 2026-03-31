@@ -30,8 +30,7 @@ type HackathonSubmission struct {
 	RegistrationID int64              `xorm:"INDEX NOT NULL"`
 	UserID         int64              `xorm:"INDEX NOT NULL"`
 	TrackID        int64              `xorm:"INDEX"`
-	RepoID         int64              `xorm:"INDEX"`
-	ForkRepoID     int64              `xorm:"INDEX"` // participant's fork of the track repo
+	RepoID         int64              `xorm:"INDEX"`                // user's own project repo
 	PRID           int64              `xorm:"INDEX"` // pull request ID
 	PullIndex      int64              `xorm:""`      // pull request index within the track repo
 	Title          string             `xorm:"NOT NULL"`
@@ -114,6 +113,12 @@ func CreateSubmission(ctx context.Context, s *HackathonSubmission) error {
 // UpdateSubmission updates all columns of a submission.
 func UpdateSubmission(ctx context.Context, s *HackathonSubmission) error {
 	_, err := db.GetEngine(ctx).ID(s.ID).AllCols().Update(s)
+	return err
+}
+
+// DeleteSubmission deletes a submission by ID.
+func DeleteSubmission(ctx context.Context, id int64) error {
+	_, err := db.GetEngine(ctx).ID(id).Delete(new(HackathonSubmission))
 	return err
 }
 

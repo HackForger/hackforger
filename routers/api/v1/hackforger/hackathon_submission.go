@@ -101,6 +101,35 @@ func GetSubmission(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, s)
 }
 
+// DeleteSubmission removes a submission from a hackathon.
+func DeleteSubmission(ctx *context.APIContext) {
+	sid := ctx.ParamsInt64(":sid")
+	sub, err := hackforger_model.GetSubmissionByID(ctx, sid)
+	if err != nil {
+		if hackforger_model.IsErrSubmissionNotExist(err) {
+			ctx.NotFound()
+		} else {
+			ctx.InternalServerError(err)
+		}
+		return
+	}
+	// Only the submitter or hackathon owner can delete
+	h, err := hackforger_model.GetHackathonByID(ctx, sub.HackathonID)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+	if ctx.Doer.ID != sub.UserID && ctx.Doer.ID != h.OwnerID {
+		ctx.Error(http.StatusForbidden, "Forbidden", "only the submitter or hackathon owner can delete a submission")
+		return
+	}
+	if err := hackforger_service.DeleteSubmission(ctx, ctx.Doer, sid); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
 // UpdateSubmission updates title, description, or demo URL of a submission.
 func UpdateSubmission(ctx *context.APIContext) {
 	s, err := hackforger_model.GetSubmissionByID(ctx, ctx.ParamsInt64(":sid"))

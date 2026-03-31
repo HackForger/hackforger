@@ -6,8 +6,10 @@ package hackforger
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
+	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	organization_model "forgejo.org/models/organization"
@@ -17,9 +19,10 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
-	pull_service "forgejo.org/services/pull"
+	actions_service "forgejo.org/services/actions"
 	release_service "forgejo.org/services/release"
 	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
 )
 
 // ErrNoTracks means hackathon has no tracks (cannot publish).
@@ -84,6 +87,91 @@ func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_m
 	return nil
 }
 
+// submissionIndexWorkflow is the Forgejo Actions workflow committed into every
+// track repo. It is dispatched via workflow_dispatch whenever a new submission
+// is created, and regenerates SUBMISSIONS.md + submissions.json from the API.
+const submissionIndexWorkflow = `name: Update Submission Index
+on:
+  workflow_dispatch:
+    inputs:
+      hackathon_id:
+        description: 'Hackathon ID'
+        required: true
+        type: string
+      track_id:
+        description: 'Track ID'
+        required: true
+        type: string
+      hackathon_slug:
+        description: 'Hackathon slug for URLs'
+        required: true
+        type: string
+      track_name:
+        description: 'Track name for index header'
+        required: true
+        type: string
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        run: |
+          git clone "${{ github.server_url }}/${{ github.repository }}.git" repo
+          cd repo
+          git config user.name "HackForger Bot"
+          git config user.email "noreply@hackforger"
+
+      - name: Fetch submissions and generate index
+        working-directory: repo
+        env:
+          API_BASE: ${{ github.server_url }}/api/v1/hackforger
+          HACKATHON_ID: ${{ inputs.hackathon_id }}
+          TRACK_ID: ${{ inputs.track_id }}
+          HACKATHON_SLUG: ${{ inputs.hackathon_slug }}
+          TRACK_NAME: ${{ inputs.track_name }}
+          INSTANCE_URL: ${{ github.server_url }}
+        run: |
+          SUBS=$(curl -sf "${API_BASE}/hackathons/${HACKATHON_ID}/submissions" 2>/dev/null || echo '[]')
+          TRACK_SUBS=$(echo "$SUBS" | jq --argjson tid "$TRACK_ID" '[.[] | select(.TrackID == $tid)]')
+
+          # Generate SUBMISSIONS.md (API returns PascalCase field names)
+          {
+            echo "# ${TRACK_NAME} — Submissions"
+            echo ""
+            echo "Track for [hackathon](${INSTANCE_URL}/hackathon/${HACKATHON_SLUG})"
+            echo ""
+            echo "| # | Project | Author | Repo | Demo |"
+            echo "|---|---------|--------|------|------|"
+            echo "$TRACK_SUBS" | jq -r 'to_entries[] | "| \(.key + 1) | \(.value.Title) | User #\(.value.UserID) | \(if .value.RepoID > 0 then "repo" else "-" end) | \(if .value.DemoURL != "" then "[Demo](\(.value.DemoURL))" else "-" end) |"'
+          } > SUBMISSIONS.md
+
+          echo "$TRACK_SUBS" | jq '[.[] | {id: .ID, title: .Title, description: .Description, user_id: .UserID, repo_id: .RepoID, demo_url: .DemoURL}]' > submissions.json
+
+      - name: Commit, push, create PR, and auto-merge
+        working-directory: repo
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          API_BASE: ${{ github.server_url }}/api/v1
+          REPO: ${{ github.repository }}
+        run: |
+          git add SUBMISSIONS.md submissions.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Update submission index"
+
+          # Push directly to main (action token has push access).
+          # No PR flow needed — this is an automated index update.
+          SERVER_HOST="${{ github.server_url }}"
+          SERVER_HOST="${SERVER_HOST#http://}"
+          SERVER_HOST="${SERVER_HOST#https://}"
+          PUSH_URL="http://x-access-token:${GITHUB_TOKEN}@${SERVER_HOST}/${{ github.repository }}.git"
+          git push "$PUSH_URL" main
+          echo "Pushed index update to main"
+`
+
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
 // Organization for the track, then inserts the track record.
 func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack) error {
@@ -112,6 +200,43 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 	track.RepoID = repo.ID
 	if err := hackforger_model.CreateTrack(ctx, track); err != nil {
 		return err
+	}
+
+	// Initialize submission index files in the track repo
+	_, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, repo)
+	if err == nil {
+		defer closer.Close()
+		_, initErr := files_service.ChangeRepoFiles(ctx, repo, doer, &files_service.ChangeRepoFilesOptions{
+			OldBranch: repo.DefaultBranch,
+			NewBranch: repo.DefaultBranch,
+			Message:   "Initialize submission index",
+			Files: []*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      "SUBMISSIONS.md",
+					ContentReader: strings.NewReader(fmt.Sprintf("# %s — Submissions\n\nNo submissions yet.\n", track.Name)),
+				},
+				{
+					Operation:     "create",
+					TreePath:      "submissions.json",
+					ContentReader: strings.NewReader("[]\n"),
+				},
+				{
+					Operation:     "create",
+					TreePath:      ".forgejo/workflows/update-submission-index.yml",
+					ContentReader: strings.NewReader(submissionIndexWorkflow),
+				},
+			},
+		})
+		if initErr != nil {
+			log.Warn("CreateTrackWithRepo: failed to initialize index files: %v", initErr)
+		}
+	}
+
+	// Auto-seed track criteria for any existing hackathon criteria
+	criteria, err := hackforger_model.ListCriteriaByHackathon(ctx, h.ID)
+	if err == nil && len(criteria) > 0 {
+		_ = hackforger_model.SeedTrackCriteria(ctx, track.ID, criteria)
 	}
 
 	// Auto-create phase milestones on the track repo
@@ -156,7 +281,7 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 // StartHacking transitions Open → Hacking.
 func StartHacking(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
 	if h.Status != hackforger_model.HackathonStatusOpen {
-		return fmt.Errorf("hackathon must be in Open status to start hacking [id: %d, status: %d]", h.ID, h.Status)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusOpen}
 	}
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusHacking); err != nil {
 		return err
@@ -170,7 +295,14 @@ func StartHacking(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 // StartJudging transitions Hacking → Judging. Requires >= 1 submission.
 func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
 	if h.Status != hackforger_model.HackathonStatusHacking {
-		return fmt.Errorf("hackathon must be in Hacking status to start judging [id: %d, status: %d]", h.ID, h.Status)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusHacking}
+	}
+	criteriaCount, err := hackforger_model.CountCriteriaByHackathon(ctx, h.ID)
+	if err != nil {
+		return err
+	}
+	if criteriaCount == 0 {
+		return hackforger_model.ErrNoCriteria{HackathonID: h.ID}
 	}
 	subCount, err := hackforger_model.CountSubmissions(ctx, h.ID)
 	if err != nil {
@@ -186,21 +318,62 @@ func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackath
 	return nil
 }
 
-// FinalizeHackathon transitions Judging → Finished. Calculates ranks.
-func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status != hackforger_model.HackathonStatusJudging {
-		return fmt.Errorf("hackathon must be in Judging status to finalize [id: %d, status: %d]", h.ID, h.Status)
+// PreviewFinalize calculates rankings for all tracks without changing status.
+// Idempotent — can be called multiple times.
+func PreviewFinalize(ctx context.Context, hackathonID int64) (map[int64][]RankedSubmission, error) {
+	h, err := hackforger_model.GetHackathonByID(ctx, hackathonID)
+	if err != nil {
+		return nil, err
 	}
-	// Tag track repos with submission-deadline snapshot before rank calculation
+	if h.Status != hackforger_model.HackathonStatusJudging {
+		return nil, hackforger_model.ErrInvalidHackathonPhase{
+			HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusJudging,
+		}
+	}
+	return CalculateRanks(ctx, hackathonID)
+}
+
+// ConfirmFinalize locks status to Finished, persists ranks, creates releases.
+func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
+	if h.Status != hackforger_model.HackathonStatusJudging {
+		return hackforger_model.ErrInvalidHackathonPhase{
+			HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusJudging,
+		}
+	}
+	// Tag track repos (preserves existing behavior)
 	tagTrackRepos(ctx, doerID, h.ID, "submission-deadline", "Submission deadline snapshot")
-	if err := CalculateRanks(ctx, h.ID); err != nil {
+
+	// Calculate and persist ranks
+	rankings, err := CalculateRanks(ctx, h.ID)
+	if err != nil {
 		return err
 	}
+	if err := PersistRanks(ctx, rankings); err != nil {
+		return err
+	}
+
+	// Update status
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusFinished); err != nil {
 		return err
 	}
-	// Create v1-results release (also creates the tag) on each track repo
+
+	// Create releases (preserves existing behavior)
 	createTrackReleases(ctx, doerID, h)
+
+	// Build winners summary
+	trackWinners := make([]map[string]any, 0)
+	for trackID, subs := range rankings {
+		if len(subs) > 0 {
+			trackWinners = append(trackWinners, map[string]any{
+				"track_id": trackID, "winner_submission_id": subs[0].SubmissionID, "winner_user_id": subs[0].UserID,
+			})
+		}
+	}
+
+	// Publish feed event
+	// NOTE: Deliberately using HackforgerActionContent (not HackforgerPhaseContent)
+	// because ActionHackathonFinalized now carries results summary.
+	// TODO: update to new feed API format after feed refactor merges
 	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
 		ActUserID:    doerID,
 		OpType:       hackforger_model.ActionHackathonFinalized,
@@ -209,11 +382,9 @@ func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Ha
 		EntityName:   h.Name,
 		EntitySlug:   h.Slug,
 		AudienceType: AudienceGlobal,
-		Content: hackforger_model.HackforgerPhaseContent{
-			HackforgerActionContent: hackforger_model.HackforgerActionContent{
-				EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
-			},
-			OldStatus: "judging", NewStatus: "finished",
+		Content: hackforger_model.HackforgerActionContent{
+			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+			Extra: map[string]any{"tracks": trackWinners},
 		},
 	})
 	return nil
@@ -222,10 +393,10 @@ func FinalizeHackathon(ctx context.Context, doerID int64, h *hackforger_model.Ha
 // CancelHackathon transitions to Cancelled. Any non-Finished status.
 func CancelHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
 	if h.Status == hackforger_model.HackathonStatusFinished {
-		return fmt.Errorf("cannot cancel a finished hackathon [id: %d]", h.ID)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: 0}
 	}
 	if h.Status == hackforger_model.HackathonStatusCancelled {
-		return fmt.Errorf("hackathon is already cancelled [id: %d]", h.ID)
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: 0}
 	}
 	oldStatus := h.Status
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusCancelled); err != nil {
@@ -251,84 +422,132 @@ func HackathonStatusLabel(status hackforger_model.HackathonStatus) string {
 	return "Unknown"
 }
 
-// CreateSubmission creates a hackathon submission. When the submission targets
-// a track that has a linked repository, the track repo is forked to the user's
-// space and a pull request is opened from the fork back to the track repo.
+// CreateSubmission creates a hackathon submission. When the user provides a
+// repo_id, it is validated to belong to the user (or an org they are a member
+// of). If the submission targets a track with a linked repository, a Forgejo
+// Actions workflow is dispatched to update SUBMISSIONS.md and submissions.json.
 func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) error {
-	// If no track selected, just create a basic submission record.
-	if sub.TrackID == 0 {
-		if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
-			return err
+	// 1. If user provided a repo_id, validate it exists and belongs to the doer
+	if sub.RepoID > 0 {
+		repo, err := repo_model.GetRepositoryByID(ctx, sub.RepoID)
+		if err != nil {
+			return fmt.Errorf("get user repo: %w", err)
 		}
-		publishSubmissionEvent(ctx, doer, h, sub)
-		return nil
-	}
-
-	track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
-	if err != nil || track.RepoID == 0 {
-		// Track doesn't exist or has no repo — save without fork/PR.
-		if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
-			return err
-		}
-		publishSubmissionEvent(ctx, doer, h, sub)
-		return nil
-	}
-
-	baseRepo, err := repo_model.GetRepositoryByID(ctx, track.RepoID)
-	if err != nil {
-		return fmt.Errorf("get track repo: %w", err)
-	}
-	if err := baseRepo.LoadOwner(ctx); err != nil {
-		return fmt.Errorf("load track repo owner: %w", err)
-	}
-
-	// Fork the track repo to the participant's personal space.
-	fork, err := repo_service.ForkRepositoryIfNotExists(ctx, doer, doer, repo_service.ForkRepoOptions{
-		BaseRepo:    baseRepo,
-		Name:        baseRepo.Name + "-" + doer.LowerName,
-		Description: sub.Title,
-	})
-	if err != nil {
-		if repo_service.IsErrForkAlreadyExist(err) {
-			fork, err = repo_model.GetUserFork(ctx, baseRepo.ID, doer.ID)
-			if err != nil {
-				return fmt.Errorf("get existing fork: %w", err)
+		if repo.OwnerID != doer.ID {
+			// Also allow repos owned by orgs where user is member
+			isMember, _ := organization_model.IsOrganizationMember(ctx, repo.OwnerID, doer.ID)
+			if !isMember {
+				return fmt.Errorf("repo does not belong to user")
 			}
-		} else {
-			return fmt.Errorf("fork track repo: %w", err)
 		}
 	}
-	sub.ForkRepoID = fork.ID
-	sub.RepoID = fork.ID
 
-	// Create a pull request from the fork back to the track repo.
-	issue := &issues_model.Issue{
-		RepoID:   baseRepo.ID,
-		Title:    sub.Title,
-		Content:  sub.Description,
-		PosterID: doer.ID,
-	}
-	pr := &issues_model.PullRequest{
-		HeadRepoID: fork.ID,
-		BaseRepoID: baseRepo.ID,
-		HeadBranch: fork.DefaultBranch,
-		BaseBranch: baseRepo.DefaultBranch,
-		Type:       issues_model.PullRequestGitea,
-	}
-	if err := pull_service.NewPullRequest(ctx, baseRepo, issue, nil, nil, pr, nil); err != nil {
-		// PR creation may fail if fork has no diff yet — that is acceptable.
-		log.Warn("CreateSubmission: PR creation failed (may be no diff): %v", err)
-	} else {
-		sub.PRID = pr.ID
-		sub.PullIndex = issue.Index
-	}
-
+	// 2. Save the submission record first (so we have an ID)
 	if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
 		return err
 	}
 
+	// 3. If track has a repo, trigger workflow to update submission index
+	if sub.TrackID > 0 {
+		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
+		if err == nil && track.RepoID > 0 {
+			triggerSubmissionIndexUpdate(ctx, doer, h, track)
+		}
+	}
+
 	publishSubmissionEvent(ctx, doer, h, sub)
 	return nil
+}
+
+// DeleteSubmission deletes a submission and triggers index re-sync on the track repo.
+func DeleteSubmission(ctx context.Context, doer *user_model.User, submissionID int64) error {
+	sub, err := hackforger_model.GetSubmissionByID(ctx, submissionID)
+	if err != nil {
+		return err
+	}
+	h, err := hackforger_model.GetHackathonByID(ctx, sub.HackathonID)
+	if err != nil {
+		return err
+	}
+
+	// Delete associated judge scores first
+	if _, err := db.GetEngine(ctx).Where("submission_id = ?", sub.ID).Delete(new(hackforger_model.HackathonJudgeScore)); err != nil {
+		return fmt.Errorf("delete submission scores: %w", err)
+	}
+
+	if err := hackforger_model.DeleteSubmission(ctx, sub.ID); err != nil {
+		return err
+	}
+
+	// Re-sync track index (the workflow will regenerate without the deleted submission)
+	if sub.TrackID > 0 {
+		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
+		if err == nil && track.RepoID > 0 {
+			triggerSubmissionIndexUpdate(ctx, doer, h, track)
+		}
+	}
+
+	return nil
+}
+
+// triggerSubmissionIndexUpdate dispatches the update-submission-index workflow
+// in the track repo via the Forgejo Actions internal API. The workflow handles
+// fetching submissions, regenerating SUBMISSIONS.md + submissions.json, and
+// creating a PR -- all within the Actions runner, not in Go code.
+func triggerSubmissionIndexUpdate(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack) {
+	if track.RepoID == 0 {
+		return
+	}
+	baseRepo, err := repo_model.GetRepositoryByID(ctx, track.RepoID)
+	if err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: get track repo: %v", err)
+		return
+	}
+	if err := baseRepo.LoadOwner(ctx); err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: load repo owner: %v", err)
+		return
+	}
+
+	// Open the git repo to locate the workflow file on the default branch
+	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, baseRepo)
+	if err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: open git repo: %v", err)
+		return
+	}
+	defer closer.Close()
+
+	workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, baseRepo.DefaultBranch, "update-submission-index.yml")
+	if err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: get workflow: %v", err)
+		return
+	}
+
+	// Build the inputs map for the workflow_dispatch event
+	inputs := map[string]string{
+		"hackathon_id":   strconv.FormatInt(h.ID, 10),
+		"track_id":       strconv.FormatInt(track.ID, 10),
+		"hackathon_slug": h.Slug,
+		"track_name":     track.Name,
+	}
+	inputGetter := func(key string) string {
+		return inputs[key]
+	}
+
+	// Dispatch as the hackathon owner (a human user with admin privileges on the org).
+	// baseRepo.Owner is the org itself (type=1), which cannot merge PRs.
+	// Using the submitter (doer) would also fail because hackers lack write access.
+	hackathonOwner, err := user_model.GetUserByID(ctx, h.OwnerID)
+	if err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: get hackathon owner: %v", err)
+		return
+	}
+	_, _, err = workflow.Dispatch(ctx, inputGetter, baseRepo, hackathonOwner)
+	if err != nil {
+		log.Warn("triggerSubmissionIndexUpdate: dispatch workflow: %v", err)
+		return
+	}
+
+	log.Info("triggerSubmissionIndexUpdate: dispatched workflow for hackathon %d track %d", h.ID, track.ID)
 }
 
 func publishSubmissionEvent(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) {

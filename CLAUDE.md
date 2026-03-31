@@ -48,10 +48,19 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - **Do NOT add `{{.CsrfTokenHtml}}` or `_csrf` hidden inputs to templates** — they don't exist in Forgejo
 - See [docs/notes/cross-origin-protection.md](docs/notes/cross-origin-protection.md) for full explanation and reverse proxy setup
 
+## Forgejo Actions Token 权限
+- `workflow.Dispatch(ctx, inputGetter, repo, doer)` 中的 **doer 决定 `github.token` 的权限**
+- Action token 对自身 repo 有内置写权限 (git push, 创建 PR)，但 **merge PR 需要 doer 有 `CanWrite(TypeCode)` 权限**
+- **Workflow 中如果需要 merge PR、创建 Release 等管理操作，dispatcher 必须是 repo owner / org admin**，不能用普通用户 (hacker/judge)
+- macOS host runner 使用 BSD shell 工具，不要用 GNU 扩展 (`sed \?` 等)，改用 POSIX 语法
+- See [docs/notes/forgejo-actions-token-permission.md](docs/notes/forgejo-actions-token-permission.md) for full permission matrix and checklist
+
 ## Local Testing
 - See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
 - See [docs/tests/e2e-lessons-learned.md](docs/tests/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
+- See [docs/tests/e2e-testing-guide.md](docs/tests/e2e-testing-guide.md) for E2E automated testing with agent-browser (localhost:3000, web-first, screenshots)
 - **Key**: always copy `custom/conf/app.ini` from main repo before starting server in a worktree
+- **E2E testing**: use `agent-browser` via `http://localhost:3000` (not HTTPS — local proxy blocks Tailscale TLS). Web-first with screenshots in reports.
 
 ## Common Commands
 - `TAGS="bindata sqlite sqlite_unlock_notify" make backend` -- Compile backend (bindata embeds templates, sqlite enables SQLite3)

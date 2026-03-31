@@ -7,6 +7,17 @@
 			<div class="required field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</label><input name="title" required></div>
 			<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.description"}}</label><textarea name="description" rows="5"></textarea></div>
 			<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.demo_url"}}</label><input name="demo_url" type="url"></div>
+			{{if .UserRepos}}
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo"}}</label>
+				<select name="repo_id" class="ui search dropdown">
+					<option value="0">— {{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo_none"}} —</option>
+					{{range .UserRepos}}
+					<option value="{{.ID}}">{{.FullName}}</option>
+					{{end}}
+				</select>
+			</div>
+			{{end}}
 			{{if .Tracks}}<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.track"}}</label><select name="track_id" class="ui dropdown"><option value="0">— None —</option>{{range .Tracks}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>{{end}}
 			<button class="ui primary button" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.submit"}}</button>
 		</form>

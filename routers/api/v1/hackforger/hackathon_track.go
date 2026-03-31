@@ -9,6 +9,7 @@ import (
 	hackforger_model "forgejo.org/models/hackforger"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
+	hackforger_service "forgejo.org/services/hackforger"
 )
 
 // CreateTrackForm is the form for creating a hackathon track.
@@ -39,18 +40,27 @@ func ListTracks(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, tracks)
 }
 
-// CreateTrack adds a new track to a hackathon.
+// CreateTrack adds a new track to a hackathon, creating a repo in the linked org.
 func CreateTrack(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*CreateTrackForm)
+	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
+	if err != nil {
+		if hackforger_model.IsErrHackathonNotExist(err) {
+			ctx.NotFound()
+		} else {
+			ctx.InternalServerError(err)
+		}
+		return
+	}
 	t := &hackforger_model.HackathonTrack{
-		HackathonID:   ctx.ParamsInt64(":id"),
+		HackathonID:   h.ID,
 		Name:          f.Name,
 		Description:   f.Description,
 		PrizeAmount:   f.PrizeAmount,
 		PrizeCurrency: f.PrizeCurrency,
 		PrizeCredits:  f.PrizeCredits,
 	}
-	if err := hackforger_model.CreateTrack(ctx, t); err != nil {
+	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
 		ctx.InternalServerError(err)
 		return
 	}

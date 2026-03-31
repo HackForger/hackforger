@@ -397,7 +397,7 @@ POST   /hackathons/{id}/submissions/{sid}/score 打分
 GET    /hackathons/{id}/submissions/{sid}/scores 评分列表
 GET    /hackathons/{id}/leaderboard             排行榜
 GET    /hackathons/{id}/summary                 摘要（Agent 友好）
-POST   /hackathons/{id}/submissions/{sid}/ai-review  AI 评审
+POST   /hackathons/{id}/submissions/{sid}/review      评审（人类或 AI，由 reviewer 决定）
 ```
 
 **Bounty（Repo 级）**

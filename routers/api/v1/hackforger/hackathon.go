@@ -208,7 +208,7 @@ func FinalizeHackathon(ctx *context.APIContext) {
 	if h == nil {
 		return
 	}
-	if err := hackforger_service.FinalizeHackathon(ctx, ctx.Doer.ID, h); err != nil {
+	if err := hackforger_service.ConfirmFinalize(ctx, ctx.Doer.ID, h); err != nil {
 		ctx.Error(http.StatusBadRequest, "FinalizeHackathon", err)
 		return
 	}
