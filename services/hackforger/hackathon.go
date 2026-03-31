@@ -5,6 +5,7 @@ package hackforger
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -15,11 +16,13 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 	pull_service "forgejo.org/services/pull"
 	release_service "forgejo.org/services/release"
 	repo_service "forgejo.org/services/repository"
+	files_service "forgejo.org/services/repository/files"
 )
 
 // ErrNoTracks means hackathon has no tracks (cannot publish).
@@ -112,6 +115,32 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 	track.RepoID = repo.ID
 	if err := hackforger_model.CreateTrack(ctx, track); err != nil {
 		return err
+	}
+
+	// Initialize submission index files in the track repo
+	_, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, repo)
+	if err == nil {
+		defer closer.Close()
+		_, initErr := files_service.ChangeRepoFiles(ctx, repo, doer, &files_service.ChangeRepoFilesOptions{
+			OldBranch: repo.DefaultBranch,
+			NewBranch: repo.DefaultBranch,
+			Message:   "Initialize submission index",
+			Files: []*files_service.ChangeRepoFile{
+				{
+					Operation:     "create",
+					TreePath:      "SUBMISSIONS.md",
+					ContentReader: strings.NewReader(fmt.Sprintf("# %s — Submissions\n\nNo submissions yet.\n", track.Name)),
+				},
+				{
+					Operation:     "create",
+					TreePath:      "submissions.json",
+					ContentReader: strings.NewReader("[]\n"),
+				},
+			},
+		})
+		if initErr != nil {
+			log.Warn("CreateTrackWithRepo: failed to initialize index files: %v", initErr)
+		}
 	}
 
 	// Auto-seed track criteria for any existing hackathon criteria
@@ -303,29 +332,49 @@ func HackathonStatusLabel(status hackforger_model.HackathonStatus) string {
 	return "Unknown"
 }
 
-// CreateSubmission creates a hackathon submission. When the submission targets
-// a track that has a linked repository, the track repo is forked to the user's
-// space and a pull request is opened from the fork back to the track repo.
+// CreateSubmission creates a hackathon submission. When the user provides a
+// repo_id, it is validated to belong to the user (or an org they are a member
+// of). If the submission targets a track with a linked repository, a PR is
+// created on the track repo updating SUBMISSIONS.md and submissions.json.
 func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) error {
-	// If no track selected, just create a basic submission record.
-	if sub.TrackID == 0 {
-		if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
-			return err
+	// 1. If user provided a repo_id, validate it exists and belongs to the doer
+	if sub.RepoID > 0 {
+		repo, err := repo_model.GetRepositoryByID(ctx, sub.RepoID)
+		if err != nil {
+			return fmt.Errorf("get user repo: %w", err)
 		}
-		publishSubmissionEvent(ctx, doer, h, sub)
-		return nil
+		if repo.OwnerID != doer.ID {
+			// Also allow repos owned by orgs where user is member
+			isMember, _ := organization_model.IsOrganizationMember(ctx, repo.OwnerID, doer.ID)
+			if !isMember {
+				return fmt.Errorf("repo does not belong to user")
+			}
+		}
 	}
 
-	track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
-	if err != nil || track.RepoID == 0 {
-		// Track doesn't exist or has no repo — save without fork/PR.
-		if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
-			return err
-		}
-		publishSubmissionEvent(ctx, doer, h, sub)
-		return nil
+	// 2. Save the submission record first (so we have an ID)
+	if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
+		return err
 	}
 
+	// 3. If track has a repo, create a PR updating the submission index
+	if sub.TrackID > 0 {
+		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
+		if err == nil && track.RepoID > 0 {
+			if err := updateTrackSubmissionIndex(ctx, doer, h, track, sub); err != nil {
+				// Log but don't fail the submission — the DB record is already saved
+				log.Warn("CreateSubmission: failed to update track index: %v", err)
+			}
+		}
+	}
+
+	publishSubmissionEvent(ctx, doer, h, sub)
+	return nil
+}
+
+// updateTrackSubmissionIndex creates a PR to the track repo that updates
+// SUBMISSIONS.md and submissions.json with the new submission entry.
+func updateTrackSubmissionIndex(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack, sub *hackforger_model.HackathonSubmission) error {
 	baseRepo, err := repo_model.GetRepositoryByID(ctx, track.RepoID)
 	if err != nil {
 		return fmt.Errorf("get track repo: %w", err)
@@ -334,52 +383,137 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 		return fmt.Errorf("load track repo owner: %w", err)
 	}
 
-	// Fork the track repo to the participant's personal space.
-	fork, err := repo_service.ForkRepositoryIfNotExists(ctx, doer, doer, repo_service.ForkRepoOptions{
-		BaseRepo:    baseRepo,
-		Name:        baseRepo.Name + "-" + doer.LowerName,
-		Description: sub.Title,
-	})
-	if err != nil {
-		if repo_service.IsErrForkAlreadyExist(err) {
-			fork, err = repo_model.GetUserFork(ctx, baseRepo.ID, doer.ID)
-			if err != nil {
-				return fmt.Errorf("get existing fork: %w", err)
-			}
-		} else {
-			return fmt.Errorf("fork track repo: %w", err)
+	// Build submission repo URL for the PR body
+	var repoURL string
+	if sub.RepoID > 0 {
+		if userRepo, err := repo_model.GetRepositoryByID(ctx, sub.RepoID); err == nil {
+			repoURL = setting.AppURL + userRepo.FullName()
 		}
 	}
-	sub.ForkRepoID = fork.ID
-	sub.RepoID = fork.ID
 
-	// Create a pull request from the fork back to the track repo.
+	// Load ALL current submissions for this track to rebuild the full index
+	allSubs, _, err := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{
+		HackathonID: sub.HackathonID,
+		TrackID:     track.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("list submissions: %w", err)
+	}
+
+	// Generate SUBMISSIONS.md content
+	var mdBuf strings.Builder
+	mdBuf.WriteString(fmt.Sprintf("# %s — Submissions\n\n", track.Name))
+	mdBuf.WriteString(fmt.Sprintf("Track for [%s](%shackathon/%s)\n\n", h.Name, setting.AppURL, h.Slug))
+	mdBuf.WriteString("| # | Project | Author | Repo | Demo |\n")
+	mdBuf.WriteString("|---|---------|--------|------|------|\n")
+	for i, s := range allSubs {
+		repoLink := "-"
+		if s.RepoID > 0 {
+			if r, err := repo_model.GetRepositoryByID(ctx, s.RepoID); err == nil {
+				repoLink = fmt.Sprintf("[%s](%s%s)", r.FullName(), setting.AppURL, r.FullName())
+			}
+		}
+		demoLink := "-"
+		if s.DemoURL != "" {
+			demoLink = fmt.Sprintf("[Demo](%s)", s.DemoURL)
+		}
+		authorName := fmt.Sprintf("User #%d", s.UserID)
+		if u, err := user_model.GetUserByID(ctx, s.UserID); err == nil {
+			authorName = fmt.Sprintf("[%s](%s%s)", u.Name, setting.AppURL, u.Name)
+		}
+		mdBuf.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n", i+1, s.Title, authorName, repoLink, demoLink))
+	}
+
+	// Generate submissions.json content
+	type jsonEntry struct {
+		ID          int64  `json:"id"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		UserID      int64  `json:"user_id"`
+		RepoURL     string `json:"repo_url,omitempty"`
+		DemoURL     string `json:"demo_url,omitempty"`
+	}
+	jsonEntries := make([]jsonEntry, 0, len(allSubs))
+	for _, s := range allSubs {
+		entry := jsonEntry{
+			ID: s.ID, Title: s.Title, Description: s.Description,
+			UserID: s.UserID, DemoURL: s.DemoURL,
+		}
+		if s.RepoID > 0 {
+			if r, err := repo_model.GetRepositoryByID(ctx, s.RepoID); err == nil {
+				entry.RepoURL = setting.AppURL + r.FullName()
+			}
+		}
+		jsonEntries = append(jsonEntries, entry)
+	}
+	jsonBytes, _ := json.MarshalIndent(jsonEntries, "", "  ")
+
+	// Create a new branch for this submission's PR
+	branchName := fmt.Sprintf("submission/%d-%s", sub.ID, doer.LowerName)
+
+	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, baseRepo)
+	if err != nil {
+		return fmt.Errorf("open git repo: %w", err)
+	}
+	defer closer.Close()
+
+	if err := repo_service.CreateNewBranch(ctx, doer, baseRepo, gitRepo, baseRepo.DefaultBranch, branchName); err != nil {
+		return fmt.Errorf("create branch: %w", err)
+	}
+
+	// Commit both files to the new branch
+	mdContent := mdBuf.String()
+	_, err = files_service.ChangeRepoFiles(ctx, baseRepo, doer, &files_service.ChangeRepoFilesOptions{
+		OldBranch: branchName,
+		NewBranch: branchName,
+		Message:   fmt.Sprintf("Add submission: %s by %s", sub.Title, doer.Name),
+		Files: []*files_service.ChangeRepoFile{
+			{
+				Operation:     "update",
+				TreePath:      "SUBMISSIONS.md",
+				ContentReader: strings.NewReader(mdContent),
+			},
+			{
+				Operation:     "update",
+				TreePath:      "submissions.json",
+				ContentReader: strings.NewReader(string(jsonBytes)),
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("commit files: %w", err)
+	}
+
+	// Create PR from the branch to the default branch
 	issue := &issues_model.Issue{
 		RepoID:   baseRepo.ID,
-		Title:    sub.Title,
-		Content:  sub.Description,
+		Title:    fmt.Sprintf("Submission: %s", sub.Title),
+		Content:  fmt.Sprintf("**Author:** @%s\n**Project:** %s\n\n%s", doer.Name, sub.Title, sub.Description),
 		PosterID: doer.ID,
 	}
+	if repoURL != "" {
+		issue.Content += fmt.Sprintf("\n\n**Repository:** %s", repoURL)
+	}
+	if sub.DemoURL != "" {
+		issue.Content += fmt.Sprintf("\n**Demo:** %s", sub.DemoURL)
+	}
+
 	pr := &issues_model.PullRequest{
-		HeadRepoID: fork.ID,
+		HeadRepoID: baseRepo.ID,
 		BaseRepoID: baseRepo.ID,
-		HeadBranch: fork.DefaultBranch,
+		HeadBranch: branchName,
 		BaseBranch: baseRepo.DefaultBranch,
 		Type:       issues_model.PullRequestGitea,
 	}
 	if err := pull_service.NewPullRequest(ctx, baseRepo, issue, nil, nil, pr, nil); err != nil {
-		// PR creation may fail if fork has no diff yet — that is acceptable.
-		log.Warn("CreateSubmission: PR creation failed (may be no diff): %v", err)
+		log.Warn("updateTrackSubmissionIndex: PR creation failed: %v", err)
 	} else {
+		// Save PR reference back to submission
 		sub.PRID = pr.ID
 		sub.PullIndex = issue.Index
+		_ = hackforger_model.UpdateSubmission(ctx, sub)
 	}
 
-	if err := hackforger_model.CreateSubmission(ctx, sub); err != nil {
-		return err
-	}
-
-	publishSubmissionEvent(ctx, doer, h, sub)
 	return nil
 }
 

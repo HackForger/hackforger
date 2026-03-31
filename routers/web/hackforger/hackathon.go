@@ -196,6 +196,17 @@ func ViewHackathon(ctx *context.Context) {
 	subs, _, _ := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{HackathonID: h.ID})
 	ctx.Data["Submissions"] = subs
 
+	// Build repo name map for submission repo links
+	subRepos := make(map[int64]string)
+	for _, s := range subs {
+		if s.RepoID > 0 {
+			if r, err := repo_model.GetRepositoryByID(ctx, s.RepoID); err == nil {
+				subRepos[s.RepoID] = r.FullName()
+			}
+		}
+	}
+	ctx.Data["SubRepos"] = subRepos
+
 	judges, _ := hackforger_model.ListJudges(ctx, h.ID)
 	ctx.Data["JudgeCount"] = len(judges)
 
@@ -303,6 +314,15 @@ func SubmitForm(ctx *context.Context) {
 	ctx.Data["Hackathon"] = h
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 	ctx.Data["Tracks"] = tracks
+
+	// Load user's repos for the project repo selector
+	repos, _, _ := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
+		Actor:   ctx.Doer,
+		OwnerID: ctx.Doer.ID,
+		Private: true,
+	})
+	ctx.Data["UserRepos"] = repos
+
 	ctx.HTML(http.StatusOK, tplSubmit)
 }
 
@@ -323,6 +343,7 @@ func SubmitPost(ctx *context.Context) {
 		return
 	}
 	trackID, _ := strconv.ParseInt(ctx.FormString("track_id"), 10, 64)
+	repoID, _ := strconv.ParseInt(ctx.FormString("repo_id"), 10, 64)
 	s := &hackforger_model.HackathonSubmission{
 		HackathonID:    h.ID,
 		RegistrationID: reg.ID,
@@ -331,6 +352,7 @@ func SubmitPost(ctx *context.Context) {
 		Description:    ctx.FormString("description"),
 		DemoURL:        ctx.FormString("demo_url"),
 		TrackID:        trackID,
+		RepoID:         repoID,
 		Status:         hackforger_model.SubmissionStatusSubmitted,
 	}
 	if err := hackforger_service.CreateSubmission(ctx, ctx.Doer, h, s); err != nil {
