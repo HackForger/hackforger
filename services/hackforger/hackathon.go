@@ -133,9 +133,9 @@ jobs:
           INSTANCE_URL: ${{ github.server_url }}
         run: |
           SUBS=$(curl -sf "${API_BASE}/hackathons/${HACKATHON_ID}/submissions" 2>/dev/null || echo '[]')
-          TRACK_SUBS=$(echo "$SUBS" | jq --argjson tid "$TRACK_ID" '[.[] | select(.track_id == $tid)]')
+          TRACK_SUBS=$(echo "$SUBS" | jq --argjson tid "$TRACK_ID" '[.[] | select(.TrackID == $tid)]')
 
-          # Generate SUBMISSIONS.md
+          # Generate SUBMISSIONS.md (API returns PascalCase field names)
           {
             echo "# ${TRACK_NAME} — Submissions"
             echo ""
@@ -143,10 +143,10 @@ jobs:
             echo ""
             echo "| # | Project | Author | Repo | Demo |"
             echo "|---|---------|--------|------|------|"
-            echo "$TRACK_SUBS" | jq -r 'to_entries[] | "| \(.key + 1) | \(.value.title) | User #\(.value.user_id) | \(if .value.repo_id > 0 then \"repo\" else \"-\" end) | \(if .value.demo_url != \"\" then \"[Demo](\(.value.demo_url))\" else \"-\" end) |"'
+            echo "$TRACK_SUBS" | jq -r 'to_entries[] | "| \(.key + 1) | \(.value.Title) | User #\(.value.UserID) | \(if .value.RepoID > 0 then "repo" else "-" end) | \(if .value.DemoURL != "" then "[Demo](\(.value.DemoURL))" else "-" end) |"'
           } > SUBMISSIONS.md
 
-          echo "$TRACK_SUBS" | jq '[.[] | {id, title, description, user_id, repo_id, demo_url}]' > submissions.json
+          echo "$TRACK_SUBS" | jq '[.[] | {id: .ID, title: .Title, description: .Description, user_id: .UserID, repo_id: .RepoID, demo_url: .DemoURL}]' > submissions.json
 
       - name: Commit, push, create PR, and auto-merge
         working-directory: repo
