@@ -115,9 +115,15 @@ jobs:
   update-index:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        run: |
+          git clone "${{ github.server_url }}/${{ github.repository }}.git" repo
+          cd repo
+          git config user.name "HackForger Bot"
+          git config user.email "noreply@hackforger"
 
       - name: Fetch submissions and generate index
+        working-directory: repo
         env:
           API_BASE: ${{ github.server_url }}/api/v1/hackforger
           HACKATHON_ID: ${{ inputs.hackathon_id }}
@@ -126,10 +132,7 @@ jobs:
           TRACK_NAME: ${{ inputs.track_name }}
           INSTANCE_URL: ${{ github.server_url }}
         run: |
-          # Fetch all submissions for this track
           SUBS=$(curl -sf "${API_BASE}/hackathons/${HACKATHON_ID}/submissions" 2>/dev/null || echo '[]')
-
-          # Filter submissions for this track
           TRACK_SUBS=$(echo "$SUBS" | jq --argjson tid "$TRACK_ID" '[.[] | select(.track_id == $tid)]')
 
           # Generate SUBMISSIONS.md
@@ -143,13 +146,15 @@ jobs:
             echo "$TRACK_SUBS" | jq -r 'to_entries[] | "| \(.key + 1) | \(.value.title) | User #\(.value.user_id) | \(if .value.repo_id > 0 then \"repo\" else \"-\" end) | \(if .value.demo_url != \"\" then \"[Demo](\(.value.demo_url))\" else \"-\" end) |"'
           } > SUBMISSIONS.md
 
-          # Generate submissions.json
           echo "$TRACK_SUBS" | jq '[.[] | {id, title, description, user_id, repo_id, demo_url}]' > submissions.json
 
-      - name: Commit and push
+      - name: Commit, push, create PR, and auto-merge
+        working-directory: repo
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          API_BASE: ${{ github.server_url }}/api/v1
+          REPO: ${{ github.repository }}
         run: |
-          git config user.name "HackForger Bot"
-          git config user.email "noreply@hackforger"
           BRANCH="submission-index-update"
           git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
           git add SUBMISSIONS.md submissions.json
@@ -158,42 +163,34 @@ jobs:
             exit 0
           fi
           git commit -m "Update submission index"
-          git push origin "$BRANCH" --force
+          git push "http://x-access-token:${GITHUB_TOKEN}@$(echo '${{ github.server_url }}' | sed 's|https\?://||')/${{ github.repository }}.git" "$BRANCH" --force
 
-      - name: Create or update PR and auto-merge
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          API_BASE: ${{ github.server_url }}/api/v1
-          REPO: ${{ github.repository }}
-        run: |
-          # Check if PR already exists for this branch
-          EXISTING=$(curl -sf "${API_BASE}/repos/${REPO}/pulls?state=open&head=submission-index-update&base=main" \
+          # Create or update PR
+          EXISTING=$(curl -sf "${API_BASE}/repos/${REPO}/pulls?state=open&head=${BRANCH}&base=main" \
             -H "Authorization: token ${GITHUB_TOKEN}" 2>/dev/null || echo '[]')
           PR_COUNT=$(echo "$EXISTING" | jq 'length')
 
           if [ "$PR_COUNT" -gt "0" ]; then
-            # PR exists — it was auto-updated by the force-push
             PR_NUMBER=$(echo "$EXISTING" | jq '.[0].number')
-            echo "Existing PR #${PR_NUMBER} updated by push"
+            echo "Existing PR #${PR_NUMBER} updated"
           else
-            # Create new PR
             PR_RESPONSE=$(curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls" \
               -H "Authorization: token ${GITHUB_TOKEN}" \
               -H "Content-Type: application/json" \
-              -d '{"title":"Update submission index","head":"submission-index-update","base":"main","body":"Automated update of SUBMISSIONS.md and submissions.json"}' 2>/dev/null || echo '{}')
+              -d "{\"title\":\"Update submission index\",\"head\":\"${BRANCH}\",\"base\":\"main\",\"body\":\"Automated update\"}" 2>/dev/null || echo '{}')
             PR_NUMBER=$(echo "$PR_RESPONSE" | jq '.number // empty')
             if [ -z "$PR_NUMBER" ]; then
-              echo "PR creation failed, skipping merge"
+              echo "PR creation failed"
               exit 0
             fi
             echo "Created PR #${PR_NUMBER}"
           fi
 
-          # Auto-merge the PR
+          # Auto-merge
           curl -sf -X POST "${API_BASE}/repos/${REPO}/pulls/${PR_NUMBER}/merge" \
             -H "Authorization: token ${GITHUB_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d '{"Do":"merge","merge_message_field":"Auto-merge submission index update"}' || echo "Merge failed (may need manual intervention)"
+            -d '{"Do":"merge","merge_message_field":"Auto-merge submission index update"}' || echo "Merge skipped"
 `
 
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
