@@ -518,6 +518,7 @@ func registerRoutes(m *web.Route) {
 		m.Get("/hackathons", hackforger_web.ExploreHackathons)
 		m.Get("/bounties", hackforger_web.ExploreBounties)
 		m.Get("/grants", hackforger_web.ExploreGrants)
+		m.Get("/submissions", hackforger_web.ExploreSubmissions)
 		m.Get("/reputation", hackforger_web.ExploreReputation)
 	}, ignExploreSignIn)
 

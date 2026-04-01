@@ -23,6 +23,12 @@ import (
 	"forgejo.org/modules/setting"
 )
 
+// Re-export internal types so external packages can use them without importing internal/.
+type SearchOptions = internal.SearchOptions
+type SearchResult = internal.SearchResult
+type Match = internal.Match
+type IndexerData = internal.IndexerData
+
 // IndexerMetadata is used to send data to the queue.
 type IndexerMetadata struct {
 	ID         int64  `json:"id"`

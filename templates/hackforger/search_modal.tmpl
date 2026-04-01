@@ -14,23 +14,16 @@
       <span id="hf-assistant-disclaimer" class="hf-search-disclaimer"></span>
     </div>
 
-    <div class="hf-search-tabs">
-      <button class="hf-search-tab active" data-scope="all">
-        {{ctx.Locale.Tr "hackforger.search.scope.all"}}
-      </button>
-      <button class="hf-search-tab" data-scope="hackathons">
-        {{ctx.Locale.Tr "hackforger.search.scope.hackathons"}}
-      </button>
-      <button class="hf-search-tab" data-scope="bounties">
-        {{ctx.Locale.Tr "hackforger.search.scope.bounties"}}
-      </button>
-      <button class="hf-search-tab" data-scope="grants">
-        {{ctx.Locale.Tr "hackforger.search.scope.grants"}}
-      </button>
-    </div>
-
     <div id="hf-search-results" class="hf-search-results"
-      data-empty-text="{{ctx.Locale.Tr "hackforger.search.no_results"}}">
+      data-empty-text="{{ctx.Locale.Tr "hackforger.search.no_results"}}"
+      data-group-hackathons="{{ctx.Locale.Tr "hackforger.search.group.hackathons"}}"
+      data-group-bounties="{{ctx.Locale.Tr "hackforger.search.group.bounties"}}"
+      data-group-grants="{{ctx.Locale.Tr "hackforger.search.group.grants"}}"
+      data-group-submissions="{{ctx.Locale.Tr "hackforger.search.group.submissions"}}"
+      data-group-repos="{{ctx.Locale.Tr "hackforger.search.group.repos"}}"
+      data-group-users="{{ctx.Locale.Tr "hackforger.search.group.users"}}"
+      data-group-issues="{{ctx.Locale.Tr "hackforger.search.group.issues"}}"
+      data-view-all="{{ctx.Locale.Tr "hackforger.search.view_all"}}">
       <div class="hf-search-empty">
         {{ctx.Locale.Tr "hackforger.search.no_results"}}
       </div>

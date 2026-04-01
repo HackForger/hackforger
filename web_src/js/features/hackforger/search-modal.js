@@ -7,13 +7,23 @@ export function initSearchModal() {
   const assistantPanel = document.getElementById('hf-assistant-panel');
   const assistantMessage = document.getElementById('hf-assistant-message');
   const assistantDisclaimer = document.getElementById('hf-assistant-disclaimer');
-  const tabs = modal?.querySelectorAll('.hf-search-tab');
 
   if (!modal || !input) return;
 
   let debounceTimer = null;
-  let currentScope = 'all';
   const emptyText = resultsContainer?.dataset.emptyText || 'No results found';
+  const viewAllText = resultsContainer?.dataset.viewAll || 'View all';
+
+  // Group display order and metadata
+  const groupConfig = {
+    hackathons: {title: resultsContainer?.dataset.groupHackathons || 'Hackathons', viewAllUrl: '/explore/hackathons'},
+    bounties: {title: resultsContainer?.dataset.groupBounties || 'Bounties', viewAllUrl: '/explore/bounties'},
+    grants: {title: resultsContainer?.dataset.groupGrants || 'Grants', viewAllUrl: '/explore/grants'},
+    submissions: {title: resultsContainer?.dataset.groupSubmissions || 'Submissions', viewAllUrl: '/explore/submissions'},
+    repos: {title: resultsContainer?.dataset.groupRepos || 'Repositories', viewAllUrl: '/explore/repos'},
+    users: {title: resultsContainer?.dataset.groupUsers || 'Users', viewAllUrl: '/explore/users'},
+    issues: {title: resultsContainer?.dataset.groupIssues || 'Issues', viewAllUrl: '/issues'},
+  };
 
   function openModal() {
     modal.style.display = 'flex';
@@ -34,36 +44,45 @@ export function initSearchModal() {
     return div.innerHTML;
   }
 
-  function getResultUrl(r) {
-    switch (r.type) {
-      case 'hackathon': return `${window.config?.appSubUrl || ''}/hackathons/${r.slug || r.id}`;
-      case 'bounty': return `${window.config?.appSubUrl || ''}/explore/bounties`;
-      case 'grant': return `${window.config?.appSubUrl || ''}/grants/${r.slug || r.id}`;
-      default: return '#';
-    }
-  }
-
-  function getTypeIcon(type) {
-    switch (type) {
-      case 'hackathon': return 'octicon-rocket';
-      case 'bounty': return 'octicon-gift';
-      case 'grant': return 'octicon-heart';
-      default: return 'octicon-search';
-    }
-  }
-
-  function renderResults(results) {
-    if (!results || results.length === 0) {
+  function renderGroupedResults(data) {
+    if (!data.groups || data.groups.length === 0) {
       resultsContainer.innerHTML = `<div class="hf-search-empty">${escapeHtml(emptyText)}</div>`;
       return;
     }
-    resultsContainer.innerHTML = results.map((r) => `
-      <a href="${getResultUrl(r)}" class="hf-search-result-item">
-        <svg class="svg octicon-16"><use xlink:href="#${getTypeIcon(r.type)}"></use></svg>
-        <span class="hf-search-result-title">${escapeHtml(r.title)}</span>
-        <span class="hf-search-result-badge hf-badge">${escapeHtml(r.status || '')}</span>
-      </a>
-    `).join('');
+
+    const baseUrl = window.config?.appSubUrl || '';
+    let html = '';
+
+    for (const group of data.groups) {
+      const config = groupConfig[group.key];
+      if (!config || !group.items || group.items.length === 0) continue;
+
+      html += `<div class="hf-search-group">`;
+      html += `<div class="hf-search-group-header">`;
+      html += `<span class="hf-search-group-title">${escapeHtml(config.title)}</span>`;
+      html += `<a href="${baseUrl}${config.viewAllUrl}" class="hf-search-view-all">${escapeHtml(viewAllText)} &rarr;</a>`;
+      html += `</div>`;
+
+      for (const item of group.items) {
+        const url = item.url.startsWith('/') ? `${baseUrl}${item.url}` : item.url;
+        html += `<a href="${url}" class="hf-search-result-item">`;
+        html += `<svg class="svg octicon-16"><use xlink:href="#${item.icon}"></use></svg>`;
+        html += `<div class="hf-search-result-content">`;
+        html += `<span class="hf-search-result-title">${escapeHtml(item.title)}</span>`;
+        if (item.desc) {
+          html += `<span class="hf-search-result-desc">${escapeHtml(item.desc)}</span>`;
+        }
+        html += `</div>`;
+        if (item.status) {
+          html += `<span class="hf-search-result-badge hf-badge">${escapeHtml(item.status)}</span>`;
+        }
+        html += `</a>`;
+      }
+
+      html += `</div>`;
+    }
+
+    resultsContainer.innerHTML = html;
   }
 
   async function doSearch(query) {
@@ -76,7 +95,7 @@ export function initSearchModal() {
     const baseUrl = window.config?.appSubUrl || '';
 
     const [searchResp, assistantResp] = await Promise.all([
-      fetch(`${baseUrl}/hackforger/search?q=${encodeURIComponent(query)}&scope=${currentScope}`),
+      fetch(`${baseUrl}/hackforger/search?q=${encodeURIComponent(query)}`),
       fetch(`${baseUrl}/hackforger/assistant/chat`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -86,7 +105,7 @@ export function initSearchModal() {
 
     if (searchResp.ok) {
       const data = await searchResp.json();
-      renderResults(data.results);
+      renderGroupedResults(data);
     }
 
     if (assistantResp?.ok) {
@@ -113,14 +132,5 @@ export function initSearchModal() {
   input.addEventListener('input', () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => doSearch(input.value), 300);
-  });
-
-  tabs?.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      tabs.forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      currentScope = tab.dataset.scope;
-      if (input.value.trim()) doSearch(input.value);
-    });
   });
 }

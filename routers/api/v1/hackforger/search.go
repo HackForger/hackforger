@@ -10,11 +10,11 @@ import (
 	hackforger_service "forgejo.org/services/hackforger"
 )
 
-// SearchAPI performs a cross-entity keyword search.
+// SearchAPI performs a unified cross-entity keyword search.
 //
 // swagger:operation GET /hackforger/search hackforger hackforgerSearch
 // ---
-// summary: Search hackathons, bounties, and grant rounds
+// summary: Search across hackathons, bounties, grants, submissions, repos, users, issues
 // produces:
 // - application/json
 // parameters:
@@ -23,44 +23,20 @@ import (
 //   description: Search keyword
 //   type: string
 //   required: true
-// - name: scope
-//   in: query
-//   description: Search scope (all, hackathons, bounties, grants)
-//   type: string
-//   default: all
-// - name: page
-//   in: query
-//   description: Page number
-//   type: integer
-//   default: 1
-// - name: limit
-//   in: query
-//   description: Page size
-//   type: integer
-//   default: 20
 // responses:
 //   "200":
-//     description: Search results
+//     description: Grouped search results
 func SearchAPI(ctx *context.APIContext) {
 	keyword := ctx.FormTrim("q")
-	scope := ctx.FormTrim("scope")
-	if scope == "" {
-		scope = "all"
-	}
 
-	results, total, err := hackforger_service.Search(ctx, &hackforger_service.SearchOptions{
+	result, err := hackforger_service.UnifiedSearch(ctx, &hackforger_service.UnifiedSearchOptions{
 		Keyword: keyword,
-		Scope:   scope,
-		Page:    ctx.FormInt("page"),
-		Limit:   ctx.FormInt("limit"),
+		Doer:    ctx.Doer,
 	})
 	if err != nil {
 		ctx.InternalServerError(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, map[string]any{
-		"results": results,
-		"total":   total,
-	})
+	ctx.JSON(http.StatusOK, result)
 }

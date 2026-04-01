@@ -10,27 +10,18 @@ import (
 	hackforger_service "forgejo.org/services/hackforger"
 )
 
-// SearchWeb returns JSON search results for the web frontend.
+// SearchWeb returns JSON grouped search results for the web frontend modal.
 func SearchWeb(ctx *context.Context) {
 	keyword := ctx.FormTrim("q")
-	scope := ctx.FormTrim("scope")
-	if scope == "" {
-		scope = "all"
-	}
 
-	results, total, err := hackforger_service.Search(ctx, &hackforger_service.SearchOptions{
+	result, err := hackforger_service.UnifiedSearch(ctx, &hackforger_service.UnifiedSearchOptions{
 		Keyword: keyword,
-		Scope:   scope,
-		Page:    ctx.FormInt("page"),
-		Limit:   ctx.FormInt("limit"),
+		Doer:    ctx.Doer,
 	})
 	if err != nil {
-		ctx.ServerError("Search", err)
+		ctx.ServerError("UnifiedSearch", err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, map[string]any{
-		"results": results,
-		"total":   total,
-	})
+	ctx.JSON(http.StatusOK, result)
 }

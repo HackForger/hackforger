@@ -5,109 +5,346 @@ package hackforger
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
 	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
 	hackforger_model "forgejo.org/models/hackforger"
+	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
+	hackforger_indexer "forgejo.org/modules/indexer/hackforger"
+	issue_indexer "forgejo.org/modules/indexer/issues"
+	"forgejo.org/modules/log"
 )
 
-// SearchResult represents a single item in search results.
-type SearchResult struct {
+const defaultGroupLimit = 5
+
+// SearchItem represents a single item in grouped search results.
+type SearchItem struct {
 	Type   string `json:"type"`
 	ID     int64  `json:"id"`
 	Title  string `json:"title"`
-	Status string `json:"status"`
-	Slug   string `json:"slug,omitempty"`
+	Desc   string `json:"desc,omitempty"`
+	Status string `json:"status,omitempty"`
+	URL    string `json:"url"`
+	Icon   string `json:"icon"`
 }
 
-// SearchOptions holds parameters for the search query.
-type SearchOptions struct {
+// SearchGroup holds items for one entity type group.
+type SearchGroup struct {
+	Key   string        `json:"key"`
+	Title string        `json:"title"`
+	Items []*SearchItem `json:"items"`
+}
+
+// GroupedSearchResult contains search results grouped by entity type.
+type GroupedSearchResult struct {
+	Groups []*SearchGroup `json:"groups"`
+}
+
+// UnifiedSearchOptions holds parameters for the unified search query.
+type UnifiedSearchOptions struct {
 	Keyword string
-	Scope   string // "all" | "hackathons" | "bounties" | "grants"
-	Page    int
-	Limit   int
+	Doer    *user_model.User
 }
 
-// Search performs a cross-entity keyword search across hackathons, bounties,
-// and grant rounds. Results are collected in-memory and paginated.
-func Search(ctx context.Context, opts *SearchOptions) ([]*SearchResult, int64, error) {
-	if opts.Limit <= 0 {
-		opts.Limit = 20
-	}
-	if opts.Page <= 0 {
-		opts.Page = 1
+// UnifiedSearch performs a cross-entity keyword search in parallel across
+// HackForger entities (hackathons, bounties, grants, submissions),
+// repositories, users, and issues. Returns grouped results with top 5 per group.
+func UnifiedSearch(ctx context.Context, opts *UnifiedSearchOptions) (*GroupedSearchResult, error) {
+	if opts.Keyword == "" {
+		return &GroupedSearchResult{}, nil
 	}
 
-	var results []*SearchResult
-	keyword := "%" + opts.Keyword + "%"
-	e := db.GetEngine(ctx)
+	type groupResult struct {
+		key   string
+		items []*SearchItem
+	}
 
-	// Search hackathons
-	if opts.Scope == "all" || opts.Scope == "hackathons" {
-		var hackathons []*hackforger_model.Hackathon
-		err := e.Where("name LIKE ? OR description LIKE ?", keyword, keyword).
-			OrderBy("created_unix DESC").Find(&hackathons)
+	var (
+		mu      sync.Mutex
+		wg      sync.WaitGroup
+		results []groupResult
+	)
+
+	collect := func(key string, items []*SearchItem) {
+		if len(items) == 0 {
+			return
+		}
+		mu.Lock()
+		results = append(results, groupResult{key: key, items: items})
+		mu.Unlock()
+	}
+
+	// 1. HackForger indexer — hackathons, bounties, grants, submissions
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		searchHackforgerEntities(ctx, opts.Keyword, collect)
+	}()
+
+	// 2. Repositories
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		items := searchRepos(ctx, opts)
+		collect("repos", items)
+	}()
+
+	// 3. Users
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		items := searchUsers(ctx, opts)
+		collect("users", items)
+	}()
+
+	// 4. Issues
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		items := searchIssues(ctx, opts)
+		collect("issues", items)
+	}()
+
+	wg.Wait()
+
+	// Build groups in fixed display order
+	groupOrder := []string{"hackathons", "bounties", "grants", "submissions", "repos", "users", "issues"}
+	resultMap := make(map[string][]*SearchItem, len(results))
+	for _, r := range results {
+		resultMap[r.key] = r.items
+	}
+
+	var groups []*SearchGroup
+	for _, key := range groupOrder {
+		items, ok := resultMap[key]
+		if !ok || len(items) == 0 {
+			continue
+		}
+		groups = append(groups, &SearchGroup{
+			Key:   key,
+			Items: items,
+		})
+	}
+
+	return &GroupedSearchResult{Groups: groups}, nil
+}
+
+// searchHackforgerEntities queries the HackForger indexer for all 4 entity types
+// and populates items by loading full entity data from the database.
+func searchHackforgerEntities(ctx context.Context, keyword string, collect func(string, []*SearchItem)) {
+	entityTypes := []string{"hackathon", "bounty", "grant", "submission"}
+	groupKeys := map[string]string{
+		"hackathon":  "hackathons",
+		"bounty":     "bounties",
+		"grant":      "grants",
+		"submission": "submissions",
+	}
+
+	for _, et := range entityTypes {
+		result, err := hackforger_indexer.SearchHackforger(ctx, &hackforger_indexer.SearchOptions{
+			Keyword:    keyword,
+			EntityType: et,
+			Paginator:  &db.ListOptions{Page: 1, PageSize: defaultGroupLimit},
+		})
 		if err != nil {
-			return nil, 0, err
+			log.Error("UnifiedSearch: hackforger indexer error for %s: %v", et, err)
+			continue
 		}
-		for _, h := range hackathons {
-			results = append(results, &SearchResult{
-				Type:   "hackathon",
-				ID:     h.ID,
-				Title:  h.Name,
-				Status: hackforger_model.HackathonStatusNames[h.Status],
-				Slug:   h.Slug,
-			})
-		}
-	}
 
-	// Search bounties
-	if opts.Scope == "all" || opts.Scope == "bounties" {
-		var bounties []*hackforger_model.Bounty
-		err := e.Where("title LIKE ?", keyword).
-			OrderBy("created_unix DESC").Find(&bounties)
+		items := make([]*SearchItem, 0, len(result.Hits))
+		for _, hit := range result.Hits {
+			item := loadHackforgerEntity(ctx, hit.EntityType, hit.ID)
+			if item != nil {
+				items = append(items, item)
+			}
+		}
+		collect(groupKeys[et], items)
+	}
+}
+
+// loadHackforgerEntity loads a HackForger entity from the database and converts it to a SearchItem.
+func loadHackforgerEntity(ctx context.Context, entityType string, id int64) *SearchItem {
+	switch entityType {
+	case "hackathon":
+		h, err := hackforger_model.GetHackathonByID(ctx, id)
 		if err != nil {
-			return nil, 0, err
+			log.Error("UnifiedSearch: load hackathon %d: %v", id, err)
+			return nil
 		}
-		for _, b := range bounties {
-			results = append(results, &SearchResult{
-				Type:   "bounty",
-				ID:     b.ID,
-				Title:  b.Title,
-				Status: hackforger_model.BountyStatusNames[b.Status],
-			})
+		return &SearchItem{
+			Type:   "hackathon",
+			ID:     h.ID,
+			Title:  h.Name,
+			Desc:   truncateDesc(h.Description),
+			Status: hackforger_model.HackathonStatusNames[h.Status],
+			URL:    fmt.Sprintf("/hackathons/%s", h.Slug),
+			Icon:   "octicon-rocket",
 		}
-	}
-
-	// Search grant rounds
-	if opts.Scope == "all" || opts.Scope == "grants" {
-		var rounds []*hackforger_model.GrantRound
-		err := e.Where("name LIKE ? OR description LIKE ?", keyword, keyword).
-			OrderBy("created_unix DESC").Find(&rounds)
+	case "bounty":
+		b, err := hackforger_model.GetBountyByID(ctx, id)
 		if err != nil {
-			return nil, 0, err
+			log.Error("UnifiedSearch: load bounty %d: %v", id, err)
+			return nil
 		}
-		for _, r := range rounds {
-			results = append(results, &SearchResult{
-				Type:   "grant",
-				ID:     r.ID,
-				Title:  r.Name,
-				Status: hackforger_model.GrantRoundStatusNames[r.Status],
-				Slug:   r.Slug,
-			})
+		return &SearchItem{
+			Type:   "bounty",
+			ID:     b.ID,
+			Title:  b.Title,
+			Status: hackforger_model.BountyStatusNames[b.Status],
+			URL:    "/explore/bounties",
+			Icon:   "octicon-gift",
 		}
+	case "grant":
+		r, err := hackforger_model.GetGrantRoundByID(ctx, id)
+		if err != nil {
+			log.Error("UnifiedSearch: load grant round %d: %v", id, err)
+			return nil
+		}
+		return &SearchItem{
+			Type:   "grant",
+			ID:     r.ID,
+			Title:  r.Name,
+			Desc:   truncateDesc(r.Description),
+			Status: hackforger_model.GrantRoundStatusNames[r.Status],
+			URL:    fmt.Sprintf("/grants/%s", r.Slug),
+			Icon:   "octicon-heart",
+		}
+	case "submission":
+		s, err := hackforger_model.GetSubmissionByID(ctx, id)
+		if err != nil {
+			log.Error("UnifiedSearch: load submission %d: %v", id, err)
+			return nil
+		}
+		return &SearchItem{
+			Type:   "submission",
+			ID:     s.ID,
+			Title:  s.Title,
+			Desc:   truncateDesc(s.Description),
+			URL:    fmt.Sprintf("/hackathons/submissions/%d", s.ID),
+			Icon:   "octicon-file-code",
+		}
+	default:
+		return nil
+	}
+}
+
+// searchRepos queries Forgejo's repository search.
+func searchRepos(ctx context.Context, opts *UnifiedSearchOptions) []*SearchItem {
+	repos, _, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
+		ListOptions: db.ListOptions{Page: 1, PageSize: defaultGroupLimit},
+		Keyword:     opts.Keyword,
+		Actor:       opts.Doer,
+		AllPublic:   true,
+		OrderBy:     db.SearchOrderByNewest,
+	})
+	if err != nil {
+		log.Error("UnifiedSearch: repo search error: %v", err)
+		return nil
 	}
 
-	total := int64(len(results))
-
-	// Apply pagination
-	start := (opts.Page - 1) * opts.Limit
-	if start >= len(results) {
-		return []*SearchResult{}, total, nil
+	items := make([]*SearchItem, 0, len(repos))
+	for _, r := range repos {
+		items = append(items, &SearchItem{
+			Type:  "repo",
+			ID:    r.ID,
+			Title: r.FullName(),
+			Desc:  truncateDesc(r.Description),
+			URL:   r.Link(),
+			Icon:  "octicon-repo",
+		})
 	}
-	end := start + opts.Limit
-	if end > len(results) {
-		end = len(results)
+	return items
+}
+
+// searchUsers queries Forgejo's user search.
+func searchUsers(ctx context.Context, opts *UnifiedSearchOptions) []*SearchItem {
+	users, _, err := user_model.SearchUsers(ctx, &user_model.SearchUserOptions{
+		ListOptions: db.ListOptions{Page: 1, PageSize: defaultGroupLimit},
+		Keyword:     opts.Keyword,
+		Type:        user_model.UserTypeIndividual,
+		Actor:       opts.Doer,
+	})
+	if err != nil {
+		log.Error("UnifiedSearch: user search error: %v", err)
+		return nil
 	}
 
-	return results[start:end], total, nil
+	items := make([]*SearchItem, 0, len(users))
+	for _, u := range users {
+		desc := u.FullName
+		if desc == "" {
+			desc = u.Name
+		}
+		items = append(items, &SearchItem{
+			Type:  "user",
+			ID:    u.ID,
+			Title: u.Name,
+			Desc:  desc,
+			URL:   fmt.Sprintf("/%s", u.Name),
+			Icon:  "octicon-person",
+		})
+	}
+	return items
+}
+
+// searchIssues queries Forgejo's issue indexer.
+func searchIssues(ctx context.Context, opts *UnifiedSearchOptions) []*SearchItem {
+	searchOpts := &issue_indexer.SearchOptions{
+		Paginator: &db.ListOptions{Page: 1, PageSize: defaultGroupLimit},
+		AllPublic: true,
+		SortBy:    issue_indexer.SortByScore,
+	}
+	_ = searchOpts.WithKeyword(ctx, opts.Keyword)
+
+	issueIDs, _, err := issue_indexer.SearchIssues(ctx, searchOpts)
+	if err != nil {
+		log.Error("UnifiedSearch: issue search error: %v", err)
+		return nil
+	}
+	if len(issueIDs) == 0 {
+		return nil
+	}
+
+	issues, err := issues_model.GetIssuesByIDs(ctx, issueIDs, true)
+	if err != nil {
+		log.Error("UnifiedSearch: load issues error: %v", err)
+		return nil
+	}
+
+	items := make([]*SearchItem, 0, len(issues))
+	for _, iss := range issues {
+		icon := "octicon-issue-opened"
+		if iss.IsClosed {
+			icon = "octicon-issue-closed"
+		}
+		if iss.IsPull {
+			icon = "octicon-git-pull-request"
+		}
+		// Build URL — need repo loaded for full path
+		url := fmt.Sprintf("/issues/%d", iss.ID)
+		if iss.Repo != nil {
+			url = fmt.Sprintf("/%s/issues/%d", iss.Repo.FullName(), iss.Index)
+		}
+		items = append(items, &SearchItem{
+			Type:  "issue",
+			ID:    iss.ID,
+			Title: iss.Title,
+			URL:   url,
+			Icon:  icon,
+		})
+	}
+	return items
+}
+
+// truncateDesc truncates a description to maxLen characters.
+func truncateDesc(s string) string {
+	const maxLen = 120
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen]) + "..."
 }
