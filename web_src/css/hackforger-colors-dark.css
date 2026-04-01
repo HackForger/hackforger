@@ -1,0 +1,38 @@
+/* HackForger color tokens — 江峡泼墨 Dark mode overrides */
+/* Light 50 stop → Dark 900 stop bg, 200 stop text */
+:root {
+  /* Jade 翠 */
+  --hf-jade-bg: #0D3F30;
+  --hf-jade-text: #7CC4A0;
+  /* Spring 芽 */
+  --hf-spring-bg: #33500F;
+  --hf-spring-text: #C5DD7E;
+  /* Gold 金 */
+  --hf-gold-bg: #5C4808;
+  --hf-gold-text: #F0D060;
+  /* Vermillion 朱 */
+  --hf-verm-bg: #5A1A0E;
+  --hf-verm-text: #F0A090;
+  /* Sand 沙 */
+  --hf-sand-bg: #5E4A2D;
+  --hf-sand-text: #E8D5B5;
+  /* Ink 墨 */
+  --hf-ink-bg: #252A33;
+  --hf-ink-text: #8A94A8;
+
+  /* Legacy aliases */
+  --hf-green-bg: var(--hf-jade-bg);
+  --hf-green-text: var(--hf-jade-text);
+  --hf-blue-bg: var(--hf-jade-bg);
+  --hf-blue-text: var(--hf-jade-text);
+  --hf-red-bg: var(--hf-verm-bg);
+  --hf-red-text: var(--hf-verm-text);
+  --hf-yellow-bg: var(--hf-gold-bg);
+  --hf-yellow-text: var(--hf-gold-text);
+  --hf-purple-bg: var(--hf-jade-bg);
+  --hf-purple-text: var(--hf-jade-text);
+  --hf-teal-bg: var(--hf-spring-bg);
+  --hf-teal-text: var(--hf-spring-text);
+  --hf-neutral-bg: var(--hf-ink-bg);
+  --hf-neutral-text: var(--hf-ink-text);
+}

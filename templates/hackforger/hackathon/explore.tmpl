@@ -5,31 +5,31 @@
 		{{template "hackforger/explore_search" .}}
 
 		{{if .Hackathons}}
-		<div class="ui relaxed divided list">
+		<div class="hf-card">
 			{{range .Hackathons}}
-			<div class="item tw-py-4">
-				<div class="content">
-					<a class="header tw-text-lg" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
-					{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{.Description}}</div>{{end}}
-					<div class="description tw-mt-1">
-						<span class="ui small label {{if eq .Status 1}}green{{else if eq .Status 2}}blue{{else if eq .Status 3}}orange{{else if eq .Status 4}}grey{{end}}">
-							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
-							{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
-							{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
-							{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
-							{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
-							{{else}}{{ctx.Locale.Tr "hackforger.hackathon.status.cancelled"}}
-							{{end}}
-						</span>
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<a class="tw-text-lg tw-font-semibold" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{.Description}}</div>{{end}}
 					</div>
 				</div>
+				<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">
+					{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
+					{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
+					{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
+					{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
+					{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
+					{{else}}{{ctx.Locale.Tr "hackforger.hackathon.status.cancelled"}}
+					{{end}}
+				</span>
 			</div>
 			{{end}}
 		</div>
 		{{template "base/paginate" .}}
 		{{else}}
-		<div class="ui placeholder segment">
-			<div class="ui icon header">
+		<div class="hf-card">
+			<div class="hf-empty">
 				{{svg "octicon-rocket" 48}}
 				<br>
 				{{ctx.Locale.Tr "hackforger.hackathon.no_hackathons"}}

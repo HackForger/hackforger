@@ -5,37 +5,39 @@
 		{{template "hackforger/explore_search" .}}
 
 		{{if .Bounties}}
-		<div class="ui relaxed divided list">
+		<div class="hf-card">
 			{{range .Bounties}}
-			<div class="item tw-py-4">
-				<div class="content">
-					<a class="header tw-text-lg" href="{{.IssueLink}}">{{.Title}}</a>
-					<div class="tw-text-sm tw-text-gray tw-mb-1">{{.RepoFullName}} #{{.IssueIndex}}</div>
-					<div class="description tw-mt-1">
-						<span class="ui small label {{if eq .Status 0}}green{{else if eq .Status 1}}blue{{else if eq .Status 2}}orange{{else if eq .Status 3}}purple{{else if eq .Status 5}}red{{end}}">
-							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.bounty.status.open"}}
-							{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}
-							{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.bounty.status.in_review"}}
-							{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}
-							{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.bounty.status.paid"}}
-							{{else if eq .Status 5}}{{ctx.Locale.Tr "hackforger.bounty.status.expired"}}
-							{{else if eq .Status 6}}{{ctx.Locale.Tr "hackforger.bounty.status.cancelled"}}
-							{{end}}
-						</span>
-						{{if .Mode}}
-							<span class="ui small label">{{ctx.Locale.Tr "hackforger.bounty.mode.competitive"}}</span>
-						{{else}}
-							<span class="ui small label">{{ctx.Locale.Tr "hackforger.bounty.mode.exclusive"}}</span>
-						{{end}}
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<a class="tw-text-lg tw-font-semibold" href="{{.IssueLink}}">{{.Title}}</a>
+						<div class="tw-text-sm tw-text-gray tw-mb-1">{{.RepoFullName}} #{{.IssueIndex}}</div>
 					</div>
+				</div>
+				<div class="tw-flex tw-items-center tw-gap-2">
+					<span class="hf-badge {{if eq .Status 0}}hf-badge-green{{else if eq .Status 1}}hf-badge-blue{{else if eq .Status 2}}hf-badge-yellow{{else if eq .Status 3}}hf-badge-purple{{else if eq .Status 4}}hf-badge-teal{{else if eq .Status 5}}hf-badge-red{{else}}hf-badge-neutral{{end}}">
+						{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.bounty.status.open"}}
+						{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}
+						{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.bounty.status.in_review"}}
+						{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}
+						{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.bounty.status.paid"}}
+						{{else if eq .Status 5}}{{ctx.Locale.Tr "hackforger.bounty.status.expired"}}
+						{{else}}{{ctx.Locale.Tr "hackforger.bounty.status.cancelled"}}
+						{{end}}
+					</span>
+					{{if .Mode}}
+						<span class="hf-badge hf-badge-neutral">{{ctx.Locale.Tr "hackforger.bounty.mode.competitive"}}</span>
+					{{else}}
+						<span class="hf-badge hf-badge-neutral">{{ctx.Locale.Tr "hackforger.bounty.mode.exclusive"}}</span>
+					{{end}}
 				</div>
 			</div>
 			{{end}}
 		</div>
 		{{template "base/paginate" .}}
 		{{else}}
-		<div class="ui placeholder segment">
-			<div class="ui icon header">
+		<div class="hf-card">
+			<div class="hf-empty">
 				{{svg "octicon-gift" 48}}
 				<br>
 				{{ctx.Locale.Tr "hackforger.bounty.explore.empty"}}

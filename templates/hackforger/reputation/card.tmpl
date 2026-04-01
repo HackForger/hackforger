@@ -1,13 +1,16 @@
-<div class="ui card tw-w-full tw-mt-4">
-	<div class="content">
-		<div class="header tw-flex tw-items-center tw-gap-2">
+<div class="hf-card tw-mt-4">
+	<div class="hf-card-head">
+		<div class="hf-card-head-left">
 			{{svg "octicon-star" 16}}
 			<span>{{ctx.Locale.Tr "hackforger.reputation.tier"}}: {{.Reputation.Tier}}</span>
 		</div>
-		<div class="meta">
+		{{template "hackforger/helpers/status_badge" dict "Type" "tier" "TierName" .Reputation.Tier "Label" .Reputation.Tier}}
+	</div>
+	<div class="hf-card-body">
+		<div class="tw-mb-2">
 			{{ctx.Locale.Tr "hackforger.reputation.score"}}: <strong>{{.Reputation.Score}}</strong>
 		</div>
-		<div class="description tw-text-sm tw-mt-2">
+		<div class="tw-text-sm tw-mt-2">
 			{{if gt .Reputation.BountiesCompleted 0}}
 				<div>{{svg "octicon-gift" 14}} {{.Reputation.BountiesCompleted}} {{ctx.Locale.Tr "hackforger.reputation.bounties_completed"}}</div>
 			{{end}}
@@ -22,7 +25,7 @@
 			{{end}}
 		</div>
 	</div>
-	<div class="extra content">
+	<div class="hf-card-body tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
 		<a href="{{AppSubUrl}}/explore/reputation">
 			{{ctx.Locale.Tr "hackforger.reputation.view_leaderboard"}} →
 		</a>

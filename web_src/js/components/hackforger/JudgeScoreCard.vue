@@ -111,21 +111,24 @@ export default {
   </div>
 
   <!-- Progress bar -->
-  <div class="ui segment">
-    <div class="tw-flex tw-justify-between tw-mb-2">
-      <span>{{ scoredCount }} / {{ activeSubmissions.length }} submissions scored</span>
-    </div>
-    <div class="ui indicating progress">
-      <div class="bar" :style="{width: progressPercent + '%'}"></div>
+  <div class="hf-card">
+    <div class="hf-card-body">
+      <div class="tw-flex tw-justify-between tw-mb-2">
+        <span>{{ scoredCount }} / {{ activeSubmissions.length }} submissions scored</span>
+      </div>
+      <div class="ui indicating progress">
+        <div class="bar" :style="{width: progressPercent + '%'}"></div>
+      </div>
     </div>
   </div>
 
   <!-- Submission cards -->
-  <div v-for="sub in activeSubmissions" :key="sub.id" class="ui segment"
-       :class="{'positive': saved[sub.id]}">
-    <h4>{{ sub.title }}
-      <span v-if="saved[sub.id]" class="ui mini green label">Scored</span>
-    </h4>
+  <div v-for="sub in activeSubmissions" :key="sub.id" class="hf-card">
+    <div class="hf-card-head">
+      <span>{{ sub.title }}</span>
+      <span v-if="saved[sub.id]" class="hf-badge hf-badge-green">Scored</span>
+    </div>
+    <div class="hf-card-body">
     <p v-if="sub.description" class="tw-text-sm tw-text-gray">{{ sub.description }}</p>
     <p v-if="sub.demo_url"><a :href="sub.demo_url" target="_blank">Demo</a></p>
 
@@ -149,19 +152,19 @@ export default {
           </div>
         </div>
       </div>
-      <button class="ui primary button" :class="{loading: saving[sub.id]}"
+      <button class="hf-btn hf-btn-primary" :class="{loading: saving[sub.id]}"
               :disabled="saving[sub.id]"
               @click="submitScores(sub.id)">
         Submit Scores
       </button>
       <div v-if="errors[sub.id]" class="ui error message visible">{{ errors[sub.id] }}</div>
     </div>
+    </div>
   </div>
 
   <!-- Empty state -->
-  <div v-if="!activeSubmissions.length" class="ui placeholder segment">
-    <div class="ui icon header">
-      <i class="clipboard outline icon"></i>
+  <div v-if="!activeSubmissions.length" class="hf-card">
+    <div class="hf-empty">
       No submissions to judge in this track.
     </div>
   </div>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 212 212" width="32" height="32">
+  <defs>
+    <linearGradient id="jade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7CC4A0"/>
+      <stop offset="100%" stop-color="#1F8C65"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="106" cy="106" r="100" fill="url(#jade)"/>
+  <!-- H letterform — HackForger -->
+  <g fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left vertical -->
+    <line x1="68" y1="56" x2="68" y2="156"/>
+    <!-- Right vertical -->
+    <line x1="144" y1="56" x2="144" y2="156"/>
+    <!-- Horizontal bar -->
+    <line x1="68" y1="106" x2="144" y2="106"/>
+  </g>
+  <!-- Forge spark — top right -->
+  <g fill="#FDF5E0" opacity="0.9">
+    <polygon points="152,48 158,38 162,50 172,46 164,54 174,58 162,58 166,68 158,60 154,70 154,58 144,62 152,54 142,50"/>
+  </g>
+</svg>
