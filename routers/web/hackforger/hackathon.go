@@ -654,6 +654,12 @@ func FinalizePreview(ctx *context.Context) {
 			judgeNames[j.UserID] = u.Name
 		}
 	}
+	trackCriteria := make(map[int64][]*hackforger_model.HackathonTrackCriteria)
+	for _, t := range tracks {
+		tc, _ := hackforger_model.ListTrackCriteria(ctx, t.ID)
+		trackCriteria[t.ID] = tc
+	}
+	regs, _, _ := hackforger_model.ListRegistrations(ctx, hackforger_model.ListRegistrationsOptions{HackathonID: h.ID})
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.manage.finalize_preview")
 	ctx.Data["Hackathon"] = h
 	ctx.Data["Rankings"] = rankings
@@ -662,6 +668,9 @@ func FinalizePreview(ctx *context.Context) {
 	ctx.Data["Criteria"] = criteria
 	ctx.Data["Judges"] = judges
 	ctx.Data["JudgeNames"] = judgeNames
+	ctx.Data["TrackCriteria"] = trackCriteria
+	ctx.Data["Registrations"] = regs
+	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.Status)
 	ctx.Data["ShowPreview"] = true
 	ctx.HTML(http.StatusOK, tplManage)
 }
