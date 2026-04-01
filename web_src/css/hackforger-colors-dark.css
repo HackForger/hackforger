@@ -1,0 +1,17 @@
+/* HackForger color tokens — dark mode overrides */
+:root {
+  --hf-green-bg: rgba(86, 211, 100, 0.18);
+  --hf-green-text: #56d364;
+  --hf-blue-bg: rgba(121, 192, 255, 0.16);
+  --hf-blue-text: #79c0ff;
+  --hf-red-bg: rgba(255, 123, 114, 0.16);
+  --hf-red-text: #ff7b72;
+  --hf-yellow-bg: rgba(227, 179, 65, 0.18);
+  --hf-yellow-text: #e3b341;
+  --hf-purple-bg: rgba(188, 140, 255, 0.16);
+  --hf-purple-text: #bc8cff;
+  --hf-teal-bg: rgba(86, 212, 221, 0.16);
+  --hf-teal-text: #56d4dd;
+  --hf-neutral-bg: #30363d;
+  --hf-neutral-text: #9eaab6;
+}
