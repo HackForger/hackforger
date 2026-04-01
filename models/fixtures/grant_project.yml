@@ -10,6 +10,7 @@
   award_credits: 0
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 2
   round_id: 3
@@ -22,6 +23,7 @@
   award_credits: 2000
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 3
   round_id: 3
@@ -32,5 +34,44 @@
   status: 1
   award_amount: 3000.00
   award_credits: 1500
+  created_unix: 1609459200
+  updated_unix: 1609459200
+
+-
+  id: 4
+  round_id: 4
+  user_id: 4
+  repo_id: 1
+  title: "Eve's Funded Project"
+  description: "A project that has been fully funded"
+  status: 3
+  award_amount: 4000.00
+  award_credits: 2000
+  created_unix: 1609459200
+  updated_unix: 1609459200
+
+-
+  id: 5
+  round_id: 5
+  user_id: 5
+  repo_id: 2
+  title: "Frank's Distributed Project"
+  description: "A project from the distributed round"
+  status: 3
+  award_amount: 3000.00
+  award_credits: 1500
+  created_unix: 1609459200
+  updated_unix: 1609459200
+
+-
+  id: 6
+  round_id: 4
+  user_id: 5
+  repo_id: 2
+  title: "Frank's Rejected Project"
+  description: "A project that was rejected during review"
+  status: 2
+  award_amount: 0
+  award_credits: 0
   created_unix: 1609459200
   updated_unix: 1609459200

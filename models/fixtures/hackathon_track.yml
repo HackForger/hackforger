@@ -1,3 +1,5 @@
+# Tracks 1-4 for hackathon 1 — credits distribution tests depend on these.
+# See services/hackforger/hackathon_credits_test.go
 -
   id: 1
   hackathon_id: 1
@@ -7,6 +9,7 @@
   prize_dist_mode: "winner_takes_all"
   prize_dist_ratios: ""
   created_unix: 1609459200
+
 -
   id: 2
   hackathon_id: 1
@@ -16,6 +19,7 @@
   prize_dist_mode: "tiered"
   prize_dist_ratios: '[{"rank":1,"pct":60},{"rank":2,"pct":30},{"rank":3,"pct":10}]'
   created_unix: 1609459200
+
 -
   id: 3
   hackathon_id: 1
@@ -25,6 +29,7 @@
   prize_dist_mode: "equal"
   prize_dist_ratios: ""
   created_unix: 1609459200
+
 -
   id: 4
   hackathon_id: 1
@@ -34,3 +39,43 @@
   prize_dist_mode: "winner_takes_all"
   prize_dist_ratios: ""
   created_unix: 1609459200
+
+# New enriched tracks for Phase 5 testing
+-
+  id: 5
+  hackathon_id: 4
+  name: "Web Track"
+  description: "Build a web application"
+  prize_amount: 1000
+  prize_currency: "USD"
+  repo_id: 1
+  prize_credits: 500
+  prize_dist_mode: "custom"
+  prize_dist_ratios: "50,30,20"
+  created_unix: 1672578000
+
+-
+  id: 6
+  hackathon_id: 1
+  name: "AI Track"
+  description: "Build an AI tool"
+  prize_amount: 2000
+  prize_currency: "USD"
+  repo_id: 2
+  prize_credits: 1000
+  prize_dist_mode: "custom"
+  prize_dist_ratios: "60,40"
+  created_unix: 1672578000
+
+-
+  id: 7
+  hackathon_id: 5
+  name: "CLI Track"
+  description: "Build a CLI tool"
+  prize_amount: 500
+  prize_currency: "USD"
+  repo_id: 3
+  prize_credits: 250
+  prize_dist_mode: "winner_takes_all"
+  prize_dist_ratios: ""
+  created_unix: 1672578000

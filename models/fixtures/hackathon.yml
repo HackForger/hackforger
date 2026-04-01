@@ -1,11 +1,78 @@
+# Hackathon id=1 MUST remain status=3 (Judging) — credits distribution tests depend on it.
+# See services/hackforger/hackathon_credits_test.go
 -
   id: 1
   org_id: 3
-  owner_id: 1
-  name: "Test Hackathon"
-  slug: "test-hackathon"
-  description: "A hackathon for testing prize distribution"
+  owner_id: 2
+  name: "Judging Hackathon"
+  slug: "judging-hackathon"
+  description: "A hackathon being judged (credits test depends on this)"
   status: 3
   max_team_size: 5
-  created_unix: 1609459200
-  updated_unix: 1609459200
+  judging_end: 1735689600
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 2
+  org_id: 3
+  owner_id: 2
+  name: "Draft Hackathon"
+  slug: "draft-hackathon"
+  description: "A hackathon in draft status for testing"
+  status: 0
+  max_team_size: 5
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 3
+  org_id: 3
+  owner_id: 2
+  name: "Open Hackathon"
+  slug: "open-hackathon"
+  description: "A hackathon accepting registrations"
+  status: 1
+  max_team_size: 4
+  registration_start: 1672578000
+  registration_end: 1735689600
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 4
+  org_id: 3
+  owner_id: 2
+  name: "Hacking Hackathon"
+  slug: "hacking-hackathon"
+  description: "A hackathon in the hacking phase"
+  status: 2
+  max_team_size: 5
+  hacking_start: 1672578000
+  hacking_end: 1735689600
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 5
+  org_id: 3
+  owner_id: 2
+  name: "Finished Hackathon"
+  slug: "finished-hackathon"
+  description: "A completed hackathon with results"
+  status: 4
+  max_team_size: 5
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 6
+  org_id: 3
+  owner_id: 2
+  name: "Cancelled Hackathon"
+  slug: "cancelled-hackathon"
+  description: "A cancelled hackathon"
+  status: 5
+  max_team_size: 5
+  created_unix: 1672578000
+  updated_unix: 1672578000

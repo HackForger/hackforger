@@ -27,3 +27,13 @@
   id: 6
   user_id: 5
   follow_id: 8
+
+-
+  id: 7
+  user_id: 4
+  follow_id: 5
+
+-
+  id: 8
+  user_id: 5
+  follow_id: 4

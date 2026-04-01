@@ -1,3 +1,5 @@
+# Submissions 1-7 for hackathon 1 — credits distribution tests depend on these.
+# See services/hackforger/hackathon_credits_test.go
 -
   id: 1
   hackathon_id: 1
@@ -11,6 +13,7 @@
   rank: 1
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 2
   hackathon_id: 1
@@ -24,6 +27,7 @@
   rank: 2
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 3
   hackathon_id: 1
@@ -37,6 +41,7 @@
   rank: 1
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 4
   hackathon_id: 1
@@ -50,6 +55,7 @@
   rank: 2
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 5
   hackathon_id: 1
@@ -63,6 +69,7 @@
   rank: 3
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 6
   hackathon_id: 1
@@ -76,6 +83,7 @@
   rank: 1
   created_unix: 1609459200
   updated_unix: 1609459200
+
 -
   id: 7
   hackathon_id: 1
@@ -89,3 +97,48 @@
   rank: 1
   created_unix: 1609459200
   updated_unix: 1609459200
+
+# New enriched submissions for Phase 5 testing (hackathon 1, track 6 = AI Track)
+# Note: XORM maps PRID->p_r_i_d, DemoURL->demo_u_r_l, PullIndex->pull_index
+# Only include fields that match existing column names (omit pr_id/demo_url/pull_index/repo_id).
+-
+  id: 8
+  hackathon_id: 1
+  registration_id: 1
+  user_id: 4
+  track_id: 6
+  title: "AI Assistant Tool"
+  description: "An AI-powered coding assistant"
+  status: 0
+  total_score: 8.5
+  rank: 1
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 9
+  hackathon_id: 1
+  registration_id: 2
+  user_id: 5
+  track_id: 6
+  title: "Smart Debugger"
+  description: "AI debugging tool"
+  status: 0
+  total_score: 7.0
+  rank: 2
+  created_unix: 1672578100
+  updated_unix: 1672578100
+
+-
+  id: 10
+  hackathon_id: 1
+  registration_id: 1
+  user_id: 44
+  track_id: 6
+  title: "Bot Submission"
+  description: "Platform bot auto-submission"
+  status: 0
+  total_score: 0
+  rank: 0
+  created_unix: 1672578200
+  updated_unix: 1672578200

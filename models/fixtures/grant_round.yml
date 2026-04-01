@@ -42,3 +42,48 @@
   deadline: 1735689600
   created_unix: 1609459200
   updated_unix: 1609459200
+
+-
+  id: 4
+  org_id: 3
+  owner_id: 2
+  name: "Test Grant Round Finalized"
+  slug: "test-grant-finalized"
+  description: "A finalized grant round awaiting distribution"
+  status: 3
+  budget: 12000.00
+  currency: "USD"
+  budget_credits: 6000
+  deadline: 1735689600
+  created_unix: 1609459200
+  updated_unix: 1609459200
+
+-
+  id: 5
+  org_id: 3
+  owner_id: 2
+  name: "Test Grant Round Distributed"
+  slug: "test-grant-distributed"
+  description: "A fully distributed grant round"
+  status: 4
+  budget: 8000.00
+  currency: "USD"
+  budget_credits: 4000
+  deadline: 1735689600
+  created_unix: 1609459200
+  updated_unix: 1609459200
+
+-
+  id: 6
+  org_id: 3
+  owner_id: 2
+  name: "Test Grant Round Cancelled"
+  slug: "test-grant-cancelled"
+  description: "A cancelled grant round"
+  status: 5
+  budget: 5000.00
+  currency: "USD"
+  budget_credits: 2500
+  deadline: 1735689600
+  created_unix: 1609459200
+  updated_unix: 1609459200
