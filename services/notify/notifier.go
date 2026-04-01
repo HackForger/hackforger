@@ -79,4 +79,10 @@ type Notifier interface {
 	ChangeDefaultBranch(ctx context.Context, repo *repo_model.Repository)
 
 	ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun)
+
+	// HackForger entity events
+	HackforgerEntityCreated(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts)
+	HackforgerEntityUpdated(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts)
+	HackforgerEntityDeleted(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts)
+	HackforgerEntityStatusChanged(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts)
 }
