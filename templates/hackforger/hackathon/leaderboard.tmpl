@@ -4,7 +4,7 @@
 		<h2>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard"}} — {{.Hackathon.Name}}</h2>
 
 		{{if .Tracks}}
-		{{/* Tab menu */}}
+		{{/* Tab menu -- kept as Fomantic (JS-dependent) */}}
 		<div class="ui top attached tabular menu">
 			{{range $i, $t := .Tracks}}
 			<a class="item {{if eq $i 0}}active{{end}}" data-tab="track-{{$t.ID}}">{{$t.Name}}</a>
@@ -17,7 +17,7 @@
 			{{$ranked := index $.Rankings $t.ID}}
 			{{$rubric := index $.Rubrics $t.ID}}
 			{{if $ranked}}
-			<table class="ui celled table">
+			<table class="tw-w-full">
 				<thead>
 					<tr>
 						<th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.rank"}}</th>
@@ -46,13 +46,17 @@
 				</tbody>
 			</table>
 			{{else}}
-			<div class="ui info message">{{ctx.Locale.Tr "hackforger.hackathon.judge.no_submissions"}}</div>
+			<div class="hf-card">
+				<div class="hf-empty">{{ctx.Locale.Tr "hackforger.hackathon.judge.no_submissions"}}</div>
+			</div>
 			{{end}}
 		</div>
 		{{end}}
 
 		{{else}}
-		<div class="ui info message">{{ctx.Locale.Tr "hackforger.hackathon.judge.no_submissions"}}</div>
+		<div class="hf-card">
+			<div class="hf-empty">{{ctx.Locale.Tr "hackforger.hackathon.judge.no_submissions"}}</div>
+		</div>
 		{{end}}
 	</div>
 </div>
