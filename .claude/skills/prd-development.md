@@ -1,0 +1,1 @@
+../vendor/product-manager-skills/skills/prd-development/SKILL.md

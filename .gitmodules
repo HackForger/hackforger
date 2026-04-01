@@ -1,0 +1,3 @@
+[submodule ".claude/vendor/product-manager-skills"]
+	path = .claude/vendor/product-manager-skills
+	url = https://github.com/deanpeters/Product-Manager-Skills.git
