@@ -72,6 +72,35 @@ cat ~/.config/forgejo-runner/runner.log  # 查看日志
 
 Runner 使用 host 模式（非 Docker），标签：`ubuntu-latest:host`, `macos-arm64:host`。
 
+## Mandatory Rules
+
+1. **Web 端测试是必选项** — 不可使用单元测试或 API 测试替代 Web 界面操作。所有核心流程验证必须通过浏览器完成。
+2. **关键验证节点必须截屏** — 使用 `agent-browser screenshot` 保存到 `docs/tests/e2e/screenshots/`，并在 E2E report 中引用作为测试证据。截图内容应能独立证明测试结果。
+3. **API 调用仅用于辅助** — 批量数据准备、密码重置等可用 API，但核心功能验证必须通过 Web 界面。
+
+## Week 5 Features to Test
+
+### ⌘K Search Modal
+- Open via navbar search icon or ⌘K/Ctrl+K
+- Type keyword → verify results appear after debounce
+- Switch scope tabs (All/Hackathons/Bounties/Grants) → verify results filter
+- Click result → verify navigation to detail page
+- Escape → verify modal closes
+- AI assistant panel shows placeholder message with disclaimer
+
+### Webhook Configuration
+- Navigate to repo Settings → Webhooks → Add Webhook
+- Verify HackForger event checkboxes appear (hackathon_created, bounty_created, etc.)
+- Select events → Create webhook
+- Trigger event → Verify delivery in Recent Deliveries
+
+### hackforger-cli Smoke Test
+- Run `hackforger-cli --help` → verify command list
+- Run `hackforger-cli search query --q "test"` → verify results
+- Run `hackforger-cli hackathon list` → verify output
+
+---
+
 ## Testing Approach
 
 ### Web-First 原则

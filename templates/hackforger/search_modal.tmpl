@@ -1,0 +1,39 @@
+<div id="hf-search-modal" class="hf-search-modal" style="display:none">
+  <div class="hf-search-overlay"></div>
+  <div class="hf-search-dialog">
+    <div class="hf-search-input-wrap">
+      {{svg "octicon-search" 16 "hf-search-icon"}}
+      <input id="hf-search-input" type="text"
+        placeholder="{{ctx.Locale.Tr "hackforger.search.placeholder"}}"
+        autocomplete="off">
+      <kbd class="hf-search-kbd">&#8984;K</kbd>
+    </div>
+
+    <div id="hf-assistant-panel" class="hf-search-assistant" style="display:none">
+      <div id="hf-assistant-message"></div>
+      <span id="hf-assistant-disclaimer" class="hf-search-disclaimer"></span>
+    </div>
+
+    <div class="hf-search-tabs">
+      <button class="hf-search-tab active" data-scope="all">
+        {{ctx.Locale.Tr "hackforger.search.scope.all"}}
+      </button>
+      <button class="hf-search-tab" data-scope="hackathons">
+        {{ctx.Locale.Tr "hackforger.search.scope.hackathons"}}
+      </button>
+      <button class="hf-search-tab" data-scope="bounties">
+        {{ctx.Locale.Tr "hackforger.search.scope.bounties"}}
+      </button>
+      <button class="hf-search-tab" data-scope="grants">
+        {{ctx.Locale.Tr "hackforger.search.scope.grants"}}
+      </button>
+    </div>
+
+    <div id="hf-search-results" class="hf-search-results"
+      data-empty-text="{{ctx.Locale.Tr "hackforger.search.no_results"}}">
+      <div class="hf-search-empty">
+        {{ctx.Locale.Tr "hackforger.search.no_results"}}
+      </div>
+    </div>
+  </div>
+</div>

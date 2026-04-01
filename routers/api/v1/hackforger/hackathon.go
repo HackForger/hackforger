@@ -35,6 +35,37 @@ type UpdateHackathonForm struct {
 // --- Handlers ---
 
 // ListHackathons returns a paginated list of hackathons.
+//
+// swagger:operation GET /hackforger/hackathons hackforger hackforgerListHackathons
+// ---
+// summary: List hackathons
+// produces:
+// - application/json
+// parameters:
+// - name: q
+//   in: query
+//   description: search keyword
+//   type: string
+// - name: org_id
+//   in: query
+//   description: filter by organization ID
+//   type: integer
+//   format: int64
+// - name: status
+//   in: query
+//   description: filter by status (0=draft, 1=open, 2=hacking, 3=judging, 4=finished, 5=cancelled)
+//   type: integer
+// - name: page
+//   in: query
+//   description: page number of results to return (1-based)
+//   type: integer
+// - name: limit
+//   in: query
+//   description: page size of results
+//   type: integer
+// responses:
+//   "200":
+//     description: Hackathon list
 func ListHackathons(ctx *context.APIContext) {
 	opts := hackforger_model.ListHackathonsOptions{
 		Keyword: ctx.FormString("q"),
@@ -66,6 +97,24 @@ func ListHackathons(ctx *context.APIContext) {
 }
 
 // GetHackathon returns a single hackathon by ID.
+//
+// swagger:operation GET /hackforger/hackathons/{id} hackforger hackforgerGetHackathon
+// ---
+// summary: Get a hackathon
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Hackathon details
+//   "404":
+//     "$ref": "#/responses/notFound"
 func GetHackathon(ctx *context.APIContext) {
 	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -80,6 +129,25 @@ func GetHackathon(ctx *context.APIContext) {
 }
 
 // CreateHackathon creates a new hackathon.
+//
+// swagger:operation POST /hackforger/hackathons hackforger hackforgerCreateHackathon
+// ---
+// summary: Create a hackathon
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/CreateHackathonForm"
+// responses:
+//   "201":
+//     description: Hackathon created
+//   "409":
+//     description: Slug already exists
 func CreateHackathon(ctx *context.APIContext) {
 	form := web.GetForm(ctx).(*CreateHackathonForm)
 	h := &hackforger_model.Hackathon{
@@ -105,6 +173,31 @@ func CreateHackathon(ctx *context.APIContext) {
 }
 
 // UpdateHackathon updates fields of an existing hackathon.
+//
+// swagger:operation PUT /hackforger/hackathons/{id} hackforger hackforgerUpdateHackathon
+// ---
+// summary: Update a hackathon
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/UpdateHackathonForm"
+// responses:
+//   "200":
+//     description: Updated hackathon
+//   "404":
+//     "$ref": "#/responses/notFound"
 func UpdateHackathon(ctx *context.APIContext) {
 	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -136,6 +229,24 @@ func UpdateHackathon(ctx *context.APIContext) {
 }
 
 // DeleteHackathon deletes a hackathon (only allowed in Draft status).
+//
+// swagger:operation DELETE /hackforger/hackathons/{id} hackforger hackforgerDeleteHackathon
+// ---
+// summary: Delete a hackathon (draft only)
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "204":
+//     description: Hackathon deleted
+//   "403":
+//     description: Not allowed (not in draft status)
+//   "404":
+//     "$ref": "#/responses/notFound"
 func DeleteHackathon(ctx *context.APIContext) {
 	if err := hackforger_model.DeleteHackathon(ctx, ctx.ParamsInt64(":id")); err != nil {
 		if hackforger_model.IsErrHackathonNotExist(err) {
@@ -164,6 +275,24 @@ func getHackathonFromPath(ctx *context.APIContext) *hackforger_model.Hackathon {
 }
 
 // PublishHackathon transitions a hackathon from Draft to Open.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/publish hackforger hackforgerPublishHackathon
+// ---
+// summary: Publish a hackathon (draft to open)
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Hackathon published
+//   "400":
+//     description: Invalid state transition
+//   "404":
+//     "$ref": "#/responses/notFound"
 func PublishHackathon(ctx *context.APIContext) {
 	h := getHackathonFromPath(ctx)
 	if h == nil {
@@ -177,6 +306,24 @@ func PublishHackathon(ctx *context.APIContext) {
 }
 
 // StartHackathon transitions a hackathon from Open to Hacking.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/start hackforger hackforgerStartHackathon
+// ---
+// summary: Start hacking phase (open to hacking)
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Hacking phase started
+//   "400":
+//     description: Invalid state transition
+//   "404":
+//     "$ref": "#/responses/notFound"
 func StartHackathon(ctx *context.APIContext) {
 	h := getHackathonFromPath(ctx)
 	if h == nil {
@@ -190,6 +337,24 @@ func StartHackathon(ctx *context.APIContext) {
 }
 
 // StartJudgingHackathon transitions a hackathon from Hacking to Judging.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/judging hackforger hackforgerStartJudging
+// ---
+// summary: Start judging phase (hacking to judging)
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Judging phase started
+//   "400":
+//     description: Invalid state transition
+//   "404":
+//     "$ref": "#/responses/notFound"
 func StartJudgingHackathon(ctx *context.APIContext) {
 	h := getHackathonFromPath(ctx)
 	if h == nil {
@@ -203,6 +368,24 @@ func StartJudgingHackathon(ctx *context.APIContext) {
 }
 
 // FinalizeHackathon transitions a hackathon from Judging to Finished and computes ranks.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/finalize hackforger hackforgerFinalizeHackathon
+// ---
+// summary: Finalize hackathon (judging to finished)
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Hackathon finalized
+//   "400":
+//     description: Invalid state transition
+//   "404":
+//     "$ref": "#/responses/notFound"
 func FinalizeHackathon(ctx *context.APIContext) {
 	h := getHackathonFromPath(ctx)
 	if h == nil {
@@ -216,6 +399,24 @@ func FinalizeHackathon(ctx *context.APIContext) {
 }
 
 // CancelHackathon cancels a hackathon (allowed in any non-Finished status).
+//
+// swagger:operation POST /hackforger/hackathons/{id}/cancel hackforger hackforgerCancelHackathon
+// ---
+// summary: Cancel a hackathon
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Hackathon cancelled
+//   "400":
+//     description: Invalid state transition
+//   "404":
+//     "$ref": "#/responses/notFound"
 func CancelHackathon(ctx *context.APIContext) {
 	h := getHackathonFromPath(ctx)
 	if h == nil {

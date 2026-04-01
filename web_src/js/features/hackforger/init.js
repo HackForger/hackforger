@@ -1,7 +1,10 @@
 // HackForger frontend module entry point.
 // Lazy-loads Vue components when their mount elements are present.
 
+import {initSearchModal} from './search-modal.js';
+
 export function initHackforger() {
+  initSearchModal();
   // BountyPanel
   const bountyEl = document.getElementById('hackforger-bounty-panel');
   if (bountyEl) {
