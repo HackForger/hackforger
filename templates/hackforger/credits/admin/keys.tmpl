@@ -1,0 +1,70 @@
+{{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin credits keys")}}
+	<div class="admin-setting-content">
+		<h4 class="ui top attached header">
+			{{ctx.Locale.Tr "hackforger.credits.admin.keys.title"}} &mdash; {{.Option.Name}}
+		</h4>
+
+		<div class="ui attached segment">
+			<div class="ui two statistics tw-mb-4">
+				<div class="statistic">
+					<div class="value">{{.KeysTotal}}</div>
+					<div class="label">{{ctx.Locale.Tr "hackforger.credits.admin.keys.total"}}</div>
+				</div>
+				<div class="statistic">
+					<div class="value">{{.KeysAvailable}}</div>
+					<div class="label">{{ctx.Locale.Tr "hackforger.credits.admin.keys.available"}}</div>
+				</div>
+			</div>
+		</div>
+
+		{{/* Add keys form */}}
+		<div class="ui attached segment">
+			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.keys.add"}}</h5>
+			<form class="ui form" action="{{AppSubUrl}}/admin/credits/options/{{.Option.ID}}/keys" method="post">
+				<div class="field">
+					<label>{{ctx.Locale.Tr "hackforger.credits.admin.keys.add_hint"}}</label>
+					<textarea name="keys" rows="6" placeholder="KEY-001&#10;KEY-002&#10;KEY-003"></textarea>
+				</div>
+				<button class="ui green button">{{ctx.Locale.Tr "hackforger.credits.admin.keys.add"}}</button>
+			</form>
+		</div>
+
+		{{/* Keys table */}}
+		{{if .Keys}}
+			<table class="ui attached segment striped table">
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.admin.keys.key_value"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.admin.keys.status"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.credits.admin.keys.order_id"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Keys}}
+						<tr>
+							<td>{{.ID}}</td>
+							<td><code>{{.KeyValue}}</code></td>
+							<td>
+								{{if .IsUsed}}
+									<span class="ui red label">{{ctx.Locale.Tr "hackforger.credits.admin.keys.used"}}</span>
+								{{else}}
+									<span class="ui green label">{{ctx.Locale.Tr "hackforger.credits.admin.keys.unused"}}</span>
+								{{end}}
+							</td>
+							<td>{{if .OrderID}}{{.OrderID}}{{else}}&mdash;{{end}}</td>
+						</tr>
+					{{end}}
+				</tbody>
+			</table>
+		{{else}}
+			<div class="ui attached segment">
+				<p class="tw-text-center">{{ctx.Locale.Tr "hackforger.credits.admin.keys.no_keys"}}</p>
+			</div>
+		{{end}}
+
+		<div class="tw-mt-4">
+			<a class="ui button" href="{{AppSubUrl}}/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
+		</div>
+	</div>
+{{template "admin/layout_footer" .}}

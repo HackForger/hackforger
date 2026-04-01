@@ -1,1 +1,91 @@
-[]
+-
+  id: 1
+  hackathon_id: 1
+  registration_id: 1
+  user_id: 2
+  track_id: 1
+  title: "WTA Submission 1"
+  description: "First place in winner takes all"
+  status: 2
+  total_score: 95.0
+  rank: 1
+  created_unix: 1609459200
+  updated_unix: 1609459200
+-
+  id: 2
+  hackathon_id: 1
+  registration_id: 2
+  user_id: 4
+  track_id: 1
+  title: "WTA Submission 2"
+  description: "Second place in winner takes all"
+  status: 2
+  total_score: 80.0
+  rank: 2
+  created_unix: 1609459200
+  updated_unix: 1609459200
+-
+  id: 3
+  hackathon_id: 1
+  registration_id: 3
+  user_id: 2
+  track_id: 2
+  title: "Tiered Submission 1"
+  description: "First place in tiered"
+  status: 2
+  total_score: 90.0
+  rank: 1
+  created_unix: 1609459200
+  updated_unix: 1609459200
+-
+  id: 4
+  hackathon_id: 1
+  registration_id: 4
+  user_id: 4
+  track_id: 2
+  title: "Tiered Submission 2"
+  description: "Second place in tiered"
+  status: 2
+  total_score: 85.0
+  rank: 2
+  created_unix: 1609459200
+  updated_unix: 1609459200
+-
+  id: 5
+  hackathon_id: 1
+  registration_id: 5
+  user_id: 5
+  track_id: 2
+  title: "Tiered Submission 3"
+  description: "Third place in tiered"
+  status: 2
+  total_score: 70.0
+  rank: 3
+  created_unix: 1609459200
+  updated_unix: 1609459200
+-
+  id: 6
+  hackathon_id: 1
+  registration_id: 6
+  user_id: 2
+  track_id: 3
+  title: "Equal Submission 1"
+  description: "Tied first in equal"
+  status: 2
+  total_score: 88.0
+  rank: 1
+  created_unix: 1609459200
+  updated_unix: 1609459200
+-
+  id: 7
+  hackathon_id: 1
+  registration_id: 7
+  user_id: 4
+  track_id: 3
+  title: "Equal Submission 2"
+  description: "Tied first in equal"
+  status: 2
+  total_score: 88.0
+  rank: 1
+  created_unix: 1609459200
+  updated_unix: 1609459200

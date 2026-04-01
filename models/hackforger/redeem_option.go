@@ -20,6 +20,7 @@ type RedeemOption struct {
 	Cost        int64              `xorm:"NOT NULL"`
 	Stock       int                `xorm:"NOT NULL DEFAULT -1"`
 	IsActive    bool               `xorm:"NOT NULL DEFAULT true"`
+	FulfillMode string             `xorm:"VARCHAR(16) NOT NULL DEFAULT 'manual'"`
 	CreatedUnix timeutil.TimeStamp `xorm:"created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"updated"`
 }

@@ -6,6 +6,7 @@ package hackforger
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -351,6 +352,9 @@ func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hack
 	if err := PersistRanks(ctx, rankings); err != nil {
 		return err
 	}
+	if err := distributeHackathonCredits(ctx, h.ID); err != nil {
+		return err
+	}
 
 	// Update status
 	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusFinished); err != nil {
@@ -653,6 +657,114 @@ func createTrackReleases(ctx context.Context, doerID int64, h *hackforger_model.
 		}
 		closer.Close()
 	}
+}
+
+// distributeHackathonCredits awards prize credits to hackathon winners per track.
+// It supports three distribution modes:
+//   - winner_takes_all: rank 1 gets all PrizeCredits
+//   - tiered: each rank gets PrizeCredits * pct / 100, remainder to rank 1
+//   - equal: PrizeCredits / N per winner, remainder to rank 1
+func distributeHackathonCredits(ctx context.Context, hackathonID int64) error {
+	tracks, err := hackforger_model.ListTracksByHackathon(ctx, hackathonID)
+	if err != nil {
+		return err
+	}
+
+	for _, track := range tracks {
+		if track.PrizeCredits <= 0 {
+			continue
+		}
+
+		subs, _, err := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{
+			ListOptions: db.ListOptions{ListAll: true},
+			TrackID:     track.ID,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Sort by TotalScore DESC, ID ASC (per-track ranking)
+		sort.Slice(subs, func(i, j int) bool {
+			if subs[i].TotalScore != subs[j].TotalScore {
+				return subs[i].TotalScore > subs[j].TotalScore
+			}
+			return subs[i].ID < subs[j].ID
+		})
+
+		// Filter out unscored submissions (TotalScore <= 0)
+		var scored []*hackforger_model.HackathonSubmission
+		for _, s := range subs {
+			if s.TotalScore > 0 {
+				scored = append(scored, s)
+			}
+		}
+		if len(scored) == 0 {
+			continue
+		}
+
+		switch track.PrizeDistMode {
+		case "winner_takes_all":
+			ref := fmt.Sprintf("hackathon:%d/track:%d:rank:1", hackathonID, track.ID)
+			note := fmt.Sprintf("Hackathon prize: %s (winner takes all)", track.Name)
+			if err := Deposit(ctx, scored[0].UserID, track.PrizeCredits, ref, note); err != nil {
+				return err
+			}
+
+		case "tiered":
+			ratios, err := hackforger_model.ParsePrizeDistRatios(track.PrizeDistRatios)
+			if err != nil {
+				return err
+			}
+			var distributed int64
+			for i, ratio := range ratios {
+				if i >= len(scored) {
+					break
+				}
+				amount := track.PrizeCredits * int64(ratio.Pct) / 100
+				distributed += amount
+				ref := fmt.Sprintf("hackathon:%d/track:%d:rank:%d", hackathonID, track.ID, ratio.Rank)
+				note := fmt.Sprintf("Hackathon prize: %s (rank %d, %d%%)", track.Name, ratio.Rank, ratio.Pct)
+				if err := Deposit(ctx, scored[i].UserID, amount, ref, note); err != nil {
+					return err
+				}
+			}
+			// Remainder (rounding residue) goes to rank 1
+			remainder := track.PrizeCredits - distributed
+			if remainder > 0 {
+				ref := fmt.Sprintf("hackathon:%d/track:%d:rank:1:remainder", hackathonID, track.ID)
+				note := fmt.Sprintf("Hackathon prize: %s (rounding remainder)", track.Name)
+				if err := Deposit(ctx, scored[0].UserID, remainder, ref, note); err != nil {
+					return err
+				}
+			}
+
+		case "equal":
+			n := int64(len(scored))
+			perUser := track.PrizeCredits / n
+			distributed := perUser * n
+			for i, s := range scored {
+				ref := fmt.Sprintf("hackathon:%d/track:%d:rank:%d", hackathonID, track.ID, i+1)
+				note := fmt.Sprintf("Hackathon prize: %s (equal split, rank %d)", track.Name, i+1)
+				if err := Deposit(ctx, s.UserID, perUser, ref, note); err != nil {
+					return err
+				}
+			}
+			// Remainder goes to rank 1
+			remainder := track.PrizeCredits - distributed
+			if remainder > 0 {
+				ref := fmt.Sprintf("hackathon:%d/track:%d:rank:1:remainder", hackathonID, track.ID)
+				note := fmt.Sprintf("Hackathon prize: %s (equal split remainder)", track.Name)
+				if err := Deposit(ctx, scored[0].UserID, remainder, ref, note); err != nil {
+					return err
+				}
+			}
+
+		default:
+			log.Warn("distributeHackathonCredits: unknown dist mode %q for track %d, skipping", track.PrizeDistMode, track.ID)
+		}
+	}
+
+	return nil
 }
 
 func publishPhaseChange(ctx context.Context, doerID int64, h *hackforger_model.Hackathon, oldStatus, newStatus hackforger_model.HackathonStatus) {

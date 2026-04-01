@@ -7,7 +7,7 @@
 		<div class="ui attached segment">
 			{{/* Deposit form */}}
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deposit"}}</h5>
-			<form class="ui form" action="/-/admin/credits/deposit" method="post">
+			<form class="ui form" action="{{AppSubUrl}}/admin/credits/deposit" method="post">
 				<div class="four fields">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
@@ -33,7 +33,7 @@
 
 			{{/* Deduct form */}}
 			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deduct"}}</h5>
-			<form class="ui form" action="/-/admin/credits/deduct" method="post">
+			<form class="ui form" action="{{AppSubUrl}}/admin/credits/deduct" method="post">
 				<div class="four fields">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
@@ -82,8 +82,8 @@
 		</table>
 
 		<div class="tw-mt-4">
-			<a class="ui button" href="/-/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.manage_options"}}</a>
-			<a class="ui button" href="/-/admin/credits/orders">{{ctx.Locale.Tr "hackforger.credits.admin.manage_orders"}}</a>
+			<a class="ui button" href="{{AppSubUrl}}/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.manage_options"}}</a>
+			<a class="ui button" href="{{AppSubUrl}}/admin/credits/orders">{{ctx.Locale.Tr "hackforger.credits.admin.manage_orders"}}</a>
 		</div>
 	</div>
 {{template "admin/layout_footer" .}}

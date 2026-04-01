@@ -38,6 +38,7 @@ const (
 	AudienceFollowers                              // 2 — Visible to ActUser's followers
 	AudienceOrgMembers                             // 4 — Visible to org members
 	AudienceRepoWatchers                           // 8 — Visible to repo watchers
+	AudienceDirectUser                             // 16 — Visible to a single target user
 )
 
 // HackforgerActionOpts holds the parameters for publishing a HackForger feed event.
@@ -52,6 +53,7 @@ type HackforgerActionOpts struct {
 	Content      any
 	AudienceType AudienceType
 	OrgID        int64 // used when AudienceRepoWatchers or AudienceOrgMembers flag is set
+	TargetUserID int64 // used when AudienceDirectUser flag is set
 }
 
 // PublishHackforgerAction writes HackForger events to the hackforger_action table.
@@ -162,6 +164,13 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 					_ = insert(uid)
 				}
 			}
+		}
+	}
+
+	// DirectUser flag: insert for a specific target user.
+	if opts.AudienceType&AudienceDirectUser != 0 {
+		if opts.TargetUserID > 0 {
+			_ = insert(opts.TargetUserID)
 		}
 	}
 

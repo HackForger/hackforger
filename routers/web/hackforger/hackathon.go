@@ -442,7 +442,43 @@ func ManageTrackPost(ctx *context.Context) {
 	if h == nil {
 		return
 	}
-	t := &hackforger_model.HackathonTrack{HackathonID: h.ID, Name: ctx.FormString("name")}
+
+	prizeCredits, _ := strconv.ParseInt(ctx.FormString("prize_credits"), 10, 64)
+	prizeDistMode := ctx.FormString("prize_dist_mode")
+	if prizeDistMode == "" {
+		prizeDistMode = "winner_takes_all"
+	}
+
+	t := &hackforger_model.HackathonTrack{
+		HackathonID:   h.ID,
+		Name:          ctx.FormString("name"),
+		PrizeCredits:  prizeCredits,
+		PrizeDistMode: prizeDistMode,
+	}
+
+	// Validate and set ratios only for tiered mode
+	if prizeDistMode == "tiered" {
+		ratiosJSON := strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
+		if ratiosJSON != "" {
+			ratios, err := hackforger_model.ParsePrizeDistRatios(ratiosJSON)
+			if err != nil {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
+			if err := hackforger_model.ValidatePrizeDistRatios(ratios); err != nil {
+				if hackforger_model.IsErrInvalidDistRatios(err) {
+					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				} else {
+					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				}
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
+			t.PrizeDistRatios = ratiosJSON
+		}
+	}
+
 	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
 		ctx.Flash.Error(err.Error())
 	}
@@ -618,6 +654,12 @@ func FinalizePreview(ctx *context.Context) {
 			judgeNames[j.UserID] = u.Name
 		}
 	}
+	trackCriteria := make(map[int64][]*hackforger_model.HackathonTrackCriteria)
+	for _, t := range tracks {
+		tc, _ := hackforger_model.ListTrackCriteria(ctx, t.ID)
+		trackCriteria[t.ID] = tc
+	}
+	regs, _, _ := hackforger_model.ListRegistrations(ctx, hackforger_model.ListRegistrationsOptions{HackathonID: h.ID})
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.manage.finalize_preview")
 	ctx.Data["Hackathon"] = h
 	ctx.Data["Rankings"] = rankings
@@ -626,6 +668,9 @@ func FinalizePreview(ctx *context.Context) {
 	ctx.Data["Criteria"] = criteria
 	ctx.Data["Judges"] = judges
 	ctx.Data["JudgeNames"] = judgeNames
+	ctx.Data["TrackCriteria"] = trackCriteria
+	ctx.Data["Registrations"] = regs
+	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.Status)
 	ctx.Data["ShowPreview"] = true
 	ctx.HTML(http.StatusOK, tplManage)
 }

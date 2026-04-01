@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	user_model "forgejo.org/models/user"
@@ -57,9 +58,12 @@ func Deposit(ctx context.Context, userID int64, amount int64, reference, note st
 }
 
 // Redeem deducts credits and creates an order within a transaction.
+// If the option's FulfillMode is "auto", a key is claimed and the order
+// is immediately fulfilled inside the same transaction.
 func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_model.RedeemOrder, error) {
 	var order *hackforger_model.RedeemOrder
 	var optionName string
+	var capturedOption *hackforger_model.RedeemOption
 
 	err := db.WithTx(ctx, func(ctx context.Context) error {
 		// Get option
@@ -78,6 +82,7 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 		}
 
 		optionName = option.Name
+		capturedOption = option
 
 		// Get account
 		acct, err := GetOrCreateCreditAccount(ctx, userID)
@@ -127,11 +132,34 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 			Cost:     option.Cost,
 			Status:   hackforger_model.OrderStatusPending,
 		}
-		_, err = db.GetEngine(ctx).Insert(order)
-		return err
+		if _, err := db.GetEngine(ctx).Insert(order); err != nil {
+			return err
+		}
+
+		// Auto-fulfill if option is configured for it
+		if option.FulfillMode == "auto" {
+			key, err := hackforger_model.ClaimKey(ctx, optionID, order.ID)
+			if err != nil {
+				return err // rolls back entire tx
+			}
+			order.Status = hackforger_model.OrderStatusFulfilled
+			order.DeliveryType = "license_key"
+			order.DeliveryValue = key.KeyValue
+			if _, err := db.GetEngine(ctx).ID(order.ID).
+				Cols("status", "delivery_type", "delivery_value").Update(order); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// Sync stock from key pool after auto-fulfill
+	if capturedOption != nil && capturedOption.FulfillMode == "auto" {
+		_ = syncOptionStock(ctx, optionID)
 	}
 
 	// Publish feed event for the redemption
@@ -264,7 +292,7 @@ func AdminDeduct(ctx context.Context, admin *user_model.User, userID, amount int
 }
 
 // FulfillOrder marks a pending order as fulfilled. Only site admins can call this.
-func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, note string) error {
+func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, note, deliveryType, deliveryValue string) error {
 	if !admin.IsAdmin {
 		return ErrNotAdmin{UserID: admin.ID}
 	}
@@ -280,7 +308,35 @@ func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, no
 
 	order.Status = hackforger_model.OrderStatusFulfilled
 	order.FulfillNote = note
-	return hackforger_model.UpdateRedeemOrder(ctx, order)
+	order.DeliveryType = deliveryType
+	order.DeliveryValue = deliveryValue
+	if err := hackforger_model.UpdateRedeemOrder(ctx, order); err != nil {
+		return err
+	}
+
+	var optName string
+	if opt, _ := hackforger_model.GetRedeemOptionByID(ctx, order.OptionID); opt != nil {
+		optName = opt.Name
+	}
+	notifyOrderStatusChange(ctx, order, admin.ID, hackforger_model.ActionOrderFulfilled, optName)
+	return nil
+}
+
+// notifyOrderStatusChange publishes a feed event when an order status changes.
+func notifyOrderStatusChange(ctx context.Context, order *hackforger_model.RedeemOrder, adminID int64, actionType activities_model.ActionType, optionName string) {
+	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
+		ActUserID:    adminID,
+		OpType:       actionType,
+		EntityType:   "credits",
+		EntityName:   optionName,
+		AudienceType: AudienceDirectUser,
+		TargetUserID: order.UserID,
+		Content: &hackforger_model.HackforgerActionContent{
+			EntityType: "credits",
+			EntityName: optionName,
+			Extra:      map[string]any{"order_id": order.ID},
+		},
+	})
 }
 
 // CancelOrder cancels a pending order and refunds the credits. Only site admins can call this.
@@ -289,8 +345,12 @@ func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) err
 		return ErrNotAdmin{UserID: admin.ID}
 	}
 
-	return db.WithTx(ctx, func(ctx context.Context) error {
-		order, err := hackforger_model.GetRedeemOrderByID(ctx, orderID)
+	var order *hackforger_model.RedeemOrder
+	var optName string
+
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		order, err = hackforger_model.GetRedeemOrderByID(ctx, orderID)
 		if err != nil {
 			return err
 		}
@@ -326,8 +386,74 @@ func CancelOrder(ctx context.Context, admin *user_model.User, orderID int64) err
 			Note:      "Order cancelled and refunded",
 		}
 		_, err = db.GetEngine(ctx).Insert(tx)
+		if opt, _ := hackforger_model.GetRedeemOptionByID(ctx, order.OptionID); opt != nil {
+			optName = opt.Name
+		}
 		return err
 	})
+	if err != nil {
+		return err
+	}
+
+	notifyOrderStatusChange(ctx, order, admin.ID, hackforger_model.ActionOrderCancelled, optName)
+	return nil
+}
+
+// BatchFulfillOrders fulfills multiple orders at once. Returns the count of
+// successes and a list of order IDs that failed. Only site admins can call this.
+func BatchFulfillOrders(ctx context.Context, admin *user_model.User, orderIDs []int64, note, deliveryType, deliveryValue string) (int, []int64, error) {
+	if !admin.IsAdmin {
+		return 0, nil, ErrNotAdmin{UserID: admin.ID}
+	}
+	var success int
+	var failed []int64
+	for _, oid := range orderIDs {
+		if err := FulfillOrder(ctx, admin, oid, note, deliveryType, deliveryValue); err != nil {
+			failed = append(failed, oid)
+		} else {
+			success++
+		}
+	}
+	return success, failed, nil
+}
+
+// syncOptionStock updates the option's Stock and IsActive based on available keys.
+func syncOptionStock(ctx context.Context, optionID int64) error {
+	avail, err := hackforger_model.CountAvailableKeys(ctx, optionID)
+	if err != nil {
+		return err
+	}
+	opt, err := hackforger_model.GetRedeemOptionByID(ctx, optionID)
+	if err != nil {
+		return err
+	}
+	opt.Stock = int(avail)
+	if avail == 0 {
+		opt.IsActive = false
+	}
+	return hackforger_model.UpdateRedeemOption(ctx, opt)
+}
+
+// AddKeysToOption bulk-inserts keys into the pool for a given option, then
+// syncs the option's stock to reflect available keys. Only site admins can call this.
+func AddKeysToOption(ctx context.Context, admin *user_model.User, optionID int64, keys []string) error {
+	if !admin.IsAdmin {
+		return ErrNotAdmin{UserID: admin.ID}
+	}
+	if err := hackforger_model.AddKeys(ctx, optionID, keys); err != nil {
+		return err
+	}
+	return syncOptionStock(ctx, optionID)
+}
+
+// GetKeyPoolStatus returns the total and available key counts for a given option.
+func GetKeyPoolStatus(ctx context.Context, optionID int64) (total, available int64, err error) {
+	total, err = hackforger_model.CountTotalKeys(ctx, optionID)
+	if err != nil {
+		return
+	}
+	available, err = hackforger_model.CountAvailableKeys(ctx, optionID)
+	return
 }
 
 // CreateRedeemOptionAsAdmin creates a new redeem option. Only site admins can call this.
