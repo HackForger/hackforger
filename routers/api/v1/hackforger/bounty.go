@@ -9,12 +9,12 @@ import (
 
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	hackforger_svc "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
 
 // --------------------------------------------------------------------------
@@ -137,19 +137,19 @@ func CreateBounty(ctx *context.APIContext) {
 	}
 
 	// Publish feed event.
-	if err := hackforger_svc.PublishHackforgerAction(ctx, &hackforger_svc.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyCreated,
+		EntityType:   "bounty",
+		EntityID:     bounty.ID,
+		EntityName:   bounty.Title,
 		RepoID:       ctx.Repo.Repository.ID,
-		AudienceType: hackforger_svc.AudienceGlobal | hackforger_svc.AudienceRepoWatchers,
+		AudienceType: notify_service.AudienceGlobal | notify_service.AudienceRepoWatchers,
 		Content: &hackforger_model.HackforgerActionContent{
 			EntityType: "bounty",
 			EntityID:   bounty.ID,
 			EntityName: bounty.Title,
 		},
-	}); err != nil {
-		log.Error("CreateBounty: PublishHackforgerAction: %v", err)
-	}
+	})
 
 	ctx.JSON(http.StatusCreated, bounty)
 }

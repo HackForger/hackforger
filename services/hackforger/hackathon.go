@@ -21,6 +21,7 @@ import (
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 	actions_service "forgejo.org/services/actions"
+	notify_service "forgejo.org/services/notify"
 	release_service "forgejo.org/services/release"
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
@@ -73,14 +74,13 @@ func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_m
 		return err
 	}
 
-	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionHackathonCreated,
 		EntityType:   "hackathon",
 		EntityID:     h.ID,
 		EntityName:   h.Name,
 		EntitySlug:   h.Slug,
-		AudienceType: AudienceGlobal,
+		AudienceType: notify_service.AudienceGlobal,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
 		},
@@ -378,19 +378,20 @@ func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hack
 	// NOTE: Deliberately using HackforgerActionContent (not HackforgerPhaseContent)
 	// because ActionHackathonFinalized now carries results summary.
 	// TODO: update to new feed API format after feed refactor merges
-	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doerID,
-		OpType:       hackforger_model.ActionHackathonFinalized,
-		EntityType:   "hackathon",
-		EntityID:     h.ID,
-		EntityName:   h.Name,
-		EntitySlug:   h.Slug,
-		AudienceType: AudienceGlobal,
-		Content: hackforger_model.HackforgerActionContent{
-			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
-			Extra: map[string]any{"tracks": trackWinners},
-		},
-	})
+	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionHackathonFinalized,
+			EntityType:   "hackathon",
+			EntityID:     h.ID,
+			EntityName:   h.Name,
+			EntitySlug:   h.Slug,
+			AudienceType: notify_service.AudienceGlobal,
+			Content: hackforger_model.HackforgerActionContent{
+				EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+				Extra: map[string]any{"tracks": trackWinners},
+			},
+		})
+	}
 	return nil
 }
 
@@ -555,14 +556,13 @@ func triggerSubmissionIndexUpdate(ctx context.Context, doer *user_model.User, h 
 }
 
 func publishSubmissionEvent(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) {
-	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionHackathonSubmitted,
 		EntityType:   "hackathon",
 		EntityID:     h.ID,
 		EntityName:   h.Name,
 		EntitySlug:   h.Slug,
-		AudienceType: AudienceFollowers,
+		AudienceType: notify_service.AudienceFollowers,
 		RepoID:       sub.RepoID,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
@@ -768,21 +768,22 @@ func distributeHackathonCredits(ctx context.Context, hackathonID int64) error {
 }
 
 func publishPhaseChange(ctx context.Context, doerID int64, h *hackforger_model.Hackathon, oldStatus, newStatus hackforger_model.HackathonStatus) {
-	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doerID,
-		OpType:       hackforger_model.ActionHackathonPhaseChanged,
-		EntityType:   "hackathon",
-		EntityID:     h.ID,
-		EntityName:   h.Name,
-		EntitySlug:   h.Slug,
-		AudienceType: AudienceOrgMembers,
-		OrgID:        h.OrgID,
-		Content: hackforger_model.HackforgerPhaseContent{
-			HackforgerActionContent: hackforger_model.HackforgerActionContent{
-				EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionHackathonPhaseChanged,
+			EntityType:   "hackathon",
+			EntityID:     h.ID,
+			EntityName:   h.Name,
+			EntitySlug:   h.Slug,
+			AudienceType: notify_service.AudienceOrgMembers,
+			OrgID:        h.OrgID,
+			Content: hackforger_model.HackforgerPhaseContent{
+				HackforgerActionContent: hackforger_model.HackforgerActionContent{
+					EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+				},
+				OldStatus: hackathonStatusName[oldStatus],
+				NewStatus: hackathonStatusName[newStatus],
 			},
-			OldStatus: hackathonStatusName[oldStatus],
-			NewStatus: hackathonStatusName[newStatus],
-		},
-	})
+		})
+	}
 }

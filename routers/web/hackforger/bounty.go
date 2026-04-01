@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_svc "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
 
 // BountyView combines a Bounty with display info for templates.
@@ -169,12 +170,14 @@ func NewBountyPost(ctx *context.Context) {
 	}
 
 	// Publish feed event.
-	_ = hackforger_svc.PublishHackforgerAction(ctx, &hackforger_svc.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyCreated,
+		EntityType:   "bounty",
+		EntityID:     bounty.ID,
+		EntityName:   bounty.Title,
 		RepoID:       bounty.RepoID,
+		AudienceType: notify_service.AudienceGlobal | notify_service.AudienceRepoWatchers,
 		Content:      &hackforger_model.HackforgerActionContent{EntityType: "bounty", EntityID: bounty.ID, EntityName: bounty.Title},
-		AudienceType: hackforger_svc.AudienceGlobal | hackforger_svc.AudienceRepoWatchers,
 	})
 
 	ctx.Flash.Success("Bounty created successfully")

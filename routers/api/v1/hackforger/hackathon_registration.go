@@ -7,9 +7,10 @@ import (
 	"net/http"
 
 	hackforger_model "forgejo.org/models/hackforger"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
-	hackforger_service "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
 
 // RegisterForm is the form for registering to a hackathon.
@@ -84,14 +85,13 @@ func Register(ctx *context.APIContext) {
 	}
 
 	// Publish feed event for registration (global + followers so it appears in entity timelines)
-	_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionHackathonRegistered,
 		EntityType:   "hackathon",
 		EntityID:     h.ID,
 		EntityName:   h.Name,
 		EntitySlug:   h.Slug,
-		AudienceType: hackforger_service.AudienceGlobal | hackforger_service.AudienceFollowers,
+		AudienceType: notify_service.AudienceGlobal | notify_service.AudienceFollowers,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
 		},
@@ -188,18 +188,19 @@ func UpdateRegistration(ctx *context.APIContext) {
 		if err == nil {
 			h, err := hackforger_model.GetHackathonByID(ctx, r.HackathonID)
 			if err == nil {
-				_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
-					ActUserID:    r.UserID,
-					OpType:       hackforger_model.ActionHackathonRegistered,
-					EntityType:   "hackathon",
-					EntityID:     h.ID,
-					EntityName:   h.Name,
-					EntitySlug:   h.Slug,
-					AudienceType: hackforger_service.AudienceFollowers,
-					Content: hackforger_model.HackforgerActionContent{
-						EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
-					},
-				})
+				if doer, err := user_model.GetUserByID(ctx, r.UserID); err == nil {
+					notify_service.HackforgerEntityCreated(ctx, doer, &notify_service.HackforgerEventOpts{
+						OpType:       hackforger_model.ActionHackathonRegistered,
+						EntityType:   "hackathon",
+						EntityID:     h.ID,
+						EntityName:   h.Name,
+						EntitySlug:   h.Slug,
+						AudienceType: notify_service.AudienceFollowers,
+						Content: hackforger_model.HackforgerActionContent{
+							EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+						},
+					})
+				}
 			}
 		}
 	}

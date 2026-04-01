@@ -172,3 +172,17 @@ func (r *indexerNotifier) AutoMergePullRequest(ctx context.Context, doer *user_m
 	}
 	issue_indexer.UpdateIssueIndexer(ctx, pr.Issue.ID)
 }
+
+// HackForger entity indexer methods (placeholder -- indexer not yet created)
+
+func (r *indexerNotifier) HackforgerEntityCreated(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+}
+
+func (r *indexerNotifier) HackforgerEntityUpdated(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+}
+
+func (r *indexerNotifier) HackforgerEntityDeleted(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+}
+
+func (r *indexerNotifier) HackforgerEntityStatusChanged(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+}

@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/services/context"
 	hackforger_service "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
 
 const (
@@ -284,10 +285,13 @@ func RegisterPost(ctx *context.Context) {
 	}
 
 	// Publish registered feed event
-	_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionHackathonRegistered,
-		AudienceType: hackforger_service.AudienceFollowers,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
+		AudienceType: notify_service.AudienceFollowers,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon",
 			EntityID:   h.ID,
