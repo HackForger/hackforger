@@ -1,17 +1,38 @@
-/* HackForger color tokens — light mode (default) */
+/* HackForger color tokens — 江峡泼墨 Light mode (default) */
+/* Badge/status colors use the 7 ramps from docs/design.md */
 :root {
-  --hf-green-bg: #d1f5dc;
-  --hf-green-text: #14532d;
-  --hf-blue-bg: #c8dffc;
-  --hf-blue-text: #0c3b7c;
-  --hf-red-bg: #fcd5d0;
-  --hf-red-text: #7f1d1d;
-  --hf-yellow-bg: #fde68a;
-  --hf-yellow-text: #713f12;
-  --hf-purple-bg: #e4ccf8;
-  --hf-purple-text: #4a1d7a;
-  --hf-teal-bg: #c4f1f9;
-  --hf-teal-text: #0e5e6f;
-  --hf-neutral-bg: #e4e7ec;
-  --hf-neutral-text: #374151;
+  /* Jade 翠 — Primary / Hackathon */
+  --hf-jade-bg: #E0F0EA;
+  --hf-jade-text: #0D3F30;
+  /* Spring 芽 — Success / Bounty */
+  --hf-spring-bg: #EEF5DC;
+  --hf-spring-text: #33500F;
+  /* Gold 金 — Highlight / Grant */
+  --hf-gold-bg: #FDF5E0;
+  --hf-gold-text: #5C4808;
+  /* Vermillion 朱 — Danger */
+  --hf-verm-bg: #FCEAE6;
+  --hf-verm-text: #5A1A0E;
+  /* Sand 沙 — Secondary / Credits */
+  --hf-sand-bg: #F8F1E6;
+  --hf-sand-text: #5E4A2D;
+  /* Ink 墨 — Neutral */
+  --hf-ink-bg: #F4F2EF;
+  --hf-ink-text: #4A4A46;
+
+  /* Legacy aliases (for templates not yet migrated to new names) */
+  --hf-green-bg: var(--hf-jade-bg);
+  --hf-green-text: var(--hf-jade-text);
+  --hf-blue-bg: var(--hf-jade-bg);
+  --hf-blue-text: var(--hf-jade-text);
+  --hf-red-bg: var(--hf-verm-bg);
+  --hf-red-text: var(--hf-verm-text);
+  --hf-yellow-bg: var(--hf-gold-bg);
+  --hf-yellow-text: var(--hf-gold-text);
+  --hf-purple-bg: var(--hf-jade-bg);
+  --hf-purple-text: var(--hf-jade-text);
+  --hf-teal-bg: var(--hf-spring-bg);
+  --hf-teal-text: var(--hf-spring-text);
+  --hf-neutral-bg: var(--hf-ink-bg);
+  --hf-neutral-text: var(--hf-ink-text);
 }

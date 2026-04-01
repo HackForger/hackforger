@@ -1,17 +1,38 @@
-/* HackForger color tokens — dark mode overrides */
+/* HackForger color tokens — 江峡泼墨 Dark mode overrides */
+/* Light 50 stop → Dark 900 stop bg, 200 stop text */
 :root {
-  --hf-green-bg: rgba(86, 211, 100, 0.18);
-  --hf-green-text: #56d364;
-  --hf-blue-bg: rgba(121, 192, 255, 0.16);
-  --hf-blue-text: #79c0ff;
-  --hf-red-bg: rgba(255, 123, 114, 0.16);
-  --hf-red-text: #ff7b72;
-  --hf-yellow-bg: rgba(227, 179, 65, 0.18);
-  --hf-yellow-text: #e3b341;
-  --hf-purple-bg: rgba(188, 140, 255, 0.16);
-  --hf-purple-text: #bc8cff;
-  --hf-teal-bg: rgba(86, 212, 221, 0.16);
-  --hf-teal-text: #56d4dd;
-  --hf-neutral-bg: #30363d;
-  --hf-neutral-text: #9eaab6;
+  /* Jade 翠 */
+  --hf-jade-bg: #0D3F30;
+  --hf-jade-text: #7CC4A0;
+  /* Spring 芽 */
+  --hf-spring-bg: #33500F;
+  --hf-spring-text: #C5DD7E;
+  /* Gold 金 */
+  --hf-gold-bg: #5C4808;
+  --hf-gold-text: #F0D060;
+  /* Vermillion 朱 */
+  --hf-verm-bg: #5A1A0E;
+  --hf-verm-text: #F0A090;
+  /* Sand 沙 */
+  --hf-sand-bg: #5E4A2D;
+  --hf-sand-text: #E8D5B5;
+  /* Ink 墨 */
+  --hf-ink-bg: #252A33;
+  --hf-ink-text: #8A94A8;
+
+  /* Legacy aliases */
+  --hf-green-bg: var(--hf-jade-bg);
+  --hf-green-text: var(--hf-jade-text);
+  --hf-blue-bg: var(--hf-jade-bg);
+  --hf-blue-text: var(--hf-jade-text);
+  --hf-red-bg: var(--hf-verm-bg);
+  --hf-red-text: var(--hf-verm-text);
+  --hf-yellow-bg: var(--hf-gold-bg);
+  --hf-yellow-text: var(--hf-gold-text);
+  --hf-purple-bg: var(--hf-jade-bg);
+  --hf-purple-text: var(--hf-jade-text);
+  --hf-teal-bg: var(--hf-spring-bg);
+  --hf-teal-text: var(--hf-spring-text);
+  --hf-neutral-bg: var(--hf-ink-bg);
+  --hf-neutral-text: var(--hf-ink-text);
 }
