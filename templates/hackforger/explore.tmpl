@@ -5,16 +5,16 @@
 		{{if .PageIsExploreHackathons}}
 		<h2>{{ctx.Locale.Tr "hackforger.explore.hackathons"}}</h2>
 		{{if .Hackathons}}
-		<div class="ui divided items">
+		<div class="hf-card">
 			{{range .Hackathons}}
-			<div class="item">
-				<div class="content">
-					<a class="header" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
-					<div class="meta">
-						<span class="ui small label">{{if eq .Status 0}}Draft{{else if eq .Status 1}}Open{{else if eq .Status 2}}Hacking{{else if eq .Status 3}}Judging{{else if eq .Status 4}}Finished{{else}}Cancelled{{end}}</span>
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<a class="tw-text-lg tw-font-medium" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mt-1">{{.Description}}</div>{{end}}
 					</div>
-					{{if .Description}}<div class="description">{{.Description}}</div>{{end}}
 				</div>
+				{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Status "Label" (Iif (eq .Status 0) "Draft" (Iif (eq .Status 1) "Open" (Iif (eq .Status 2) "Hacking" (Iif (eq .Status 3) "Judging" (Iif (eq .Status 4) "Finished" "Cancelled")))))}}
 			</div>
 			{{end}}
 		</div>

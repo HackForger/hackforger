@@ -5,26 +5,20 @@
 		{{template "hackforger/explore_search" .}}
 
 		{{if .Grants}}
-		<div class="ui relaxed divided list">
+		<div class="hf-card">
 			{{range .Grants}}
-			<div class="item tw-py-4">
-				<div class="content">
-					<a class="header tw-text-lg" href="{{AppSubUrl}}/grants/{{.Slug}}">{{.Name}}</a>
-					{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{.Description}}</div>{{end}}
-					<div class="description tw-mt-1">
-						<span class="ui small label {{if eq .Status 1}}green{{else if eq .Status 2}}blue{{else if eq .Status 3}}orange{{else if eq .Status 4}}purple{{else if eq .Status 5}}red{{else}}grey{{end}}">
-							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.grant.round.status.draft"}}
-							{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.grant.round.status.open"}}
-							{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.grant.round.status.review"}}
-							{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.grant.round.status.finalized"}}
-							{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.grant.round.status.distributed"}}
-							{{else if eq .Status 5}}{{ctx.Locale.Tr "hackforger.grant.round.status.cancelled"}}
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<a class="tw-text-lg tw-font-medium" href="{{AppSubUrl}}/grants/{{.Slug}}">{{.Name}}</a>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{.Description}}</div>{{end}}
+						<div class="tw-mt-1 tw-flex tw-items-center tw-gap-2">
+							{{template "hackforger/helpers/status_badge" dict "Type" "grant" "Status" .Status "Label" (Iif (eq .Status 0) (ctx.Locale.Tr "hackforger.grant.round.status.draft") (Iif (eq .Status 1) (ctx.Locale.Tr "hackforger.grant.round.status.open") (Iif (eq .Status 2) (ctx.Locale.Tr "hackforger.grant.round.status.review") (Iif (eq .Status 3) (ctx.Locale.Tr "hackforger.grant.round.status.finalized") (Iif (eq .Status 4) (ctx.Locale.Tr "hackforger.grant.round.status.distributed") (ctx.Locale.Tr "hackforger.grant.round.status.cancelled"))))))}}
+							<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.grant.budget"}}: {{.Budget}} {{.Currency}}</span>
+							{{if gt .BudgetCredits 0}}
+								<span class="tw-text-sm tw-text-gray">+ {{.BudgetCredits}} {{ctx.Locale.Tr "hackforger.credits"}}</span>
 							{{end}}
-						</span>
-						<span class="tw-ml-2 tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.grant.budget"}}: {{.Budget}} {{.Currency}}</span>
-						{{if gt .BudgetCredits 0}}
-							<span class="tw-ml-2 tw-text-sm tw-text-gray">+ {{.BudgetCredits}} {{ctx.Locale.Tr "hackforger.credits"}}</span>
-						{{end}}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -32,8 +26,8 @@
 		</div>
 		{{template "base/paginate" .}}
 		{{else}}
-		<div class="ui placeholder segment">
-			<div class="ui icon header">
+		<div class="hf-card">
+			<div class="hf-empty">
 				{{svg "octicon-heart" 48}}
 				<br>
 				{{ctx.Locale.Tr "hackforger.grant.round.no_rounds"}}

@@ -165,15 +165,15 @@ export default {
 
     <!-- Apply button for non-publishers on Open bounties -->
     <div v-if="canApply">
-      <button v-if="!showApplyForm" class="ui small green button tw-w-full" @click="showApplyForm = true">
+      <button v-if="!showApplyForm" class="hf-btn hf-btn-primary tw-w-full" @click="showApplyForm = true">
         Apply for this Bounty
       </button>
       <div v-else class="ui form tw-mt-2">
         <div class="field">
           <textarea v-model="applyMessage" rows="3" placeholder="Why should you be assigned?"></textarea>
         </div>
-        <button class="ui small green button" :disabled="loading" @click="submitApplication">Submit</button>
-        <button class="ui small button" @click="showApplyForm = false">Cancel</button>
+        <button class="hf-btn hf-btn-primary" :disabled="loading" @click="submitApplication">Submit</button>
+        <button class="hf-btn hf-btn-secondary" @click="showApplyForm = false">Cancel</button>
       </div>
     </div>
 
@@ -183,10 +183,10 @@ export default {
       <div v-for="app in applications" :key="app.id" class="tw-flex tw-items-center tw-justify-between tw-py-1">
         <span>{{ app.username || `User #${app.user_id}` }}: {{ app.message }}</span>
         <span v-if="app.status === 0">
-          <button class="ui mini green button" @click="reviewApplication(app.id, 'accept')">Accept</button>
-          <button class="ui mini red button" @click="reviewApplication(app.id, 'reject')">Reject</button>
+          <button class="hf-btn hf-btn-primary" @click="reviewApplication(app.id, 'accept')">Accept</button>
+          <button class="hf-btn hf-btn-danger" @click="reviewApplication(app.id, 'reject')">Reject</button>
         </span>
-        <span v-else class="ui mini label">{{ app.status === 1 ? 'Accepted' : 'Rejected' }}</span>
+        <span v-else class="hf-badge">{{ app.status === 1 ? 'Accepted' : 'Rejected' }}</span>
       </div>
     </div>
 
@@ -195,46 +195,46 @@ export default {
       <strong>Winners:</strong>
       <div v-for="w in winners" :key="w.ID" class="tw-flex tw-items-center tw-justify-between tw-py-1">
         <span>{{ w.Username || `User #${w.UserID}` }}</span>
-        <span class="ui mini label">#{{ w.Rank }}</span>
+        <span class="hf-badge">#{{ w.Rank }}</span>
       </div>
     </div>
 
     <!-- Select Winners form (competitive, publisher, in review) -->
     <div v-if="canSelectWinners" class="tw-mt-2">
-      <button v-if="!showWinnersForm" class="ui small blue button tw-w-full" @click="showWinnersForm = true">
+      <button v-if="!showWinnersForm" class="hf-btn hf-btn-primary tw-w-full" @click="showWinnersForm = true">
         Select Winners
       </button>
       <div v-else class="ui form tw-mt-2">
         <div v-for="(entry, idx) in winnerEntries" :key="idx" class="tw-flex tw-gap-2 tw-items-center tw-mb-1">
           <input v-model="entry.user_id" type="number" placeholder="User ID" class="ui mini input" style="width: 100px;">
           <span class="tw-text-sm">Rank #{{ entry.rank }}</span>
-          <button v-if="winnerEntries.length > 1" class="ui mini icon button" @click="removeWinnerEntry(idx)">
+          <button v-if="winnerEntries.length > 1" class="hf-btn hf-btn-secondary" @click="removeWinnerEntry(idx)">
             &times;
           </button>
         </div>
         <div class="tw-flex tw-gap-1 tw-mt-1">
-          <button class="ui mini button" @click="addWinnerEntry">+ Add</button>
-          <button class="ui small green button" :disabled="loading" @click="submitWinners">Submit Winners</button>
-          <button class="ui small button" @click="showWinnersForm = false">Cancel</button>
+          <button class="hf-btn hf-btn-secondary" @click="addWinnerEntry">+ Add</button>
+          <button class="hf-btn hf-btn-primary" :disabled="loading" @click="submitWinners">Submit Winners</button>
+          <button class="hf-btn hf-btn-secondary" @click="showWinnersForm = false">Cancel</button>
         </div>
       </div>
     </div>
 
     <!-- Publisher actions -->
     <div v-if="isPublisher" class="tw-mt-2 tw-flex tw-flex-col tw-gap-1">
-      <button v-if="canStartReview" class="ui small blue button tw-w-full" :disabled="loading" @click="startReview">
+      <button v-if="canStartReview" class="hf-btn hf-btn-primary tw-w-full" :disabled="loading" @click="startReview">
         Start Review
       </button>
-      <button v-if="canComplete" class="ui small green button tw-w-full" :disabled="loading" @click="completeBounty">
+      <button v-if="canComplete" class="hf-btn hf-btn-primary tw-w-full" :disabled="loading" @click="completeBounty">
         Complete Bounty
       </button>
-      <button v-if="canRejectDelivery" class="ui small orange button tw-w-full" :disabled="loading" @click="rejectDelivery">
+      <button v-if="canRejectDelivery" class="hf-btn hf-btn-secondary tw-w-full" :disabled="loading" @click="rejectDelivery">
         Reject Delivery
       </button>
-      <button v-if="canMarkPaid" class="ui small teal button tw-w-full" :disabled="loading" @click="markPaid">
+      <button v-if="canMarkPaid" class="hf-btn hf-btn-primary tw-w-full" :disabled="loading" @click="markPaid">
         Mark as Paid
       </button>
-      <button v-if="canCancel" class="ui small red button tw-w-full" :disabled="loading" @click="cancelBounty">
+      <button v-if="canCancel" class="hf-btn hf-btn-danger tw-w-full" :disabled="loading" @click="cancelBounty">
         Cancel Bounty
       </button>
     </div>
