@@ -67,6 +67,7 @@ cpu.out
 /dist
 /custom/*
 !/custom/conf/app.example.ini
+!/custom/public/assets/img/
 /data
 /indexers
 /log
