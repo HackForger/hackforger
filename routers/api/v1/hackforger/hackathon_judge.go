@@ -28,6 +28,22 @@ type SubmitScoresForm struct {
 }
 
 // ListJudges returns all judge assignments for a hackathon.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/judges hackforger hackforgerListJudges
+// ---
+// summary: List judge assignments for a hackathon
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Judge list
 func ListJudges(ctx *context.APIContext) {
 	judges, err := hackforger_model.ListJudges(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -38,6 +54,29 @@ func ListJudges(ctx *context.APIContext) {
 }
 
 // AddJudge assigns a user as a judge for a hackathon track.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/judges hackforger hackforgerAddJudge
+// ---
+// summary: Add a judge to a hackathon track
+// consumes:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/AddJudgeForm"
+// responses:
+//   "201":
+//     description: Judge added
+//   "409":
+//     description: Duplicate judge assignment
 func AddJudge(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*AddJudgeForm)
 	if err := hackforger_model.AddJudge(ctx, ctx.ParamsInt64(":id"), f.TrackID, f.UserID); err != nil {
@@ -52,6 +91,31 @@ func AddJudge(ctx *context.APIContext) {
 }
 
 // RemoveJudge removes a judge assignment from a hackathon track.
+//
+// swagger:operation DELETE /hackforger/hackathons/{id}/judges/{uid} hackforger hackforgerRemoveJudge
+// ---
+// summary: Remove a judge from a hackathon track
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: uid
+//   in: path
+//   description: User ID of the judge
+//   type: integer
+//   format: int64
+//   required: true
+// - name: track_id
+//   in: query
+//   description: Track ID to remove judge from
+//   type: integer
+//   format: int64
+// responses:
+//   "204":
+//     description: Judge removed
 func RemoveJudge(ctx *context.APIContext) {
 	trackID := ctx.FormInt64("track_id")
 	if err := hackforger_model.RemoveJudge(ctx, ctx.ParamsInt64(":id"), trackID, ctx.ParamsInt64(":uid")); err != nil {
@@ -62,6 +126,35 @@ func RemoveJudge(ctx *context.APIContext) {
 }
 
 // SubmitScore records a judge's scores for all criteria on a submission.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/submissions/{sid}/scores hackforger hackforgerSubmitScore
+// ---
+// summary: Submit scores for a submission
+// consumes:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: sid
+//   in: path
+//   description: ID of the submission
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/SubmitScoresForm"
+// responses:
+//   "201":
+//     description: Scores submitted
+//   "400":
+//     description: Invalid scores
 func SubmitScore(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*SubmitScoresForm)
 	scores := make([]hackforger_service.CriteriaScore, len(f.Scores))
@@ -76,6 +169,28 @@ func SubmitScore(ctx *context.APIContext) {
 }
 
 // ListScores returns all judge scores for a submission.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/submissions/{sid}/scores hackforger hackforgerListScores
+// ---
+// summary: List scores for a submission
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: sid
+//   in: path
+//   description: ID of the submission
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Score list
 func ListScores(ctx *context.APIContext) {
 	scores, err := hackforger_model.ListScoresBySubmission(ctx, ctx.ParamsInt64(":sid"))
 	if err != nil {
@@ -110,6 +225,22 @@ type TrackCriteriaOverrideForm struct {
 }
 
 // ListCriteria returns all judge criteria for a hackathon.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/criteria hackforger hackforgerListCriteria
+// ---
+// summary: List judge criteria for a hackathon
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Criteria list
 func ListCriteria(ctx *context.APIContext) {
 	criteria, err := hackforger_model.ListCriteriaByHackathon(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -120,6 +251,29 @@ func ListCriteria(ctx *context.APIContext) {
 }
 
 // AddCriteriaAPI creates a new judge criterion for a hackathon.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/criteria hackforger hackforgerAddCriteria
+// ---
+// summary: Add a judge criterion to a hackathon
+// consumes:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/AddCriteriaForm"
+// responses:
+//   "201":
+//     description: Criterion created
+//   "409":
+//     description: Criteria locked (hackathon not in draft/open)
 func AddCriteriaAPI(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*AddCriteriaForm)
 	maxScore := f.MaxScore
@@ -142,6 +296,39 @@ func AddCriteriaAPI(ctx *context.APIContext) {
 }
 
 // UpdateCriteriaAPI updates an existing judge criterion.
+//
+// swagger:operation PUT /hackforger/hackathons/{id}/criteria/{cid} hackforger hackforgerUpdateCriteria
+// ---
+// summary: Update a judge criterion
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: cid
+//   in: path
+//   description: ID of the criterion
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/UpdateCriteriaForm"
+// responses:
+//   "200":
+//     description: Updated criterion
+//   "404":
+//     "$ref": "#/responses/notFound"
+//   "409":
+//     description: Criteria locked
 func UpdateCriteriaAPI(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*UpdateCriteriaForm)
 	c, err := hackforger_model.GetCriteriaByID(ctx, ctx.ParamsInt64(":cid"))
@@ -180,6 +367,30 @@ func UpdateCriteriaAPI(ctx *context.APIContext) {
 }
 
 // DeleteCriteriaAPI deletes a judge criterion.
+//
+// swagger:operation DELETE /hackforger/hackathons/{id}/criteria/{cid} hackforger hackforgerDeleteCriteria
+// ---
+// summary: Delete a judge criterion
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: cid
+//   in: path
+//   description: ID of the criterion
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "204":
+//     description: Criterion deleted
+//   "404":
+//     "$ref": "#/responses/notFound"
+//   "409":
+//     description: Criteria locked
 func DeleteCriteriaAPI(ctx *context.APIContext) {
 	if err := hackforger_service.RemoveCriteria(ctx, ctx.ParamsInt64(":cid")); err != nil {
 		if hackforger_model.IsErrCriteriaNotExist(err) {
@@ -195,6 +406,28 @@ func DeleteCriteriaAPI(ctx *context.APIContext) {
 }
 
 // GetTrackEffectiveRubric returns the resolved scoring rubric for a track.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/tracks/{tid}/rubric hackforger hackforgerGetTrackRubric
+// ---
+// summary: Get effective scoring rubric for a track
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: tid
+//   in: path
+//   description: ID of the track
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Effective rubric with criteria and weights
 func GetTrackEffectiveRubric(ctx *context.APIContext) {
 	rubric, err := hackforger_service.GetEffectiveRubric(ctx, ctx.ParamsInt64(":tid"))
 	if err != nil {
@@ -205,6 +438,41 @@ func GetTrackEffectiveRubric(ctx *context.APIContext) {
 }
 
 // SetTrackCriteriaOverrideAPI sets a track-level override for a criterion.
+//
+// swagger:operation PUT /hackforger/hackathons/{id}/tracks/{tid}/criteria/{cid} hackforger hackforgerSetTrackCriteriaOverride
+// ---
+// summary: Set track-level criterion override
+// consumes:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: tid
+//   in: path
+//   description: ID of the track
+//   type: integer
+//   format: int64
+//   required: true
+// - name: cid
+//   in: path
+//   description: ID of the criterion
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/TrackCriteriaOverrideForm"
+// responses:
+//   "200":
+//     description: Override set
+//   "400":
+//     description: Invalid override
 func SetTrackCriteriaOverrideAPI(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*TrackCriteriaOverrideForm)
 	if err := hackforger_service.SetTrackCriteriaOverride(ctx, ctx.ParamsInt64(":tid"), ctx.ParamsInt64(":cid"), f.Enabled, f.Weight); err != nil {
@@ -215,6 +483,24 @@ func SetTrackCriteriaOverrideAPI(ctx *context.APIContext) {
 }
 
 // FinalizePreviewAPI returns computed rankings without changing hackathon status.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/finalize/preview hackforger hackforgerFinalizePreview
+// ---
+// summary: Preview finalization rankings
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Computed rankings preview
+//   "409":
+//     description: Invalid hackathon phase
 func FinalizePreviewAPI(ctx *context.APIContext) {
 	rankings, err := hackforger_service.PreviewFinalize(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -229,6 +515,24 @@ func FinalizePreviewAPI(ctx *context.APIContext) {
 }
 
 // FinalizeConfirmAPI locks rankings and transitions hackathon to Finished.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/finalize/confirm hackforger hackforgerFinalizeConfirm
+// ---
+// summary: Confirm finalization and lock rankings
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Hackathon finalized
+//   "404":
+//     "$ref": "#/responses/notFound"
+//   "409":
+//     description: Invalid hackathon phase
 func FinalizeConfirmAPI(ctx *context.APIContext) {
 	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -251,6 +555,22 @@ func FinalizeConfirmAPI(ctx *context.APIContext) {
 }
 
 // GetLeaderboard returns ranked submissions for a hackathon, grouped by track.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/leaderboard hackforger hackforgerGetLeaderboard
+// ---
+// summary: Get hackathon leaderboard grouped by track
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Leaderboard with ranked submissions per track
 func GetLeaderboard(ctx *context.APIContext) {
 	hackathonID := ctx.ParamsInt64(":id")
 	tracks, err := hackforger_model.ListTracksByHackathon(ctx, hackathonID)

@@ -59,6 +59,7 @@ cpu.out
 /build/lint-locale-usage/lint-locale-usage
 /gitea
 /gitea-vet
+/hackforger-cli
 /debug
 /integrations.test
 /forgejo

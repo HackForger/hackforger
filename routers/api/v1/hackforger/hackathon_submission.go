@@ -29,6 +29,33 @@ type UpdateSubmissionForm struct {
 }
 
 // CreateSubmission creates a new project submission for a hackathon.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/submissions hackforger hackforgerCreateSubmission
+// ---
+// summary: Submit a project to a hackathon
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/CreateSubmissionForm"
+// responses:
+//   "201":
+//     description: Submission created
+//   "400":
+//     description: Hackathon is not accepting submissions
+//   "403":
+//     description: User is not registered
 func CreateSubmission(ctx *context.APIContext) {
 	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -68,6 +95,30 @@ func CreateSubmission(ctx *context.APIContext) {
 }
 
 // ListSubmissions returns a paginated list of submissions for a hackathon.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/submissions hackforger hackforgerListSubmissions
+// ---
+// summary: List submissions for a hackathon
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: page
+//   in: query
+//   description: page number of results to return (1-based)
+//   type: integer
+// - name: limit
+//   in: query
+//   description: page size of results
+//   type: integer
+// responses:
+//   "200":
+//     description: Submission list
 func ListSubmissions(ctx *context.APIContext) {
 	opts := hackforger_model.ListSubmissionsOptions{HackathonID: ctx.ParamsInt64(":id")}
 	opts.Page = ctx.FormInt("page")
@@ -88,6 +139,30 @@ func ListSubmissions(ctx *context.APIContext) {
 }
 
 // GetSubmission returns a single submission by ID.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/submissions/{sid} hackforger hackforgerGetSubmission
+// ---
+// summary: Get a submission
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: sid
+//   in: path
+//   description: ID of the submission
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Submission details
+//   "404":
+//     "$ref": "#/responses/notFound"
 func GetSubmission(ctx *context.APIContext) {
 	s, err := hackforger_model.GetSubmissionByID(ctx, ctx.ParamsInt64(":sid"))
 	if err != nil {
@@ -102,6 +177,30 @@ func GetSubmission(ctx *context.APIContext) {
 }
 
 // DeleteSubmission removes a submission from a hackathon.
+//
+// swagger:operation DELETE /hackforger/hackathons/{id}/submissions/{sid} hackforger hackforgerDeleteSubmission
+// ---
+// summary: Delete a submission
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: sid
+//   in: path
+//   description: ID of the submission
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "204":
+//     description: Submission deleted
+//   "403":
+//     description: Only submitter or hackathon owner can delete
+//   "404":
+//     "$ref": "#/responses/notFound"
 func DeleteSubmission(ctx *context.APIContext) {
 	sid := ctx.ParamsInt64(":sid")
 	sub, err := hackforger_model.GetSubmissionByID(ctx, sid)
@@ -131,6 +230,37 @@ func DeleteSubmission(ctx *context.APIContext) {
 }
 
 // UpdateSubmission updates title, description, or demo URL of a submission.
+//
+// swagger:operation PUT /hackforger/hackathons/{id}/submissions/{sid} hackforger hackforgerUpdateSubmission
+// ---
+// summary: Update a submission
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: sid
+//   in: path
+//   description: ID of the submission
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/UpdateSubmissionForm"
+// responses:
+//   "200":
+//     description: Updated submission
+//   "404":
+//     "$ref": "#/responses/notFound"
 func UpdateSubmission(ctx *context.APIContext) {
 	s, err := hackforger_model.GetSubmissionByID(ctx, ctx.ParamsInt64(":sid"))
 	if err != nil {
