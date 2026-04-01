@@ -10,6 +10,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	code_indexer "forgejo.org/modules/indexer/code"
+	hackforger_indexer "forgejo.org/modules/indexer/hackforger"
 	issue_indexer "forgejo.org/modules/indexer/issues"
 	stats_indexer "forgejo.org/modules/indexer/stats"
 	"forgejo.org/modules/log"
@@ -173,16 +174,20 @@ func (r *indexerNotifier) AutoMergePullRequest(ctx context.Context, doer *user_m
 	issue_indexer.UpdateIssueIndexer(ctx, pr.Issue.ID)
 }
 
-// HackForger entity indexer methods (placeholder -- indexer not yet created)
+// HackForger entity indexer methods
 
 func (r *indexerNotifier) HackforgerEntityCreated(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	hackforger_indexer.UpdateHackforgerIndexer(ctx, opts.EntityType, opts.EntityID)
 }
 
 func (r *indexerNotifier) HackforgerEntityUpdated(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	hackforger_indexer.UpdateHackforgerIndexer(ctx, opts.EntityType, opts.EntityID)
 }
 
 func (r *indexerNotifier) HackforgerEntityDeleted(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	hackforger_indexer.DeleteHackforgerIndexer(ctx, opts.EntityType, opts.EntityID)
 }
 
 func (r *indexerNotifier) HackforgerEntityStatusChanged(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	hackforger_indexer.UpdateHackforgerIndexer(ctx, opts.EntityType, opts.EntityID)
 }

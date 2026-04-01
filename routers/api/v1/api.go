@@ -1861,6 +1861,11 @@ func Routes() *web.Route {
 				}, reqToken(), reqSiteAdmin())
 			})
 
+			// Admin routes (site admin only)
+			m.Group("/admin", func() {
+				m.Post("/reindex", hackforger_api.AdminReindex)
+			}, reqToken(), reqSiteAdmin())
+
 			// Reputation routes
 			m.Group("/reputation", func() {
 				m.Get("/users/{username}", hackforger_api.GetUserReputation)
