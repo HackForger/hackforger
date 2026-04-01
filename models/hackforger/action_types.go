@@ -5,6 +5,7 @@ package hackforger
 
 import (
 	activities_model "forgejo.org/models/activities"
+	webhook_module "forgejo.org/modules/webhook"
 )
 
 // HackForger action types, starting from 30 to avoid collision with
@@ -103,4 +104,27 @@ type HackforgerPhaseContent struct {
 	NewStatus   string `json:"new_status"`
 	StatusLabel string `json:"status_label,omitempty"`
 	WinnerName  string `json:"winner_name,omitempty"`
+}
+
+// ActionTypeToHookEvent maps HackForger ActionTypes to webhook HookEventTypes.
+var ActionTypeToHookEvent = map[activities_model.ActionType]webhook_module.HookEventType{
+	ActionHackathonCreated:      webhook_module.HookEventHackathonCreated,
+	ActionHackathonPhaseChanged: webhook_module.HookEventHackathonStatusChanged,
+	ActionHackathonSubmitted:    webhook_module.HookEventHackathonSubmission,
+	ActionHackathonScored:       webhook_module.HookEventHackathonScored,
+	ActionHackathonFinalized:    webhook_module.HookEventHackathonFinalized,
+	ActionBountyCreated:         webhook_module.HookEventBountyCreated,
+	ActionBountyClaimed:         webhook_module.HookEventBountyClaimed,
+	ActionBountyDelivered:       webhook_module.HookEventBountyApplication,
+	ActionBountyCompleted:       webhook_module.HookEventBountyCompleted,
+	ActionBountyWinnersSelected: webhook_module.HookEventBountyWinners,
+	ActionBountyPaid:            webhook_module.HookEventBountyPaid,
+	ActionBountyExpired:         webhook_module.HookEventBountyExpired,
+	ActionBountyCancelled:       webhook_module.HookEventBountyCancelled,
+	ActionGrantRoundCreated:     webhook_module.HookEventGrantRoundCreated,
+	ActionGrantProjectSubmitted: webhook_module.HookEventGrantProjectSubmitted,
+	ActionGrantAwarded:          webhook_module.HookEventGrantAwarded,
+	ActionGrantRoundOpened:      webhook_module.HookEventGrantRoundOpened,
+	ActionGrantRoundFinalized:   webhook_module.HookEventGrantRoundFinalized,
+	ActionCreditsRedeemed:       webhook_module.HookEventCreditsRedeemed,
 }

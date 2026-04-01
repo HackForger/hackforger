@@ -10,11 +10,15 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/services/convert"
 	notify_service "forgejo.org/services/notify"
+	webhook_service "forgejo.org/services/webhook"
 )
 
 type hackforgerNotifier struct {
@@ -171,6 +175,29 @@ func PublishHackforgerAction(ctx context.Context, opts *HackforgerActionOpts) er
 	if opts.AudienceType&AudienceDirectUser != 0 {
 		if opts.TargetUserID > 0 {
 			_ = insert(opts.TargetUserID)
+		}
+	}
+
+	// Webhook dispatch: send to any configured webhooks that subscribe to HackForger events.
+	if hookEvent, ok := hackforger_model.ActionTypeToHookEvent[opts.OpType]; ok {
+		actUser, loadErr := user_model.GetUserByID(ctx, opts.ActUserID)
+		if loadErr == nil {
+			payload := &structs.HackforgerWebhookPayload{
+				Action:     string(hookEvent),
+				EntityType: opts.EntityType,
+				EntityID:   opts.EntityID,
+				EntityName: opts.EntityName,
+				Sender:     convert.ToUser(ctx, actUser, nil),
+			}
+			source := webhook_service.EventSource{Owner: actUser}
+			if opts.RepoID > 0 {
+				if repo, repoErr := repo_model.GetRepositoryByID(ctx, opts.RepoID); repoErr == nil {
+					source.Repository = repo
+				}
+			}
+			if whErr := webhook_service.PrepareWebhooks(ctx, source, hookEvent, payload); whErr != nil {
+				log.Error("PrepareWebhooks for HackForger event %s: %v", hookEvent, whErr)
+			}
 		}
 	}
 

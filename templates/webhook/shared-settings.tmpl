@@ -175,6 +175,114 @@
 					<span class="help">{{ctx.Locale.Tr "repo.settings.event_action_success_desc"}}</span>
 				</label>
 			</fieldset>
+			<!-- HackForger Events -->
+			<fieldset class="simple-grid grid-2">
+				<legend>{{ctx.Locale.Tr "repo.settings.event_header_hackforger"}}</legend>
+				<!-- Hackathon Events -->
+				<label>
+					<input name="hackathon_created" type="checkbox" {{if .Webhook.HackathonCreated}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_hackathon_created"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_hackathon_created_desc"}}</span>
+				</label>
+				<label>
+					<input name="hackathon_status_changed" type="checkbox" {{if .Webhook.HackathonStatusChanged}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_hackathon_status_changed"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_hackathon_status_changed_desc"}}</span>
+				</label>
+				<label>
+					<input name="hackathon_submission" type="checkbox" {{if .Webhook.HackathonSubmission}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_hackathon_submission"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_hackathon_submission_desc"}}</span>
+				</label>
+				<label>
+					<input name="hackathon_scored" type="checkbox" {{if .Webhook.HackathonScored}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_hackathon_scored"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_hackathon_scored_desc"}}</span>
+				</label>
+				<label>
+					<input name="hackathon_finalized" type="checkbox" {{if .Webhook.HackathonFinalized}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_hackathon_finalized"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_hackathon_finalized_desc"}}</span>
+				</label>
+				<!-- Bounty Events -->
+				<label>
+					<input name="bounty_created" type="checkbox" {{if .Webhook.BountyCreated}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_created"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_created_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_application" type="checkbox" {{if .Webhook.BountyApplication}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_application"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_application_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_claimed" type="checkbox" {{if .Webhook.BountyClaimed}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_claimed"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_claimed_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_completed" type="checkbox" {{if .Webhook.BountyCompleted}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_completed"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_completed_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_paid" type="checkbox" {{if .Webhook.BountyPaid}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_paid"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_paid_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_winners" type="checkbox" {{if .Webhook.BountyWinners}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_winners"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_winners_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_expired" type="checkbox" {{if .Webhook.BountyExpired}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_expired"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_expired_desc"}}</span>
+				</label>
+				<label>
+					<input name="bounty_cancelled" type="checkbox" {{if .Webhook.BountyCancelled}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_bounty_cancelled"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_bounty_cancelled_desc"}}</span>
+				</label>
+				<!-- Grant Events -->
+				<label>
+					<input name="grant_round_created" type="checkbox" {{if .Webhook.GrantRoundCreated}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_grant_round_created"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_grant_round_created_desc"}}</span>
+				</label>
+				<label>
+					<input name="grant_round_opened" type="checkbox" {{if .Webhook.GrantRoundOpened}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_grant_round_opened"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_grant_round_opened_desc"}}</span>
+				</label>
+				<label>
+					<input name="grant_project_submitted" type="checkbox" {{if .Webhook.GrantProjectSubmitted}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_grant_project_submitted"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_grant_project_submitted_desc"}}</span>
+				</label>
+				<label>
+					<input name="grant_awarded" type="checkbox" {{if .Webhook.GrantAwarded}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_grant_awarded"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_grant_awarded_desc"}}</span>
+				</label>
+				<label>
+					<input name="grant_round_finalized" type="checkbox" {{if .Webhook.GrantRoundFinalized}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_grant_round_finalized"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_grant_round_finalized_desc"}}</span>
+				</label>
+				<!-- Credits Events -->
+				<label>
+					<input name="credits_deposited" type="checkbox" {{if .Webhook.CreditsDeposited}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_credits_deposited"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_credits_deposited_desc"}}</span>
+				</label>
+				<label>
+					<input name="credits_redeemed" type="checkbox" {{if .Webhook.CreditsRedeemed}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.event_credits_redeemed"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.event_credits_redeemed_desc"}}</span>
+				</label>
+			</fieldset>
 		</fieldset>
 	</fieldset>
 </div>

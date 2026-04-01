@@ -124,7 +124,7 @@ func TestCreateWebhook(t *testing.T) {
 			RepoID:      3,
 			URL:         "https://www.example.com/unit_test",
 			ContentType: ContentTypeJSON,
-			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"create":true,"delete":true,"fork":true,"issues":true,"issue_assign":true,"issue_label":true,"issue_milestone":true,"issue_comment":true,"push":true,"pull_request":true,"pull_request_assign":true,"pull_request_label":true,"pull_request_milestone":true,"pull_request_comment":true,"pull_request_review":true,"pull_request_sync":true,"pull_request_review_request":true,"wiki":true,"repository":true,"release":true,"package":true,"action_run_failure":true,"action_run_recover":true,"action_run_success":true}}`,
+			Events:      `{"push_only":false,"send_everything":false,"choose_events":true,"events":{"create":true,"delete":true,"fork":true,"issues":true,"issue_assign":true,"issue_label":true,"issue_milestone":true,"issue_comment":true,"push":true,"pull_request":true,"pull_request_assign":true,"pull_request_label":true,"pull_request_milestone":true,"pull_request_comment":true,"pull_request_review":true,"pull_request_sync":true,"pull_request_review_request":true,"wiki":true,"repository":true,"release":true,"package":true,"action_run_failure":true,"action_run_recover":true,"action_run_success":true,"hackathon_created":true,"hackathon_status_changed":true,"hackathon_submission":true,"hackathon_scored":true,"hackathon_finalized":true,"bounty_created":true,"bounty_application":true,"bounty_claimed":true,"bounty_completed":true,"bounty_paid":true,"bounty_winners":true,"bounty_expired":true,"bounty_cancelled":true,"grant_round_created":true,"grant_round_opened":true,"grant_project_submitted":true,"grant_awarded":true,"grant_round_finalized":true,"credits_deposited":true,"credits_redeemed":true}}`,
 		}
 		unittest.AssertNotExistsBean(t, hook)
 		require.NoError(t, CreateWebhook(db.DefaultContext, hook))
@@ -159,6 +159,27 @@ func TestCreateWebhook(t *testing.T) {
 			string(webhook_module.HookEventActionRunFailure),
 			string(webhook_module.HookEventActionRunRecover),
 			string(webhook_module.HookEventActionRunSuccess),
+			// HackForger events
+			string(webhook_module.HookEventHackathonCreated),
+			string(webhook_module.HookEventHackathonStatusChanged),
+			string(webhook_module.HookEventHackathonSubmission),
+			string(webhook_module.HookEventHackathonScored),
+			string(webhook_module.HookEventHackathonFinalized),
+			string(webhook_module.HookEventBountyCreated),
+			string(webhook_module.HookEventBountyApplication),
+			string(webhook_module.HookEventBountyClaimed),
+			string(webhook_module.HookEventBountyCompleted),
+			string(webhook_module.HookEventBountyPaid),
+			string(webhook_module.HookEventBountyWinners),
+			string(webhook_module.HookEventBountyExpired),
+			string(webhook_module.HookEventBountyCancelled),
+			string(webhook_module.HookEventGrantRoundCreated),
+			string(webhook_module.HookEventGrantRoundOpened),
+			string(webhook_module.HookEventGrantProjectSubmitted),
+			string(webhook_module.HookEventGrantAwarded),
+			string(webhook_module.HookEventGrantRoundFinalized),
+			string(webhook_module.HookEventCreditsDeposited),
+			string(webhook_module.HookEventCreditsRedeemed),
 		},
 			hookFromDb.EventsArray())
 	})
