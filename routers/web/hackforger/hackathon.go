@@ -414,7 +414,7 @@ func ManagePhasePost(ctx *context.Context) {
 		err = hackforger_service.PublishHackathon(ctx, ctx.Doer.ID, h)
 	case "start":
 		err = hackforger_service.StartHacking(ctx, ctx.Doer.ID, h)
-	case "start-judging":
+	case "judge":
 		err = hackforger_service.StartJudging(ctx, ctx.Doer.ID, h)
 	case "cancel":
 		err = hackforger_service.CancelHackathon(ctx, ctx.Doer.ID, h)

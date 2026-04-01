@@ -13,7 +13,7 @@
 				<div class="tw-flex tw-gap-2">
 				{{if eq .Hackathon.Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/publish" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.publish"}}</button></form>
 				{{else if eq .Hackathon.Status 1}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/start" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start"}}</button></form>
-				{{else if eq .Hackathon.Status 2}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/start-judging" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start_judging"}}</button></form>
+				{{else if eq .Hackathon.Status 2}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judge" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start_judging"}}</button></form>
 				{{else if eq .Hackathon.Status 3}}<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize-preview">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview"}}</a>
 				{{end}}
 				{{if and (ne .Hackathon.Status 4) (ne .Hackathon.Status 5)}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline"><button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button></form>{{end}}
@@ -320,7 +320,7 @@
 					</table>
 					{{end}}
 					{{end}}
-					<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize-confirm" class="tw-mt-3">
+					<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize" class="tw-mt-3">
 						<button class="hf-btn hf-btn-primary" type="submit" onclick="return confirm('{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_confirm_dialog"}}');">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_confirm"}}</button>
 					</form>
 				{{else}}

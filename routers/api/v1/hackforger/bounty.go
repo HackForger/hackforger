@@ -867,7 +867,7 @@ func CompleteBountyAPI(ctx *context.APIContext) {
 
 // RejectDeliveryAPI transitions an exclusive bounty from InReview back to Claimed.
 func RejectDeliveryAPI(ctx *context.APIContext) {
-	// swagger:operation POST /repos/{owner}/{repo}/bounties/{bounty_id}/reject-delivery bounty bountyRejectDelivery
+	// swagger:operation POST /repos/{owner}/{repo}/bounties/{bounty_id}/reject bounty bountyRejectDelivery
 	// ---
 	// summary: Reject a bounty delivery
 	// produces:

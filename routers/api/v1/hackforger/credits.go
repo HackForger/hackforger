@@ -578,7 +578,7 @@ func ListKeys(ctx *context.APIContext) {
 
 // BatchFulfill fulfills multiple redeem orders at once (admin only).
 func BatchFulfill(ctx *context.APIContext) {
-	// swagger:operation POST /hackforger/credits/redeem/orders/batch-fulfill hackforger hackforgerBatchFulfill
+	// swagger:operation POST /hackforger/credits/redeem/orders/fulfill hackforger hackforgerBatchFulfill
 	// ---
 	// summary: Batch fulfill redeem orders (admin only)
 	// consumes:

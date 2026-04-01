@@ -193,7 +193,7 @@ func BountyAction(ctx *context.Context) {
 		_, err = hackforger_svc.ApplyForBounty(ctx, bountyID, ctx.Doer.ID, message)
 	case "complete":
 		err = hackforger_svc.CompleteBounty(ctx, bountyID, ctx.Doer.ID)
-	case "reject-delivery":
+	case "reject":
 		err = hackforger_svc.RejectDelivery(ctx, bountyID, ctx.Doer.ID)
 	case "pay":
 		err = hackforger_svc.MarkPaid(ctx, bountyID, ctx.Doer.ID)
