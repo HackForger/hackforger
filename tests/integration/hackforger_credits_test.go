@@ -342,6 +342,146 @@ func TestAPICreditsUpdateRedeemOption(t *testing.T) {
 	assert.Equal(t, int64(600), opt.Cost)
 }
 
+// TestAPICreditsTransactionPagination tests transaction listing with pagination.
+func TestAPICreditsTransactionPagination(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// User 4 has 5 transactions in fixtures (IDs 1-5).
+	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	session := loginUser(t, user4.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeAll)
+
+	// Request page 1 with limit 2.
+	req := NewRequest(t, "GET", "/api/v1/hackforger/credits/transactions?page=1&limit=2").AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	var txns []hackforger_model.CreditTransaction
+	DecodeJSON(t, resp, &txns)
+	assert.Equal(t, 2, len(txns))
+	// Total count header should indicate all transactions.
+	assert.Equal(t, "5", resp.Header().Get("X-Total-Count"))
+
+	// Request page 2.
+	req = NewRequest(t, "GET", "/api/v1/hackforger/credits/transactions?page=2&limit=2").AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &txns)
+	assert.Equal(t, 2, len(txns))
+
+	// Request page 3 (should have 1 item).
+	req = NewRequest(t, "GET", "/api/v1/hackforger/credits/transactions?page=3&limit=2").AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &txns)
+	assert.Equal(t, 1, len(txns))
+}
+
+// TestAPICreditsRedeemOptionKeyManagement tests adding and listing keys for a redeem option.
+func TestAPICreditsRedeemOptionKeyManagement(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	adminSession := loginUser(t, admin.Name)
+	adminToken := getTokenForLoggedInUser(t, adminSession, auth_model.AccessTokenScopeAll)
+
+	// Add keys to option 1.
+	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/credits/redeem/options/1/keys", map[string]any{
+		"keys": []string{"KEY-001", "KEY-002", "KEY-003"},
+	}).AddTokenAuth(adminToken)
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	var poolStatus map[string]any
+	DecodeJSON(t, resp, &poolStatus)
+	// Should have at least 3 available keys.
+	assert.GreaterOrEqual(t, poolStatus["available"], float64(3))
+
+	// List keys for option 1.
+	req = NewRequest(t, "GET", "/api/v1/hackforger/credits/redeem/options/1/keys").AddTokenAuth(adminToken)
+	resp = MakeRequest(t, req, http.StatusOK)
+
+	var keys []hackforger_model.RedeemOptionKey
+	DecodeJSON(t, resp, &keys)
+	assert.GreaterOrEqual(t, len(keys), 3)
+
+	// Non-admin cannot list keys.
+	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	user4Session := loginUser(t, user4.Name)
+	user4Token := getTokenForLoggedInUser(t, user4Session, auth_model.AccessTokenScopeAll)
+
+	req = NewRequest(t, "GET", "/api/v1/hackforger/credits/redeem/options/1/keys").AddTokenAuth(user4Token)
+	MakeRequest(t, req, http.StatusForbidden)
+}
+
+// TestAPICreditsOutOfStock tests that redeeming an out-of-stock option returns 422.
+func TestAPICreditsOutOfStock(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	adminSession := loginUser(t, admin.Name)
+	adminToken := getTokenForLoggedInUser(t, adminSession, auth_model.AccessTokenScopeAll)
+
+	// Create an option with stock=1.
+	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/credits/redeem/options", map[string]any{
+		"name":      "Limited Item",
+		"cost":      100,
+		"stock":     1,
+		"is_active": true,
+	}).AddTokenAuth(adminToken)
+	resp := MakeRequest(t, req, http.StatusCreated)
+	var opt hackforger_model.RedeemOption
+	DecodeJSON(t, resp, &opt)
+	optionID := opt.ID
+
+	// User 4 redeems it (balance=1000, cost=100) -- should succeed.
+	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+	user4Session := loginUser(t, user4.Name)
+	user4Token := getTokenForLoggedInUser(t, user4Session, auth_model.AccessTokenScopeAll)
+
+	req = NewRequestWithJSON(t, "POST", "/api/v1/hackforger/credits/redeem", map[string]any{
+		"option_id": optionID,
+	}).AddTokenAuth(user4Token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	// Deposit credits to user 5 so they have enough.
+	req = NewRequestWithJSON(t, "POST", "/api/v1/hackforger/credits/admin/deposit", map[string]any{
+		"user_id":   5,
+		"amount":    500,
+		"reference": "test_stock",
+	}).AddTokenAuth(adminToken)
+	MakeRequest(t, req, http.StatusNoContent)
+
+	// User 5 tries to redeem the same option (now stock=0) -> 422.
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	user5Session := loginUser(t, user5.Name)
+	user5Token := getTokenForLoggedInUser(t, user5Session, auth_model.AccessTokenScopeAll)
+
+	req = NewRequestWithJSON(t, "POST", "/api/v1/hackforger/credits/redeem", map[string]any{
+		"option_id": optionID,
+	}).AddTokenAuth(user5Token)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+}
+
+// TestAPICreditsBatchFulfill tests the batch fulfill endpoint.
+func TestAPICreditsBatchFulfill(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	adminSession := loginUser(t, admin.Name)
+	adminToken := getTokenForLoggedInUser(t, adminSession, auth_model.AccessTokenScopeAll)
+
+	// Fixture orders 1 and 3 are pending.
+	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/credits/redeem/orders/fulfill", map[string]any{
+		"order_ids": []int64{1, 3},
+		"note":      "Batch fulfilled via integration test",
+	}).AddTokenAuth(adminToken)
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	var result map[string]any
+	DecodeJSON(t, resp, &result)
+	// Both should have succeeded.
+	successList, ok := result["success"].([]any)
+	assert.True(t, ok)
+	assert.GreaterOrEqual(t, len(successList), 2)
+}
+
 // TestAPICreditsUnauthenticated tests that balance and transaction endpoints require auth.
 func TestAPICreditsUnauthenticated(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()

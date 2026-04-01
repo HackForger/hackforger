@@ -26,6 +26,16 @@ const (
 	HackathonStatusCancelled                          // 5
 )
 
+// HackathonStatusNames maps status values to human-readable names.
+var HackathonStatusNames = map[HackathonStatus]string{
+	HackathonStatusDraft:     "draft",
+	HackathonStatusOpen:      "open",
+	HackathonStatusHacking:   "hacking",
+	HackathonStatusJudging:   "judging",
+	HackathonStatusFinished:  "finished",
+	HackathonStatusCancelled: "cancelled",
+}
+
 // Hackathon represents a hackathon event.
 type Hackathon struct {
 	ID                int64              `xorm:"pk autoincr"`

@@ -521,6 +521,9 @@ func registerRoutes(m *web.Route) {
 		m.Get("/reputation", hackforger_web.ExploreReputation)
 	}, ignExploreSignIn)
 
+	// HackForger: public search route (JSON endpoint for web frontend)
+	m.Get("/hackforger/search", hackforger_web.SearchWeb)
+
 	// HackForger: public hackathon routes
 	m.Get("/hackathon/{slug}", hackforger_web.ViewHackathon)
 	m.Get("/hackathon/{slug}/leaderboard", hackforger_web.Leaderboard)
@@ -589,6 +592,10 @@ func registerRoutes(m *web.Route) {
 		m.Get("/orders", hackforger_web.CreditOrders)
 	}, reqSignIn)
 	// ***** END: HackForger Credits *****
+
+	// ***** START: HackForger Assistant *****
+	m.Post("/hackforger/assistant/chat", reqSignIn, hackforger_web.ChatWeb)
+	// ***** END: HackForger Assistant *****
 
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)

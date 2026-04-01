@@ -1806,6 +1806,7 @@ func Routes() *web.Route {
 			m.Get("/bounties/stats", hackforger_api.BountyStats)
 			m.Get("/bounties/leaderboard", hackforger_api.HunterLeaderboard)
 			m.Get("/feed", hackforger_api.GetFeed)
+			m.Get("/search", hackforger_api.SearchAPI)
 
 			// Grant Round routes
 			m.Group("/grant-rounds", func() {
@@ -1865,6 +1866,11 @@ func Routes() *web.Route {
 				m.Get("/users/{username}", hackforger_api.GetUserReputation)
 				m.Get("/leaderboard", hackforger_api.GetReputationLeaderboard)
 				m.Post("/recalculate/{username}", reqToken(), reqSiteAdmin(), hackforger_api.AdminRecalculateReputation)
+			})
+
+			// Assistant routes
+			m.Group("/assistant", func() {
+				m.Post("/chat", reqToken(), bind(hackforger_api.ChatForm{}), hackforger_api.ChatAPI)
 			})
 		})
 	}, sudo())

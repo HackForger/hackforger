@@ -27,6 +27,17 @@ const (
 	BountyStatusCancelled BountyStatus = 6
 )
 
+// BountyStatusNames maps status values to human-readable names.
+var BountyStatusNames = map[BountyStatus]string{
+	BountyStatusOpen:      "open",
+	BountyStatusClaimed:   "claimed",
+	BountyStatusInReview:  "in_review",
+	BountyStatusCompleted: "completed",
+	BountyStatusPaid:      "paid",
+	BountyStatusExpired:   "expired",
+	BountyStatusCancelled: "cancelled",
+}
+
 // BountyMode represents how a bounty is assigned.
 type BountyMode int
 
