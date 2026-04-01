@@ -1,13 +1,4 @@
 {
-  "enabledPlugins": {
-    "agent-setup@agent-setup": true,
-    "superpowers@agent-setup": true,
-    "agent-browser@agent-setup": true,
-    "skill-creator@claude-plugins-official": true,
-    "hookify@claude-plugins-official": true,
-    "learning-output-style@claude-plugins-official": true,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -37,6 +28,16 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "agent-setup@agent-setup": true,
+    "superpowers@agent-setup": true,
+    "agent-browser@agent-setup": true,
+    "skill-creator@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "learning-output-style@claude-plugins-official": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
+    "ralph-loop@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "ui-ux-pro-max-skill": {

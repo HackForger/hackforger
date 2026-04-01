@@ -143,3 +143,4 @@ claude.local.sh
 
 # MCP server secrets (API keys, tokens)
 .mcp.env
+docs/tests/e2e/*.pdf
