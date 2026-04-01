@@ -43,7 +43,13 @@
 							{{if gt .AwardCredits 0}}{{.AwardCredits}} {{ctx.Locale.Tr "hackforger.credits.balance"}}{{end}}
 						</span>
 						{{end}}
-						{{template "hackforger/helpers/status_badge" dict "Type" "grant_project" "Status" .Status "Label" (Iif (eq .Status 0) (ctx.Locale.Tr "hackforger.grant.project.status.pending") (Iif (eq .Status 1) (ctx.Locale.Tr "hackforger.grant.project.status.approved") (Iif (eq .Status 2) (ctx.Locale.Tr "hackforger.grant.project.status.rejected") (ctx.Locale.Tr "hackforger.grant.project.status.funded"))))}}
+						<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-red{{else}}hf-badge-blue{{end}}">
+							{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.grant.project.status.pending"}}
+							{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.grant.project.status.approved"}}
+							{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.grant.project.status.rejected"}}
+							{{else}}{{ctx.Locale.Tr "hackforger.grant.project.status.funded"}}
+							{{end}}
+						</span>
 					</div>
 				</div>
 				{{end}}

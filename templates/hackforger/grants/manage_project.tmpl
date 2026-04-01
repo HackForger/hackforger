@@ -18,7 +18,13 @@
 				</div>
 				<div class="tw-mb-2">
 					<strong>{{ctx.Locale.Tr "hackforger.grant.status"}}:</strong>
-					{{template "hackforger/helpers/status_badge" dict "Type" "grant_project" "Status" .Project.Status "Label" (Iif (eq .Project.Status 0) "pending" (Iif (eq .Project.Status 1) "approved" (Iif (eq .Project.Status 2) "rejected" "funded")))}}
+					<span class="hf-badge {{if eq .Project.Status 0}}hf-badge-neutral{{else if eq .Project.Status 1}}hf-badge-green{{else if eq .Project.Status 2}}hf-badge-red{{else}}hf-badge-blue{{end}}">
+						{{if eq .Project.Status 0}}{{ctx.Locale.Tr "hackforger.grant.project.status.pending"}}
+						{{else if eq .Project.Status 1}}{{ctx.Locale.Tr "hackforger.grant.project.status.approved"}}
+						{{else if eq .Project.Status 2}}{{ctx.Locale.Tr "hackforger.grant.project.status.rejected"}}
+						{{else}}{{ctx.Locale.Tr "hackforger.grant.project.status.funded"}}
+						{{end}}
+					</span>
 				</div>
 				{{if .Project.Description}}
 					<div class="tw-mb-2">

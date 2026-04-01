@@ -14,7 +14,15 @@
 						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mt-1">{{.Description}}</div>{{end}}
 					</div>
 				</div>
-				{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Status "Label" (Iif (eq .Status 0) "Draft" (Iif (eq .Status 1) "Open" (Iif (eq .Status 2) "Hacking" (Iif (eq .Status 3) "Judging" (Iif (eq .Status 4) "Finished" "Cancelled")))))}}
+				<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">
+					{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
+					{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
+					{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
+					{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
+					{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
+					{{else}}{{ctx.Locale.Tr "hackforger.hackathon.status.cancelled"}}
+					{{end}}
+				</span>
 			</div>
 			{{end}}
 		</div>

@@ -13,7 +13,16 @@
 		<div class="hf-card-head-left">
 			{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.bounty.panel.title"}}
 		</div>
-		{{template "hackforger/helpers/status_badge" dict "Type" "bounty" "Status" .BountyData.Status "Label" (Iif (eq .BountyData.Status 0) (ctx.Locale.Tr "hackforger.bounty.status.open") (Iif (eq .BountyData.Status 1) (ctx.Locale.Tr "hackforger.bounty.status.claimed") (Iif (eq .BountyData.Status 2) (ctx.Locale.Tr "hackforger.bounty.status.in_review") (Iif (eq .BountyData.Status 3) (ctx.Locale.Tr "hackforger.bounty.status.completed") (Iif (eq .BountyData.Status 4) (ctx.Locale.Tr "hackforger.bounty.status.paid") (Iif (eq .BountyData.Status 5) (ctx.Locale.Tr "hackforger.bounty.status.expired") (ctx.Locale.Tr "hackforger.bounty.status.cancelled")))))))}}
+		<span class="hf-badge {{if eq .BountyData.Status 0}}hf-badge-green{{else if eq .BountyData.Status 1}}hf-badge-blue{{else if eq .BountyData.Status 2}}hf-badge-yellow{{else if eq .BountyData.Status 3}}hf-badge-purple{{else if eq .BountyData.Status 4}}hf-badge-teal{{else if eq .BountyData.Status 5}}hf-badge-red{{else}}hf-badge-neutral{{end}}">
+			{{if eq .BountyData.Status 0}}{{ctx.Locale.Tr "hackforger.bounty.status.open"}}
+			{{else if eq .BountyData.Status 1}}{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}
+			{{else if eq .BountyData.Status 2}}{{ctx.Locale.Tr "hackforger.bounty.status.in_review"}}
+			{{else if eq .BountyData.Status 3}}{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}
+			{{else if eq .BountyData.Status 4}}{{ctx.Locale.Tr "hackforger.bounty.status.paid"}}
+			{{else if eq .BountyData.Status 5}}{{ctx.Locale.Tr "hackforger.bounty.status.expired"}}
+			{{else}}{{ctx.Locale.Tr "hackforger.bounty.status.cancelled"}}
+			{{end}}
+		</span>
 	</div>
 	<div class="hf-card-body">
 		{{if .BountyRewards}}

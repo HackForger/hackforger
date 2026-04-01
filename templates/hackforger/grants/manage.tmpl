@@ -83,7 +83,9 @@
 								<td class="tw-p-2"><a href="/grants/{{$.Round.Slug}}/manage/projects/{{.ID}}">{{.Title}}</a></td>
 								<td class="tw-p-2">{{.UserID}}</td>
 								<td class="tw-p-2">
-									{{template "hackforger/helpers/status_badge" dict "Type" "grant_project" "Status" .Status "Label" (Iif (eq .Status 0) "pending" (Iif (eq .Status 1) "approved" (Iif (eq .Status 2) "rejected" "funded")))}}
+									<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-red{{else}}hf-badge-blue{{end}}">
+										{{if eq .Status 0}}pending{{else if eq .Status 1}}approved{{else if eq .Status 2}}rejected{{else}}funded{{end}}
+									</span>
 								</td>
 								<td class="tw-p-2">
 									{{if or (gt .AwardAmount 0.0) (gt .AwardCredits 0)}}
