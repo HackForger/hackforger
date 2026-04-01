@@ -1,107 +1,110 @@
 {{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin credits options")}}
 	<div class="admin-setting-content">
-		<h4 class="ui top attached header">
-			{{ctx.Locale.Tr "hackforger.credits.admin.options"}}
-		</h4>
-
-		<div class="ui attached segment">
-			{{/* Create option form */}}
-			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.option_create"}}</h5>
-			<form class="ui form" action="{{AppSubUrl}}/admin/credits/options" method="post">
-				<div class="five fields">
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.admin.option_name"}}</label>
-						<input type="text" name="name" required>
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.credits.admin.options"}}</div>
+			</div>
+			<div class="hf-card-body">
+				{{/* Create option form */}}
+				<h5>{{ctx.Locale.Tr "hackforger.credits.admin.option_create"}}</h5>
+				<form class="ui form" action="{{AppSubUrl}}/admin/credits/options" method="post">
+					<div class="five fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.option_name"}}</label>
+							<input type="text" name="name" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.grant.round.description"}}</label>
+							<input type="text" name="description">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.cost"}}</label>
+							<input type="number" name="cost" min="1" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.stock"}} (-1 = unlimited)</label>
+							<input type="number" name="stock" value="-1">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode"}}</label>
+							<select name="fulfill_mode">
+								<option value="manual">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.manual"}}</option>
+								<option value="auto">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.auto"}}</option>
+							</select>
+						</div>
 					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.grant.round.description"}}</label>
-						<input type="text" name="description">
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.cost"}}</label>
-						<input type="number" name="cost" min="1" required>
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.admin.stock"}} (-1 = unlimited)</label>
-						<input type="number" name="stock" value="-1">
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode"}}</label>
-						<select name="fulfill_mode">
-							<option value="manual">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.manual"}}</option>
-							<option value="auto">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.auto"}}</option>
-						</select>
-					</div>
-				</div>
-				<button class="ui green button">{{ctx.Locale.Tr "hackforger.credits.admin.option_create"}}</button>
-			</form>
+					<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.credits.admin.option_create"}}</button>
+				</form>
+			</div>
 		</div>
 
 		{{/* Options table */}}
-		<table class="ui attached segment striped table">
-			<thead>
-				<tr>
-					<th>ID</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.admin.option_name"}}</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.admin.stock"}}</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode"}}</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.admin.active"}}</th>
-					<th>{{ctx.Locale.Tr "hackforger.grant.actions"}}</th>
-				</tr>
-			</thead>
-			<tbody>
-				{{range .Options}}
+		<div class="hf-card">
+			<table class="tw-w-full">
+				<thead>
 					<tr>
-						<td>{{.ID}}</td>
-						<td>{{.Name}}</td>
-						<td>{{.Cost}}</td>
-						<td>{{if eq .Stock -1}}unlimited{{else}}{{.Stock}}{{end}}</td>
-						<td>
-							{{if eq .FulfillMode "auto"}}
-								<span class="ui blue label">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.auto"}}</span>
-							{{else}}
-								<span class="ui label">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.manual"}}</span>
-							{{end}}
-						</td>
-						<td>{{if .IsActive}}{{svg "octicon-check" 16}}{{else}}{{svg "octicon-x" 16}}{{end}}</td>
-						<td>
-							<div class="tw-flex tw-gap-1">
-								<form class="ui form tw-inline" action="{{AppSubUrl}}/admin/credits/options/{{.ID}}" method="post">
-									<input type="hidden" name="name" value="{{.Name}}">
-									<input type="hidden" name="description" value="{{.Description}}">
-									<input type="hidden" name="cost" value="{{.Cost}}">
-									<input type="hidden" name="stock" value="{{.Stock}}">
-									<input type="hidden" name="fulfill_mode" value="{{.FulfillMode}}">
-									{{if .IsActive}}
-										{{/* Toggle to inactive */}}
-										<button class="ui mini red button" title="{{ctx.Locale.Tr "hackforger.credits.admin.deactivate"}}">
-											{{ctx.Locale.Tr "hackforger.credits.admin.deactivate"}}
-										</button>
-									{{else}}
-										{{/* Toggle to active */}}
-										<input type="hidden" name="is_active" value="on">
-										<button class="ui mini green button" title="{{ctx.Locale.Tr "hackforger.credits.admin.activate"}}">
-											{{ctx.Locale.Tr "hackforger.credits.admin.activate"}}
-										</button>
-									{{end}}
-								</form>
-								{{if eq .FulfillMode "auto"}}
-									<a class="ui mini blue button" href="{{AppSubUrl}}/admin/credits/options/{{.ID}}/keys">
-										{{ctx.Locale.Tr "hackforger.credits.admin.keys.manage"}}
-									</a>
-								{{end}}
-							</div>
-						</td>
+						<th class="tw-p-2">ID</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.option_name"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.stock"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.active"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.grant.actions"}}</th>
 					</tr>
-				{{else}}
-					<tr><td class="tw-text-center" colspan="7">{{ctx.Locale.Tr "hackforger.credits.admin.no_options"}}</td></tr>
-				{{end}}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{{range .Options}}
+						<tr>
+							<td class="tw-p-2">{{.ID}}</td>
+							<td class="tw-p-2">{{.Name}}</td>
+							<td class="tw-p-2">{{.Cost}}</td>
+							<td class="tw-p-2">{{if eq .Stock -1}}unlimited{{else}}{{.Stock}}{{end}}</td>
+							<td class="tw-p-2">
+								{{if eq .FulfillMode "auto"}}
+									<span class="hf-badge hf-badge-blue">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.auto"}}</span>
+								{{else}}
+									<span class="hf-badge hf-badge-neutral">{{ctx.Locale.Tr "hackforger.credits.admin.fulfill_mode.manual"}}</span>
+								{{end}}
+							</td>
+							<td class="tw-p-2">{{if .IsActive}}{{svg "octicon-check" 16}}{{else}}{{svg "octicon-x" 16}}{{end}}</td>
+							<td class="tw-p-2">
+								<div class="tw-flex tw-gap-1">
+									<form class="ui form tw-inline" action="{{AppSubUrl}}/admin/credits/options/{{.ID}}" method="post">
+										<input type="hidden" name="name" value="{{.Name}}">
+										<input type="hidden" name="description" value="{{.Description}}">
+										<input type="hidden" name="cost" value="{{.Cost}}">
+										<input type="hidden" name="stock" value="{{.Stock}}">
+										<input type="hidden" name="fulfill_mode" value="{{.FulfillMode}}">
+										{{if .IsActive}}
+											{{/* Toggle to inactive */}}
+											<button class="hf-btn hf-btn-danger" title="{{ctx.Locale.Tr "hackforger.credits.admin.deactivate"}}">
+												{{ctx.Locale.Tr "hackforger.credits.admin.deactivate"}}
+											</button>
+										{{else}}
+											{{/* Toggle to active */}}
+											<input type="hidden" name="is_active" value="on">
+											<button class="hf-btn hf-btn-primary" title="{{ctx.Locale.Tr "hackforger.credits.admin.activate"}}">
+												{{ctx.Locale.Tr "hackforger.credits.admin.activate"}}
+											</button>
+										{{end}}
+									</form>
+									{{if eq .FulfillMode "auto"}}
+										<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/admin/credits/options/{{.ID}}/keys">
+											{{ctx.Locale.Tr "hackforger.credits.admin.keys.manage"}}
+										</a>
+									{{end}}
+								</div>
+							</td>
+						</tr>
+					{{else}}
+						<tr><td class="tw-text-center tw-p-2" colspan="7">{{ctx.Locale.Tr "hackforger.credits.admin.no_options"}}</td></tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
 
 		<div class="tw-mt-4">
-			<a class="ui button" href="{{AppSubUrl}}/admin/credits">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
+			<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/admin/credits">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
 		</div>
 	</div>
 {{template "admin/layout_footer" .}}

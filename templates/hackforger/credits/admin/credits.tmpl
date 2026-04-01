@@ -1,89 +1,92 @@
 {{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin credits")}}
 	<div class="admin-setting-content">
-		<h4 class="ui top attached header">
-			{{ctx.Locale.Tr "hackforger.credits.admin.title"}}
-		</h4>
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.credits.admin.title"}}</div>
+			</div>
+			<div class="hf-card-body">
+				{{/* Deposit form */}}
+				<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deposit"}}</h5>
+				<form class="ui form" action="{{AppSubUrl}}/admin/credits/deposit" method="post">
+					<div class="four fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
+							<input type="number" name="user_id" min="1" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.amount"}}</label>
+							<input type="number" name="amount" min="1" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.reference"}}</label>
+							<input type="text" name="reference">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.note"}}</label>
+							<input type="text" name="note">
+						</div>
+					</div>
+					<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.credits.admin.deposit"}}</button>
+				</form>
 
-		<div class="ui attached segment">
-			{{/* Deposit form */}}
-			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deposit"}}</h5>
-			<form class="ui form" action="{{AppSubUrl}}/admin/credits/deposit" method="post">
-				<div class="four fields">
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
-						<input type="number" name="user_id" min="1" required>
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.amount"}}</label>
-						<input type="number" name="amount" min="1" required>
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.reference"}}</label>
-						<input type="text" name="reference">
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.note"}}</label>
-						<input type="text" name="note">
-					</div>
-				</div>
-				<button class="ui green button">{{ctx.Locale.Tr "hackforger.credits.admin.deposit"}}</button>
-			</form>
+				<div class="ui divider"></div>
 
-			<div class="ui divider"></div>
-
-			{{/* Deduct form */}}
-			<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deduct"}}</h5>
-			<form class="ui form" action="{{AppSubUrl}}/admin/credits/deduct" method="post">
-				<div class="four fields">
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
-						<input type="number" name="user_id" min="1" required>
+				{{/* Deduct form */}}
+				<h5>{{ctx.Locale.Tr "hackforger.credits.admin.deduct"}}</h5>
+				<form class="ui form" action="{{AppSubUrl}}/admin/credits/deduct" method="post">
+					<div class="four fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</label>
+							<input type="number" name="user_id" min="1" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.amount"}}</label>
+							<input type="number" name="amount" min="1" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.reference"}}</label>
+							<input type="text" name="reference">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.credits.note"}}</label>
+							<input type="text" name="note">
+						</div>
 					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.amount"}}</label>
-						<input type="number" name="amount" min="1" required>
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.reference"}}</label>
-						<input type="text" name="reference">
-					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.credits.note"}}</label>
-						<input type="text" name="note">
-					</div>
-				</div>
-				<button class="ui red button">{{ctx.Locale.Tr "hackforger.credits.admin.deduct"}}</button>
-			</form>
+					<button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.credits.admin.deduct"}}</button>
+				</form>
+			</div>
 		</div>
 
 		{{/* Account list */}}
-		<h4 class="ui top attached header tw-mt-4">
-			{{ctx.Locale.Tr "hackforger.credits.admin.accounts"}} ({{.Total}})
-		</h4>
-		<table class="ui attached segment striped table">
-			<thead>
-				<tr>
-					<th>ID</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</th>
-					<th>{{ctx.Locale.Tr "hackforger.credits.balance"}}</th>
-				</tr>
-			</thead>
-			<tbody>
-				{{range .Accounts}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.credits.admin.accounts"}} <span class="hf-count">{{.Total}}</span></div>
+			</div>
+			<table class="tw-w-full">
+				<thead>
 					<tr>
-						<td>{{.ID}}</td>
-						<td>{{.UserID}}</td>
-						<td>{{.Balance}}</td>
+						<th class="tw-p-2">ID</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.user_id"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.balance"}}</th>
 					</tr>
-				{{else}}
-					<tr><td class="tw-text-center" colspan="3">{{ctx.Locale.Tr "hackforger.credits.no_accounts"}}</td></tr>
-				{{end}}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{{range .Accounts}}
+						<tr>
+							<td class="tw-p-2">{{.ID}}</td>
+							<td class="tw-p-2">{{.UserID}}</td>
+							<td class="tw-p-2">{{.Balance}}</td>
+						</tr>
+					{{else}}
+						<tr><td class="tw-text-center tw-p-2" colspan="3">{{ctx.Locale.Tr "hackforger.credits.no_accounts"}}</td></tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
 
-		<div class="tw-mt-4">
-			<a class="ui button" href="{{AppSubUrl}}/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.manage_options"}}</a>
-			<a class="ui button" href="{{AppSubUrl}}/admin/credits/orders">{{ctx.Locale.Tr "hackforger.credits.admin.manage_orders"}}</a>
+		<div class="tw-mt-4 tw-flex tw-gap-2">
+			<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.manage_options"}}</a>
+			<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/admin/credits/orders">{{ctx.Locale.Tr "hackforger.credits.admin.manage_orders"}}</a>
 		</div>
 	</div>
 {{template "admin/layout_footer" .}}

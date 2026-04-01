@@ -1,73 +1,67 @@
 {{if and (not .BountyData) $.SignedUser (not .Issue.IsPull)}}
 <div class="divider"></div>
 <div class="tw-text-center tw-py-2">
-	<a class="ui small green button" href="{{.RepoLink}}/bounties/new?issue_id={{.Issue.Index}}&title={{.Issue.Title}}">
+	<a class="hf-btn hf-btn-primary" href="{{.RepoLink}}/bounties/new?issue_id={{.Issue.Index}}&title={{.Issue.Title}}">
 		{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.bounty.new.submit"}}
 	</a>
 </div>
 {{end}}
 {{if .BountyData}}
 <div class="divider"></div>
-<div class="ui segment">
-	<div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
-		<span class="tw-font-semibold">{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.bounty.panel.title"}}</span>
-		<span class="ui small label {{if eq .BountyData.Status 0}}green{{else if eq .BountyData.Status 1}}blue{{else if eq .BountyData.Status 2}}orange{{else if eq .BountyData.Status 3}}purple{{else if eq .BountyData.Status 4}}teal{{else if eq .BountyData.Status 5}}red{{else if eq .BountyData.Status 6}}grey{{end}}">
-			{{if eq .BountyData.Status 0}}{{ctx.Locale.Tr "hackforger.bounty.status.open"}}
-			{{else if eq .BountyData.Status 1}}{{ctx.Locale.Tr "hackforger.bounty.status.claimed"}}
-			{{else if eq .BountyData.Status 2}}{{ctx.Locale.Tr "hackforger.bounty.status.in_review"}}
-			{{else if eq .BountyData.Status 3}}{{ctx.Locale.Tr "hackforger.bounty.status.completed"}}
-			{{else if eq .BountyData.Status 4}}{{ctx.Locale.Tr "hackforger.bounty.status.paid"}}
-			{{else if eq .BountyData.Status 5}}{{ctx.Locale.Tr "hackforger.bounty.status.expired"}}
-			{{else if eq .BountyData.Status 6}}{{ctx.Locale.Tr "hackforger.bounty.status.cancelled"}}
-			{{end}}
-		</span>
+<div class="hf-card">
+	<div class="hf-card-head">
+		<div class="hf-card-head-left">
+			{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.bounty.panel.title"}}
+		</div>
+		{{template "hackforger/helpers/status_badge" dict "Type" "bounty" "Status" .BountyData.Status "Label" (Iif (eq .BountyData.Status 0) (ctx.Locale.Tr "hackforger.bounty.status.open") (Iif (eq .BountyData.Status 1) (ctx.Locale.Tr "hackforger.bounty.status.claimed") (Iif (eq .BountyData.Status 2) (ctx.Locale.Tr "hackforger.bounty.status.in_review") (Iif (eq .BountyData.Status 3) (ctx.Locale.Tr "hackforger.bounty.status.completed") (Iif (eq .BountyData.Status 4) (ctx.Locale.Tr "hackforger.bounty.status.paid") (Iif (eq .BountyData.Status 5) (ctx.Locale.Tr "hackforger.bounty.status.expired") (ctx.Locale.Tr "hackforger.bounty.status.cancelled")))))))}}
 	</div>
-
-	{{if .BountyRewards}}
-	<div class="tw-mb-2">
-		<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.rewards"}}:</strong>
-		{{range .BountyRewards}}
-			<span class="ui mini label">
-				{{if eq .Type "money"}}{{.Currency}} {{.Amount}}{{end}}
-				{{if eq .Type "credits"}}{{.Credits}} credits{{end}}
-				{{if eq .Type "other"}}{{.Note}}{{end}}
-			</span>
-		{{end}}
-	</div>
-	{{end}}
-
-	{{if $.BountyClaimer}}
-	<div class="tw-mb-2">
-		<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.claimer"}}:</strong>
-		<a href="{{$.BountyClaimer.HomeLink}}">{{svg "octicon-person" 14}} {{$.BountyClaimer.Name}}</a>
-	</div>
-	{{end}}
-
-	{{if $.BountyWinners}}
-	<div class="tw-mb-2">
-		<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.select_winners"}}:</strong>
-		<div class="tw-mt-1">
-			{{range $.BountyWinners}}
-			<div class="tw-flex tw-items-center tw-justify-between tw-py-1">
-				<span>
-					{{svg "octicon-trophy" 14}}
-					<a href="/{{.Username}}">{{.Username}}</a>
+	<div class="hf-card-body">
+		{{if .BountyRewards}}
+		<div class="tw-mb-2">
+			<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.rewards"}}:</strong>
+			{{range .BountyRewards}}
+				<span class="hf-badge hf-badge-neutral" style="border: 1px solid var(--color-secondary);">
+					{{if eq .Type "money"}}{{.Currency}} {{.Amount}}{{end}}
+					{{if eq .Type "credits"}}{{.Credits}} credits{{end}}
+					{{if eq .Type "other"}}{{.Note}}{{end}}
 				</span>
-				<span class="ui mini label">#{{.Rank}}</span>
-			</div>
 			{{end}}
 		</div>
-	</div>
-	{{end}}
+		{{end}}
 
-	<div id="hackforger-bounty-panel"
-		data-bounty-id="{{.BountyData.ID}}"
-		data-repo-owner="{{.Repository.OwnerName}}"
-		data-repo-name="{{.Repository.Name}}"
-		data-status="{{.BountyData.Status}}"
-		data-mode="{{.BountyData.Mode}}"
-		data-is-publisher="{{if and $.SignedUser (eq $.SignedUser.ID .BountyData.PublisherID)}}true{{else}}false{{end}}"
-		data-claimer-id="{{.BountyData.ClaimerID}}">
+		{{if $.BountyClaimer}}
+		<div class="tw-mb-2">
+			<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.claimer"}}:</strong>
+			<a href="{{$.BountyClaimer.HomeLink}}">{{svg "octicon-person" 14}} {{$.BountyClaimer.Name}}</a>
+		</div>
+		{{end}}
+
+		{{if $.BountyWinners}}
+		<div class="tw-mb-2">
+			<strong>{{ctx.Locale.Tr "hackforger.bounty.panel.select_winners"}}:</strong>
+			<div class="tw-mt-1">
+				{{range $.BountyWinners}}
+				<div class="hf-row">
+					<div class="hf-row-left">
+						{{svg "octicon-trophy" 14}}
+						<a href="/{{.Username}}">{{.Username}}</a>
+					</div>
+					<span class="hf-badge hf-badge-neutral">#{{.Rank}}</span>
+				</div>
+				{{end}}
+			</div>
+		</div>
+		{{end}}
+
+		<div id="hackforger-bounty-panel"
+			data-bounty-id="{{.BountyData.ID}}"
+			data-repo-owner="{{.Repository.OwnerName}}"
+			data-repo-name="{{.Repository.Name}}"
+			data-status="{{.BountyData.Status}}"
+			data-mode="{{.BountyData.Mode}}"
+			data-is-publisher="{{if and $.SignedUser (eq $.SignedUser.ID .BountyData.PublisherID)}}true{{else}}false{{end}}"
+			data-claimer-id="{{.BountyData.ClaimerID}}">
+		</div>
 	</div>
 </div>
 {{end}}
