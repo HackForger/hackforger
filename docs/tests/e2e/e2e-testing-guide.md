@@ -82,7 +82,7 @@ Runner 使用 host 模式（非 Docker），标签：`ubuntu-latest:host`, `maco
 
 | 模版 | 用途 | 路径 |
 |------|------|------|
-| 用户旅程全流程 | 5 角色 × 57 步骤的完整端到端测试 | [user-journey-full-cycle-template.md](e2e/templates/user-journey-full-cycle-template.md) |
+| 用户旅程全流程 | 5 角色 × 57 步骤的完整端到端测试 | [user-journey-full-cycle-template.md](templates/user-journey-full-cycle-template.md) |
 
 ---
 
@@ -90,8 +90,8 @@ Runner 使用 host 模式（非 Docker），标签：`ubuntu-latest:host`, `maco
 
 ### ⌘K Search Modal
 - Open via navbar search icon or ⌘K/Ctrl+K
-- Type keyword → verify results appear after debounce
-- Switch scope tabs (All/Hackathons/Bounties/Grants) → verify results filter
+- Type keyword → verify grouped results appear (Hackathons/Bounties/Grants/Submissions/Repos/Users/Issues)
+- Each group has "查看全部" link → verify navigation to Explore page
 - Click result → verify navigation to detail page
 - Escape → verify modal closes
 - AI assistant panel shows placeholder message with disclaimer

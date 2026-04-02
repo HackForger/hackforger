@@ -450,7 +450,7 @@ Update `.mcp.json` to remove non-functional `forgejo-mcp` entry.
 
 ### 8.1 Guide Updates
 
-Update `docs/tests/e2e-testing-guide.md` with:
+Update `docs/tests/e2e/e2e-testing-guide.md` with:
 
 **Mandatory rules section:**
 1. Web UI testing is mandatory — unit tests and API tests cannot substitute for web interface operations
