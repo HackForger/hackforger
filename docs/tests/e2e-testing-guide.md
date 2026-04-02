@@ -78,6 +78,14 @@ Runner 使用 host 模式（非 Docker），标签：`ubuntu-latest:host`, `maco
 2. **关键验证节点必须截屏** — 使用 `agent-browser screenshot` 保存到 `docs/tests/e2e/screenshots/`，并在 E2E report 中引用作为测试证据。截图内容应能独立证明测试结果。
 3. **API 调用仅用于辅助** — 批量数据准备、密码重置等可用 API，但核心功能验证必须通过 Web 界面。
 
+## 测试模版
+
+| 模版 | 用途 | 路径 |
+|------|------|------|
+| 用户旅程全流程 | 5 角色 × 57 步骤的完整端到端测试 | [user-journey-full-cycle-template.md](e2e/templates/user-journey-full-cycle-template.md) |
+
+---
+
 ## Week 5 Features to Test
 
 ### ⌘K Search Modal
