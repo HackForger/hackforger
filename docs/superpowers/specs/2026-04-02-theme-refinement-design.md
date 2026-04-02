@@ -93,6 +93,8 @@ Location: `web_src/css/themes/`
 
 Each file is a full copy of the base theme with the relevant variables overridden from the tables above. This follows Forgejo's pattern where each theme file is self-contained.
 
+**Important**: Dark variant files must preserve the `@import "../hackforger-colors-dark.css"` import from the dark base theme (line 4 of `theme-hackforger-dark.css`). Light variants do not have this import. The `--color-body` variable is intentionally NOT overridden in any variant — all variants inherit the base body color.
+
 ### 2. Go Registration
 
 **File**: `modules/setting/ui.go:85`
@@ -108,9 +110,10 @@ Append to the Themes array:
 
 **Files**: `options/locale/locale_en-US.ini`, `options/locale/locale_zh-CN.ini`
 
-Add under appropriate section:
+Add as top-level keys (no INI section header). These are resolved dynamically by `routers/web/user/setting/profile.go:322` via `"themes.names." + themeName`. If the key doesn't exist, the raw theme name is shown as fallback. No existing `themes.names.*` keys exist in any locale file currently.
+
 ```ini
-; English
+; English (locale_en-US.ini) — top-level, no section header
 themes.names.hackforger-flat-light = HackForger Flat (Light)
 themes.names.hackforger-flat-dark = HackForger Flat (Dark)
 themes.names.hackforger-whisper-light = HackForger Whisper (Light)
