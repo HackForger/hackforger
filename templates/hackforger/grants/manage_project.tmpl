@@ -29,7 +29,7 @@
 				{{if .Project.Description}}
 					<div class="tw-mb-2">
 						<strong>{{ctx.Locale.Tr "hackforger.grant.project.description"}}:</strong>
-						<p>{{.Project.Description}}</p>
+						{{if .DescriptionHTML}}<div class="markup">{{.DescriptionHTML}}</div>{{else}}<p>{{.Project.Description}}</p>{{end}}
 					</div>
 				{{end}}
 				{{if gt .Project.RepoID 0}}

@@ -24,15 +24,26 @@
 ### Step 5.2: Organizer 创建 Grant Round (Draft)
 - **角色**: hackforger session
 - **UI 路径**: 导航到 Grant 创建页面 `/grants/new`
-- **操作**: 填写表单：
+- **操作**: 填写表单（描述字段使用 Markdown 编辑器，支持工具栏 + 预览 + 文件拖拽上传）：
   - 名称 = `DeFi Track Boost`
   - Slug = `defi-track-boost`
-  - 描述（Markdown）= `额外资助 DeFi 赛道的参赛者，帮助提升项目质量。`
+  - 描述 = 使用 Markdown 格式编写：
+    ```markdown
+    ## DeFi Track Boost
+    额外资助 DeFi 赛道的参赛者，帮助提升项目质量。
+    
+    ### 资助范围
+    - 智能合约审计
+    - 前端开发
+    - 文档编写
+    ```
   - 预算（积分）= `500`
   - 截止日期 = `2026-06-01`
+  - **验证预览**: 点击编辑器"预览"Tab，确认 Markdown 正确渲染
   - 点击"创建"
 - **验证**:
   - Grant Round 创建成功，状态 = `Draft(0)`
+  - 详情页 `/grants/defi-track-boost` 描述以 Markdown 渲染（标题 + 列表正确显示）
   - Feed 事件: `grant_round_created(39)` -- 全局可见
 - **截图**: `screenshots/full-cycle/p5-02-grant-round-created.png`
 
@@ -49,11 +60,17 @@
 ### Step 5.4: Hacker1 提交 Grant 项目申请
 - **角色**: hacker_eve session
 - **UI 路径**: 导航到 Grant Round 详情页 `/grants/defi-track-boost` → 点击"提交项目" → 进入提交页面 `/grants/defi-track-boost/submit`
-- **操作**: 填写表单：
+- **操作**: 填写表单（描述字段使用 Markdown 编辑器）：
   - 标题 = `DeFi Automation Toolkit`
-  - 描述（Markdown）= `Open-source toolkit for automating DeFi operations. Includes smart contract templates and testing utilities.`
-  - 申请金额 = `300`
-  - Repo URL = `http://localhost:3000/hacker_eve/web-track`
+  - 描述 = 使用 Markdown 编写：
+    ```markdown
+    Open-source toolkit for automating DeFi operations.
+    
+    - Smart contract templates
+    - Testing utilities
+    - CLI tools
+    ```
+  - 选择仓库 = `hacker_eve/web-track`
   - 点击"提交"
 - **验证**:
   - Grant Project 创建成功，状态 = `Pending`

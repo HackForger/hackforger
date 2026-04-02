@@ -54,7 +54,7 @@
 				{{if .Round.Description}}
 					<div class="tw-mb-2">
 						<strong>{{ctx.Locale.Tr "hackforger.grant.round.description"}}:</strong>
-						<p>{{.Round.Description}}</p>
+						{{if .DescriptionHTML}}<div class="markup">{{.DescriptionHTML}}</div>{{else}}<p>{{.Round.Description}}</p>{{end}}
 					</div>
 				{{end}}
 			</div>

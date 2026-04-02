@@ -22,23 +22,33 @@
 
 - **Role**: `organizer`
 - **Operation**: Create a new hackathon "Web3 Innovation Challenge"
+- **Web UI**: Navigate to `/hackathons/new`
 - **API**: `POST /api/v1/hackforger/hackathons`
   ```json
   {
     "name": "Web3 Innovation Challenge",
     "slug": "web3-innovation",
-    "description": "Build the future of decentralized web",
-    "max_tracks": 3,
-    "prize_pool": 800
+    "description": "## Web3 Innovation Challenge\nBuild the future of decentralized web.\n\n![banner](url)\n\n- DeFi\n- NFT",
+    "prize_summary": "Grand Prize: 500 Credits, Runner-up: 300 Credits",
+    "max_team_size": 5,
+    "registration_start": "2026-04-10T09:00:00Z",
+    "registration_end": "2026-04-20T23:59:00Z",
+    "hacking_start": "2026-04-21T09:00:00Z",
+    "hacking_end": "2026-05-05T23:59:00Z",
+    "judging_end": "2026-05-12T23:59:00Z"
   }
   ```
 - **Git Operation**: Auto-creates Organization `web3-innovation` on Forgejo
 - **Expected Result**:
   - Hackathon created with status = `Draft(0)`
   - Org `web3-innovation` exists with `organizer` as owner
+  - Description rendered as Markdown (headings, lists, images, code blocks)
+  - Timeline shows phase dates on detail page
   - Feed event: `hackathon_created(30)` — audience: global
 
-> **编辑器：** 描述字段支持 Markdown 格式（使用 Forgejo 原生 Markdown 编辑器，支持图片上传和代码块）。
+> **编辑器：** 描述和奖品说明字段支持 Markdown 格式（标题、列表、链接、图片、代码块）。创建后可在管理页面通过"编辑详情"修改所有字段。
+
+> **日程安排：** 可设置报名开始/截止、开发开始/截止、评审截止五个时间节点，在详情页显示为时间轴。
 
 - **Fixture Hint**: `hackathon(id=1, status=Draft, org_id=<auto>)`
 

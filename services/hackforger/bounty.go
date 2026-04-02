@@ -271,6 +271,34 @@ func StartReview(ctx context.Context, bountyID, doerID int64) error {
 	return hackforger_model.UpdateBounty(ctx, bounty)
 }
 
+// SubmitDelivery transitions an Exclusive bounty from Claimed to InReview.
+// Called when the claimer submits their work for review.
+func SubmitDelivery(ctx context.Context, bountyID, doerID int64) error {
+	bounty, err := hackforger_model.GetBountyByID(ctx, bountyID)
+	if err != nil {
+		return err
+	}
+
+	if bounty.Mode != hackforger_model.BountyModeExclusive {
+		return ErrInvalidBountyStatus{
+			BountyID: bountyID,
+			Current:  bounty.Status,
+			Expected: "Exclusive mode only",
+		}
+	}
+
+	if bounty.Status != hackforger_model.BountyStatusClaimed {
+		return ErrInvalidBountyStatus{
+			BountyID: bountyID,
+			Current:  bounty.Status,
+			Expected: "Claimed",
+		}
+	}
+
+	bounty.Status = hackforger_model.BountyStatusInReview
+	return hackforger_model.UpdateBounty(ctx, bounty)
+}
+
 // CompleteBounty transitions an Exclusive bounty from InReview to Completed.
 // If credit-type rewards exist, they are deposited to the claimer.
 func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {

@@ -6,6 +6,7 @@ package hackforger
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"forgejo.org/models/db"
@@ -340,8 +341,59 @@ func searchIssues(ctx context.Context, opts *UnifiedSearchOptions) []*SearchItem
 }
 
 // truncateDesc truncates a description to maxLen characters.
+// stripMarkdown removes common Markdown syntax to produce plain text for search result previews.
+func stripMarkdown(s string) string {
+	lines := strings.Split(s, "\n")
+	var out []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || line == "---" {
+			continue
+		}
+		// Remove headings (## ...)
+		for strings.HasPrefix(line, "#") {
+			line = strings.TrimLeft(line, "#")
+			line = strings.TrimSpace(line)
+		}
+		// Remove list markers (- ..., * ..., 1. ...)
+		if strings.HasPrefix(line, "- ") || strings.HasPrefix(line, "* ") {
+			line = line[2:]
+		}
+		// Remove bold/italic (**text**, *text*, __text__, _text_)
+		line = strings.ReplaceAll(line, "**", "")
+		line = strings.ReplaceAll(line, "__", "")
+		// Remove image/link syntax ![alt](url) → alt, [text](url) → text
+		for {
+			idx := strings.Index(line, "](")
+			if idx < 0 {
+				break
+			}
+			// Find opening [ or ![
+			start := strings.LastIndex(line[:idx], "[")
+			end := strings.Index(line[idx:], ")")
+			if start < 0 || end < 0 {
+				break
+			}
+			text := line[start+1 : idx]
+			if start > 0 && line[start-1] == '!' {
+				start--
+			}
+			line = line[:start] + text + line[idx+end+1:]
+		}
+		// Remove backticks
+		line = strings.ReplaceAll(line, "`", "")
+		// Remove blockquote markers
+		line = strings.TrimPrefix(line, "> ")
+		if line != "" {
+			out = append(out, line)
+		}
+	}
+	return strings.Join(out, " ")
+}
+
 func truncateDesc(s string) string {
 	const maxLen = 120
+	s = stripMarkdown(s)
 	runes := []rune(s)
 	if len(runes) <= maxLen {
 		return s

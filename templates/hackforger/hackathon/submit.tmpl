@@ -6,7 +6,20 @@
 			<div class="hf-card-body">
 				<form class="ui form" method="post">
 					<div class="required field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</label><input name="title" required></div>
-					<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.description"}}</label><textarea name="description" rows="5"></textarea></div>
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.description"}}</label>
+						{{template "shared/combomarkdowneditor" (dict
+							"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
+							"MarkdownPreviewContext" ""
+							"TextareaName" "description"
+							"TextareaContent" ""
+							"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.hackathon.submit.field.description")
+							"DropzoneParentContainer" "form"
+						)}}
+						{{if .IsAttachmentEnabled}}
+						<div class="field">{{template "repo/upload" .}}</div>
+						{{end}}
+					</div>
 					<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.demo_url"}}</label><input name="demo_url" type="url"></div>
 					{{if .UserRepos}}
 					<div class="field">

@@ -48,20 +48,20 @@
 		</div>
 		{{end}}
 
-		{{/* Description */}}
+		{{/* Description (Markdown rendered) */}}
 		{{if .Hackathon.Description}}
 		<div class="hf-card">
-			<div class="hf-card-body"><p>{{.Hackathon.Description}}</p></div>
+			<div class="hf-card-body markup">{{if .DescriptionHTML}}{{.DescriptionHTML}}{{else}}<p>{{.Hackathon.Description}}</p>{{end}}</div>
 		</div>
 		{{end}}
 
-		{{/* Prizes */}}
+		{{/* Prizes (Markdown rendered) */}}
 		{{if .Hackathon.PrizeSummary}}
 		<div class="hf-card">
 			<div class="hf-card-head">
 				<div class="hf-card-head-left">{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.hackathon.view.prizes"}}</div>
 			</div>
-			<div class="hf-card-body"><p>{{.Hackathon.PrizeSummary}}</p></div>
+			<div class="hf-card-body markup">{{if .PrizeSummaryHTML}}{{.PrizeSummaryHTML}}{{else}}<p>{{.Hackathon.PrizeSummary}}</p>{{end}}</div>
 		</div>
 		{{end}}
 

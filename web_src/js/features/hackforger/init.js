@@ -2,9 +2,11 @@
 // Lazy-loads Vue components when their mount elements are present.
 
 import {initSearchModal} from './search-modal.js';
+import {initHackathonEditor} from './hackathon-editor.js';
 
 export function initHackforger() {
   initSearchModal();
+  initHackathonEditor();
   // BountyPanel
   const bountyEl = document.getElementById('hackforger-bounty-panel');
   if (bountyEl) {

@@ -109,19 +109,25 @@ var validTransitions = map[hackforger_model.GrantRoundStatus][]hackforger_model.
 
 // checkGrantRoundAccess verifies that doerID is an owner or admin of the round's org.
 func checkGrantRoundAccess(ctx context.Context, doerID int64, round *hackforger_model.GrantRound) error {
-	isOwner, err := org_model.IsOrganizationOwner(ctx, round.OrgID, doerID)
-	if err != nil {
-		return err
-	}
-	if isOwner {
+	// Direct owner check (covers non-org grant rounds where owner_id = creator)
+	if round.OwnerID == doerID {
 		return nil
 	}
-	isAdmin, err := org_model.IsOrganizationAdmin(ctx, round.OrgID, doerID)
-	if err != nil {
-		return err
-	}
-	if isAdmin {
-		return nil
+	if round.OrgID > 0 {
+		isOwner, err := org_model.IsOrganizationOwner(ctx, round.OrgID, doerID)
+		if err != nil {
+			return err
+		}
+		if isOwner {
+			return nil
+		}
+		isAdmin, err := org_model.IsOrganizationAdmin(ctx, round.OrgID, doerID)
+		if err != nil {
+			return err
+		}
+		if isAdmin {
+			return nil
+		}
 	}
 	return ErrAccessDenied{UserID: doerID, OrgID: round.OrgID}
 }

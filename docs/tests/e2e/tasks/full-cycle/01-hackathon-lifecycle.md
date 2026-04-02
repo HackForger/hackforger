@@ -18,21 +18,33 @@
 - **UI 路径**: 顶部导航栏 "+" 菜单 → "创建 Hackathon" → `/hackathons/new`
 - **操作**: 填写表单：
   - 名称 = `Web3 Innovation Challenge`
-  - Slug = `web3-innovation`
-  - 描述 = 使用 Markdown 格式编写（Forgejo 原生编辑器）：
-    ```
+  - 标识符 = `web3-innovation`（系统将自动创建同名 Forgejo 组织）
+  - 描述 = 使用 Markdown 格式编写（支持标题、列表、链接、图片、代码块）：
+    ```markdown
     ## Web3 Innovation Challenge
     Build the future of decentralized web.
+
+    ![banner](https://example.com/hackathon-banner.png)
+
+    ### 主题
     - DeFi 协议
     - NFT 工具链
+    - 去中心化身份
     ```
-  - 最大赛道数 = `3`
-  - 奖金池（积分）= `800`
-  - 点击"创建"按钮
+  - 奖品说明 = `冠军：500 积分，亚军：300 积分`（支持 Markdown）
+  - 日程安排：
+    - 报名开始 = `2026-04-10 09:00`
+    - 报名截止 = `2026-04-20 23:59`
+    - 开发开始 = `2026-04-21 09:00`
+    - 开发截止 = `2026-05-05 23:59`
+    - 评审截止 = `2026-05-12 23:59`
+  - 最大团队人数 = `5`
+  - 点击"创建黑客松"按钮
 - **验证**:
   - 跳转到 Hackathon 详情页 `/hackathon/web3-innovation`，状态 = `Draft`
+  - 描述以 Markdown 渲染（标题、列表、图片均正确显示）
+  - 时间轴显示各阶段日期
   - Forgejo 组织 `web3-innovation` 已自动创建，hackforger 为 owner
-  - 法币奖金字段不显示（v0.1 仅积分）
   - Feed 事件: `hackathon_created(30)` -- 全局可见
 - **截图**: `screenshots/full-cycle/p1-01-hackathon-created.png`
 

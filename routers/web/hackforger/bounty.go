@@ -200,6 +200,8 @@ func BountyAction(ctx *context.Context) {
 		err = hackforger_svc.RejectDelivery(ctx, bountyID, ctx.Doer.ID)
 	case "pay":
 		err = hackforger_svc.MarkPaid(ctx, bountyID, ctx.Doer.ID)
+	case "deliver":
+		err = hackforger_svc.SubmitDelivery(ctx, bountyID, ctx.Doer.ID)
 	case "cancel":
 		err = hackforger_svc.CancelBounty(ctx, bountyID, ctx.Doer.ID)
 	case "review":

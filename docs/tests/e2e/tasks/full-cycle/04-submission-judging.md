@@ -42,7 +42,17 @@
   - PR 创建成功后，导航到 Hackathon 提交页面 `/hackathon/web3-innovation/submit`
   - 选择赛道 = `Web Track`
   - 填写标题 = `Web App Toolkit`
-  - 填写描述 = `A modular web application toolkit with component library and state management`
+  - 描述（使用 Markdown 编辑器，支持工具栏 + 预览 + 文件上传）= 
+    ```markdown
+    ## Web App Toolkit
+    A modular web application toolkit.
+    
+    ### Features
+    - Component library
+    - State management
+    - API integration layer
+    ```
+  - **验证预览**: 点击"预览"Tab 确认 Markdown 渲染正确
   - 关联 PR（选择刚创建的 PR）
   - 点击"提交"
 - **验证**:

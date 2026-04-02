@@ -120,8 +120,8 @@ jobs:
         run: |
           git clone "${{ github.server_url }}/${{ github.repository }}.git" repo
           cd repo
-          git config user.name "HackForger Bot"
-          git config user.email "noreply@hackforger"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@noreply.localhost"
 
       - name: Fetch submissions and generate index
         working-directory: repo

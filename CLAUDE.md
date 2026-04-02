@@ -93,8 +93,10 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 
 ## Internal Instance
 - Login: hackforger / admin1234
-- Caddy reverse proxy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
-- Caddy management: `launchctl load|unload ~/Library/LaunchAgents/com.h2os.caddy.plist`
+- Caddy reverse proxy: managed by launchd (com.h2os.caddy), do NOT restart or unload
+- Check Caddy status: `launchctl list com.h2os.caddy`
+- Caddy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
+- ⚠️ If Caddy config reload is needed, MUST confirm with developer first: `caddy reload --config ~/.config/caddy/Caddyfile`
 - Default branch: v0.1-dev/hackforger
 
 ## Git Remotes

@@ -533,11 +533,14 @@ func registerRoutes(m *web.Route) {
 	m.Group("", func() {
 		m.Get("/hackathons/new", hackforger_web.NewHackathon)
 		m.Post("/hackathons/new", hackforger_web.NewHackathonPost)
+		m.Post("/hackforger/attachments", hackforger_web.UploadHackforgerAttachment)
+		m.Post("/hackforger/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
 		m.Post("/hackathon/{slug}/register", hackforger_web.RegisterPost)
 		m.Get("/hackathon/{slug}/submit", hackforger_web.SubmitForm)
 		m.Post("/hackathon/{slug}/submit", hackforger_web.SubmitPost)
 		m.Group("/hackathon/{slug}/manage", func() {
 			m.Get("", hackforger_web.ManageHackathon)
+			m.Post("/update", hackforger_web.UpdateHackathonPost)
 			m.Post("/publish", hackforger_web.ManagePhasePost)
 			m.Post("/start", hackforger_web.ManagePhasePost)
 			m.Post("/judge", hackforger_web.ManagePhasePost)

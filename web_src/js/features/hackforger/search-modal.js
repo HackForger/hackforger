@@ -66,7 +66,6 @@ export function initSearchModal() {
       for (const item of group.items) {
         const url = item.url.startsWith('/') ? `${baseUrl}${item.url}` : item.url;
         html += `<a href="${url}" class="hf-search-result-item">`;
-        html += `<svg class="svg octicon-16"><use xlink:href="#${item.icon}"></use></svg>`;
         html += `<div class="hf-search-result-content">`;
         html += `<span class="hf-search-result-title">${escapeHtml(item.title)}</span>`;
         if (item.desc) {
@@ -94,26 +93,25 @@ export function initSearchModal() {
 
     const baseUrl = window.config?.appSubUrl || '';
 
-    const [searchResp, assistantResp] = await Promise.all([
-      fetch(`${baseUrl}/hackforger/search?q=${encodeURIComponent(query)}`),
-      fetch(`${baseUrl}/hackforger/assistant/chat`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({query}),
-      }).catch(() => null),
-    ]);
+    const searchResp = await fetch(`${baseUrl}/hackforger/search?q=${encodeURIComponent(query)}`);
 
     if (searchResp.ok) {
       const data = await searchResp.json();
       renderGroupedResults(data);
     }
 
-    if (assistantResp?.ok) {
-      const assistant = await assistantResp.json();
-      if (assistantMessage) assistantMessage.textContent = assistant.message;
-      if (assistantDisclaimer) assistantDisclaimer.textContent = assistant.disclaimer;
-      assistantPanel.style.display = 'block';
-    }
+    // TODO(v0.2): AI assistant integration — uncomment when backend is ready
+    // const assistantResp = await fetch(`${baseUrl}/hackforger/assistant/chat`, {
+    //   method: 'POST',
+    //   headers: {'Content-Type': 'application/json'},
+    //   body: JSON.stringify({query}),
+    // }).catch(() => null);
+    // if (assistantResp?.ok) {
+    //   const assistant = await assistantResp.json();
+    //   if (assistantMessage) assistantMessage.textContent = assistant.message;
+    //   if (assistantDisclaimer) assistantDisclaimer.textContent = assistant.disclaimer;
+    //   assistantPanel.style.display = 'block';
+    // }
   }
 
   trigger?.addEventListener('click', openModal);
