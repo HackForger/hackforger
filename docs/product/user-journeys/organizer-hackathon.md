@@ -37,6 +37,9 @@
   - Hackathon created with status = `Draft(0)`
   - Org `web3-innovation` exists with `organizer` as owner
   - Feed event: `hackathon_created(30)` — audience: global
+
+> **编辑器：** 描述字段支持 Markdown 格式（使用 Forgejo 原生 Markdown 编辑器，支持图片上传和代码块）。
+
 - **Fixture Hint**: `hackathon(id=1, status=Draft, org_id=<auto>)`
 
 ### Step 1.3: Organizer creates Tracks (Repos)
@@ -228,6 +231,8 @@
   - Feed event: `hackathon_submitted(32)` — audience: org + followers
 - **Fixture Hint**: `hackathon_submission(id=1, hackathon_id=1, track_id=1, user_id=hacker1, pull_id=<auto>)`
 
+> **v0.1 支持两种提交模式：** (1) Fork + PR 模式（如上，推荐的 Git-Native 方式）；(2) Link Repo 模式 — 参赛者在 CreateSubmission 时直接填写已有 Repo URL，不需要 Fork。Journey 中 hacker1 使用 Fork+PR，hacker2 可使用 Link Repo。
+
 ### Step 1.15: hacker2 submits via PR (team submission)
 
 - **Role**: `hacker2`
@@ -352,6 +357,16 @@
   - Leaderboard frozen and published
   - Feed event: `hackathon_finalized(51)` — audience: global
 - **Fixture Hint**: `hackathon(id=1, status=Finished)`, `credit_transaction(deposit, hacker1, 500)`, `credit_transaction(deposit, hacker2, 300)`
+
+### Step 1.19a: 验证积分发放
+
+- **Role**: `hacker1`, `hacker2`, `organizer`
+- **Operation**: 各角色查看积分余额确认变化
+- **Web**: `/credits` (积分概览页面)
+- **Expected Result**:
+  - hacker1 余额: +500（1st place DeFi Track）
+  - hacker2 余额: +300（2nd place DeFi Track）
+  - organizer 余额: 1000 - 500 - 300 = 200（剩余）
 
 ### Step 1.20: Verify leaderboard
 

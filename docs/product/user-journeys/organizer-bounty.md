@@ -5,6 +5,8 @@
 - `admin` has deposited 600 Credits to `organizer`'s account for bounty rewards
 - hacker1, hacker2, platform-bot exist
 
+> **v0.1 集成场景：** 在实际使用中，Bounty 常在 Hackathon Hacking 阶段内创建 — 参赛者在赛道 Repo 上发起 Issue 并挂载 Bounty 寻求协作。详见 `docs/tests/e2e/tasks/user-journey-full-cycle.md` Phase 4。
+
 ### Step 2.0: Admin deposits Credits to organizer
 
 - **Role**: `admin`
@@ -61,6 +63,7 @@
   - Reward created: 300 Credits
   - Credits escrowed from organizer: balance 600 → 300 (300 held by platform)
   - Transaction type: `escrow`
+  - 验证 organizer 余额: 600 → 300（300 积分被托管）
 - **Fixture Hint**: `bounty_reward(bounty_id=1, amount=300)`, `credit_transaction(escrow, organizer, -300)`
 
 ### Step 2a.4: hacker1 applies for the Bounty
