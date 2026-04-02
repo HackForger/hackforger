@@ -16,7 +16,17 @@
 			</div>
 			<div class="field">
 				<label>{{ctx.Locale.Tr "hackforger.grant.round.description"}}</label>
-				<textarea name="description" rows="5"></textarea>
+				{{template "shared/combomarkdowneditor" (dict
+					"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
+					"MarkdownPreviewContext" ""
+					"TextareaName" "description"
+					"TextareaContent" ""
+					"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.grant.round.description")
+					"DropzoneParentContainer" "form"
+				)}}
+				{{if .IsAttachmentEnabled}}
+				<div class="field">{{template "repo/upload" .}}</div>
+				{{end}}
 			</div>
 			<div class="two fields">
 				<div class="field">

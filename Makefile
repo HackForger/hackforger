@@ -829,6 +829,10 @@ frontend: $(WEBPACK_DEST)
 .PHONY: backend
 backend: go-check generate-backend $(EXECUTABLE)
 
+.PHONY: hackforger-cli
+hackforger-cli:
+	$(GO) build -o hackforger-cli ./cmd/hackforger-cli/
+
 # We generate the backend before the frontend in case we in future we want to generate things in the frontend from generated files in backend
 .PHONY: generate
 generate: generate-backend

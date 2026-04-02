@@ -204,6 +204,8 @@ Credits   ──→ (standalone, receives deposits from other modules)
 - **Reputation:** Weighted score from hackathon placements, bounty completions, grant funding; tiered badges
 - **Discovery:** Explore pages for hackathons, bounties, grants; full-text search across entities
 
+> **搜索结果分组：** ⌘K 全局搜索返回按实体类型分组的结果（Hackathons / Bounties / Grants / Submissions / Repos / Users / Issues），每组显示 top 5，带"查看全部"链接。API 支持 `scope` 参数过滤。
+
 ### State Machines
 
 **Hackathon:**
@@ -296,6 +298,8 @@ Account management, deposit/withdraw, redeem options + key pool, order fulfillme
 
 ### Epic 6: AI Agent Participation
 Full REST API coverage, PAT authentication, bot-friendly endpoints for automated participation.
+
+> **内容编辑：** 所有用户创建的描述字段（Hackathon、Bounty、Grant、Submission 的 description）支持 Markdown 格式，使用 Forgejo 原生 Markdown 编辑器（支持图片上传、代码块、链接）。v0.1 不支持 MDX。
 
 ### Cross-Cutting Concerns
 - **i18n:** All user-facing text in `locale_en-US.ini` + `locale_zh-CN.ini`

@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
+	notify_service "forgejo.org/services/notify"
 )
 
 // closeBountyIssue closes the Issue linked to a bounty when it completes.
@@ -194,25 +195,24 @@ func AcceptApplication(ctx context.Context, applicationID, doerID int64) error {
 			}
 
 			// Publish feed event.
-			if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-				ActUserID:    doerID,
-				OpType:       hackforger_model.ActionBountyClaimed,
-				EntityType:   "bounty",
-				EntityID:     bounty.ID,
-				EntityName:   bounty.Title,
-				RepoID:       bounty.RepoID,
-				AudienceType: AudienceFollowers | AudienceRepoWatchers,
-				Content: &hackforger_model.HackforgerPhaseContent{
-					HackforgerActionContent: hackforger_model.HackforgerActionContent{
-						EntityType: "bounty",
-						EntityID:   bounty.ID,
-						EntityName: bounty.Title,
+			if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+				notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+					OpType:       hackforger_model.ActionBountyClaimed,
+					EntityType:   "bounty",
+					EntityID:     bounty.ID,
+					EntityName:   bounty.Title,
+					RepoID:       bounty.RepoID,
+					AudienceType: notify_service.AudienceFollowers | notify_service.AudienceRepoWatchers,
+					Content: &hackforger_model.HackforgerPhaseContent{
+						HackforgerActionContent: hackforger_model.HackforgerActionContent{
+							EntityType: "bounty",
+							EntityID:   bounty.ID,
+							EntityName: bounty.Title,
+						},
+						OldStatus: "open",
+						NewStatus: "claimed",
 					},
-					OldStatus: "open",
-					NewStatus: "claimed",
-				},
-			}); err != nil {
-				log.Error("AcceptApplication: PublishHackforgerAction: %v", err)
+				})
 			}
 		}
 
@@ -271,6 +271,34 @@ func StartReview(ctx context.Context, bountyID, doerID int64) error {
 	return hackforger_model.UpdateBounty(ctx, bounty)
 }
 
+// SubmitDelivery transitions an Exclusive bounty from Claimed to InReview.
+// Called when the claimer submits their work for review.
+func SubmitDelivery(ctx context.Context, bountyID, doerID int64) error {
+	bounty, err := hackforger_model.GetBountyByID(ctx, bountyID)
+	if err != nil {
+		return err
+	}
+
+	if bounty.Mode != hackforger_model.BountyModeExclusive {
+		return ErrInvalidBountyStatus{
+			BountyID: bountyID,
+			Current:  bounty.Status,
+			Expected: "Exclusive mode only",
+		}
+	}
+
+	if bounty.Status != hackforger_model.BountyStatusClaimed {
+		return ErrInvalidBountyStatus{
+			BountyID: bountyID,
+			Current:  bounty.Status,
+			Expected: "Claimed",
+		}
+	}
+
+	bounty.Status = hackforger_model.BountyStatusInReview
+	return hackforger_model.UpdateBounty(ctx, bounty)
+}
+
 // CompleteBounty transitions an Exclusive bounty from InReview to Completed.
 // If credit-type rewards exist, they are deposited to the claimer.
 func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {
@@ -315,25 +343,24 @@ func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {
 		}
 
 		// Publish feed event.
-		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-			ActUserID:    doerID,
-			OpType:       hackforger_model.ActionBountyCompleted,
-			EntityType:   "bounty",
-			EntityID:     bounty.ID,
-			EntityName:   bounty.Title,
-			RepoID:       bounty.RepoID,
-			AudienceType: AudienceFollowers | AudienceRepoWatchers,
-			Content: &hackforger_model.HackforgerPhaseContent{
-				HackforgerActionContent: hackforger_model.HackforgerActionContent{
-					EntityType: "bounty",
-					EntityID:   bounty.ID,
-					EntityName: bounty.Title,
+		if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+			notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+				OpType:       hackforger_model.ActionBountyCompleted,
+				EntityType:   "bounty",
+				EntityID:     bounty.ID,
+				EntityName:   bounty.Title,
+				RepoID:       bounty.RepoID,
+				AudienceType: notify_service.AudienceFollowers | notify_service.AudienceRepoWatchers,
+				Content: &hackforger_model.HackforgerPhaseContent{
+					HackforgerActionContent: hackforger_model.HackforgerActionContent{
+						EntityType: "bounty",
+						EntityID:   bounty.ID,
+						EntityName: bounty.Title,
+					},
+					OldStatus: "in_review",
+					NewStatus: "completed",
 				},
-				OldStatus: "in_review",
-				NewStatus: "completed",
-			},
-		}); err != nil {
-			log.Error("CompleteBounty: PublishHackforgerAction: %v", err)
+			})
 		}
 
 		// Close the linked Issue — bounty completion means task is done.
@@ -441,25 +468,24 @@ func SelectWinners(ctx context.Context, bountyID, doerID int64, winners []Winner
 		}
 
 		// Publish feed event.
-		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-			ActUserID:    doerID,
-			OpType:       hackforger_model.ActionBountyWinnersSelected,
-			EntityType:   "bounty",
-			EntityID:     bounty.ID,
-			EntityName:   bounty.Title,
-			RepoID:       bounty.RepoID,
-			AudienceType: AudienceGlobal,
-			Content: &hackforger_model.HackforgerPhaseContent{
-				HackforgerActionContent: hackforger_model.HackforgerActionContent{
-					EntityType: "bounty",
-					EntityID:   bounty.ID,
-					EntityName: bounty.Title,
+		if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+			notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+				OpType:       hackforger_model.ActionBountyWinnersSelected,
+				EntityType:   "bounty",
+				EntityID:     bounty.ID,
+				EntityName:   bounty.Title,
+				RepoID:       bounty.RepoID,
+				AudienceType: notify_service.AudienceGlobal,
+				Content: &hackforger_model.HackforgerPhaseContent{
+					HackforgerActionContent: hackforger_model.HackforgerActionContent{
+						EntityType: "bounty",
+						EntityID:   bounty.ID,
+						EntityName: bounty.Title,
+					},
+					OldStatus: "in_review",
+					NewStatus: "completed",
 				},
-				OldStatus: "in_review",
-				NewStatus: "completed",
-			},
-		}); err != nil {
-			log.Error("SelectWinners: PublishHackforgerAction: %v", err)
+			})
 		}
 
 		// Close the linked Issue — bounty completion means task is done.
@@ -493,26 +519,25 @@ func MarkPaid(ctx context.Context, bountyID, doerID int64) error {
 		return err
 	}
 
-	// AudienceType=0: no broadcast — only the actor's own feed record is written.
-	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doerID,
-		OpType:       hackforger_model.ActionBountyPaid,
-		EntityType:   "bounty",
-		EntityID:     bounty.ID,
-		EntityName:   bounty.Title,
-		RepoID:       bounty.RepoID,
-		AudienceType: 0,
-		Content: &hackforger_model.HackforgerPhaseContent{
-			HackforgerActionContent: hackforger_model.HackforgerActionContent{
-				EntityType: "bounty",
-				EntityID:   bounty.ID,
-				EntityName: bounty.Title,
+	// AudienceType=0: no broadcast -- only the actor's own feed record is written.
+	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionBountyPaid,
+			EntityType:   "bounty",
+			EntityID:     bounty.ID,
+			EntityName:   bounty.Title,
+			RepoID:       bounty.RepoID,
+			AudienceType: 0,
+			Content: &hackforger_model.HackforgerPhaseContent{
+				HackforgerActionContent: hackforger_model.HackforgerActionContent{
+					EntityType: "bounty",
+					EntityID:   bounty.ID,
+					EntityName: bounty.Title,
+				},
+				OldStatus: "completed",
+				NewStatus: "paid",
 			},
-			OldStatus: "completed",
-			NewStatus: "paid",
-		},
-	}); err != nil {
-		log.Error("MarkPaid: PublishHackforgerAction: %v", err)
+		})
 	}
 
 	return nil
@@ -542,25 +567,24 @@ func CancelBounty(ctx context.Context, bountyID, doerID int64) error {
 		return err
 	}
 
-	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doerID,
-		OpType:       hackforger_model.ActionBountyCancelled,
-		EntityType:   "bounty",
-		EntityID:     bounty.ID,
-		EntityName:   bounty.Title,
-		RepoID:       bounty.RepoID,
-		AudienceType: AudienceRepoWatchers,
-		Content: &hackforger_model.HackforgerPhaseContent{
-			HackforgerActionContent: hackforger_model.HackforgerActionContent{
-				EntityType: "bounty",
-				EntityID:   bounty.ID,
-				EntityName: bounty.Title,
+	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionBountyCancelled,
+			EntityType:   "bounty",
+			EntityID:     bounty.ID,
+			EntityName:   bounty.Title,
+			RepoID:       bounty.RepoID,
+			AudienceType: notify_service.AudienceRepoWatchers,
+			Content: &hackforger_model.HackforgerPhaseContent{
+				HackforgerActionContent: hackforger_model.HackforgerActionContent{
+					EntityType: "bounty",
+					EntityID:   bounty.ID,
+					EntityName: bounty.Title,
+				},
+				OldStatus: "open",
+				NewStatus: "cancelled",
 			},
-			OldStatus: "open",
-			NewStatus: "cancelled",
-		},
-	}); err != nil {
-		log.Error("CancelBounty: PublishHackforgerAction: %v", err)
+		})
 	}
 
 	return nil
@@ -595,25 +619,24 @@ func CheckExpiredBounties(ctx context.Context) error {
 			oldStatusStr = "claimed"
 		}
 
-		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-			ActUserID:    bounty.PublisherID,
-			OpType:       hackforger_model.ActionBountyExpired,
-			EntityType:   "bounty",
-			EntityID:     bounty.ID,
-			EntityName:   bounty.Title,
-			RepoID:       bounty.RepoID,
-			AudienceType: AudienceRepoWatchers,
-			Content: &hackforger_model.HackforgerPhaseContent{
-				HackforgerActionContent: hackforger_model.HackforgerActionContent{
-					EntityType: "bounty",
-					EntityID:   bounty.ID,
-					EntityName: bounty.Title,
+		if doer, err := user_model.GetUserByID(ctx, bounty.PublisherID); err == nil {
+			notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+				OpType:       hackforger_model.ActionBountyExpired,
+				EntityType:   "bounty",
+				EntityID:     bounty.ID,
+				EntityName:   bounty.Title,
+				RepoID:       bounty.RepoID,
+				AudienceType: notify_service.AudienceRepoWatchers,
+				Content: &hackforger_model.HackforgerPhaseContent{
+					HackforgerActionContent: hackforger_model.HackforgerActionContent{
+						EntityType: "bounty",
+						EntityID:   bounty.ID,
+						EntityName: bounty.Title,
+					},
+					OldStatus: oldStatusStr,
+					NewStatus: "expired",
 				},
-				OldStatus: oldStatusStr,
-				NewStatus: "expired",
-			},
-		}); err != nil {
-			log.Error("CheckExpiredBounties: PublishHackforgerAction(%d): %v", bounty.ID, err)
+			})
 		}
 	}
 
@@ -698,25 +721,24 @@ func ExpireBounty(ctx context.Context, bounty *hackforger_model.Bounty) error {
 		return err
 	}
 
-	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    bounty.PublisherID,
-		OpType:       hackforger_model.ActionBountyExpired,
-		EntityType:   "bounty",
-		EntityID:     bounty.ID,
-		EntityName:   bounty.Title,
-		RepoID:       bounty.RepoID,
-		AudienceType: AudienceRepoWatchers,
-		Content: &hackforger_model.HackforgerPhaseContent{
-			HackforgerActionContent: hackforger_model.HackforgerActionContent{
-				EntityType: "bounty",
-				EntityID:   bounty.ID,
-				EntityName: bounty.Title,
+	if doer, err := user_model.GetUserByID(ctx, bounty.PublisherID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionBountyExpired,
+			EntityType:   "bounty",
+			EntityID:     bounty.ID,
+			EntityName:   bounty.Title,
+			RepoID:       bounty.RepoID,
+			AudienceType: notify_service.AudienceRepoWatchers,
+			Content: &hackforger_model.HackforgerPhaseContent{
+				HackforgerActionContent: hackforger_model.HackforgerActionContent{
+					EntityType: "bounty",
+					EntityID:   bounty.ID,
+					EntityName: bounty.Title,
+				},
+				OldStatus: oldStatusStr,
+				NewStatus: "expired",
 			},
-			OldStatus: oldStatusStr,
-			NewStatus: "expired",
-		},
-	}); err != nil {
-		log.Error("ExpireBounty: PublishHackforgerAction(%d): %v", bounty.ID, err)
+		})
 	}
 
 	return nil

@@ -4,34 +4,47 @@
 package hackforger
 
 import (
+	"sync"
 	"testing"
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/models/unittest"
+	notify_service "forgejo.org/services/notify"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestPublishHackforgerAction_Global(t *testing.T) {
+var notifierOnce sync.Once
+
+func ensureNotifierRegistered() {
+	notifierOnce.Do(func() {
+		notify_service.RegisterNotifier(&hackforgerNotifier{})
+	})
+}
+
+func TestPublishFeed_Global(t *testing.T) {
+	ensureNotifierRegistered()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	err := PublishHackforgerAction(db.DefaultContext, &HackforgerActionOpts{
-		ActUserID:    2,
+	doer, err := user_model.GetUserByID(db.DefaultContext, 2)
+	require.NoError(t, err)
+
+	notify_service.HackforgerEntityCreated(db.DefaultContext, doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyCreated,
 		EntityType:   "bounty",
 		EntityID:     1,
 		EntityName:   "Test Bounty",
 		RepoID:       1,
-		AudienceType: AudienceGlobal,
+		AudienceType: notify_service.AudienceGlobal,
 		Content: &hackforger_model.HackforgerActionContent{
 			EntityType: "bounty",
 			EntityID:   1,
 			EntityName: "Test Bounty",
 		},
 	})
-	require.NoError(t, err)
 
 	// Verify global record (UserID=0) was created in hackforger_action table.
 	var globalActions []*hackforger_model.HackforgerAction
@@ -51,22 +64,24 @@ func TestPublishHackforgerAction_Global(t *testing.T) {
 	assert.NotEmpty(t, actorActions, "expected actor's own action record")
 }
 
-func TestPublishHackforgerAction_Followers(t *testing.T) {
+func TestPublishFeed_Followers(t *testing.T) {
+	ensureNotifierRegistered()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
+	doer, err := user_model.GetUserByID(db.DefaultContext, 2)
+	require.NoError(t, err)
+
 	// User 2 has followers: user 4 and user 8 (per follow.yml fixture).
-	err := PublishHackforgerAction(db.DefaultContext, &HackforgerActionOpts{
-		ActUserID:    2,
+	notify_service.HackforgerEntityStatusChanged(db.DefaultContext, doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyClaimed,
 		RepoID:       1,
-		AudienceType: AudienceFollowers,
+		AudienceType: notify_service.AudienceFollowers,
 		Content: &hackforger_model.HackforgerActionContent{
 			EntityType: "bounty",
 			EntityID:   2,
 			EntityName: "Follower Bounty",
 		},
 	})
-	require.NoError(t, err)
 
 	// Verify actor record exists.
 	var actorActions []*hackforger_model.HackforgerAction
@@ -92,27 +107,27 @@ func TestPublishHackforgerAction_Followers(t *testing.T) {
 	assert.True(t, followerIDs[8], "expected action for follower user 8")
 }
 
-func TestPublishHackforgerAction_CombinedAudience(t *testing.T) {
+func TestPublishFeed_CombinedAudience(t *testing.T) {
+	ensureNotifierRegistered()
 	require.NoError(t, unittest.PrepareTestDatabase())
 
+	doer, err := user_model.GetUserByID(db.DefaultContext, 2)
+	require.NoError(t, err)
+
 	// Test RepoWatchers audience for user 2 on repo 1.
-	// AudienceGlobal=1 (bit flag 1<<0); AudienceRepoWatchers=8 (bit flag 1<<3).
-	// Exact watcher set depends on fixture data; we verify basic invariants.
-	err := PublishHackforgerAction(db.DefaultContext, &HackforgerActionOpts{
-		ActUserID:    2,
+	notify_service.HackforgerEntityStatusChanged(db.DefaultContext, doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyCompleted,
 		EntityType:   "bounty",
 		EntityID:     3,
 		EntityName:   "Combined Bounty",
 		RepoID:       1,
-		AudienceType: AudienceRepoWatchers,
+		AudienceType: notify_service.AudienceRepoWatchers,
 		Content: &hackforger_model.HackforgerActionContent{
 			EntityType: "bounty",
 			EntityID:   3,
 			EntityName: "Combined Bounty",
 		},
 	})
-	require.NoError(t, err)
 
 	// Verify action records were created in hackforger_action table.
 	var allActions []*hackforger_model.HackforgerAction
@@ -131,26 +146,28 @@ func TestPublishHackforgerAction_CombinedAudience(t *testing.T) {
 	assert.GreaterOrEqual(t, len(allActions), 2, "expected at least actor + 1 watcher")
 }
 
-func TestPublishHackforgerAction_Dedup(t *testing.T) {
+func TestPublishFeed_Dedup(t *testing.T) {
+	ensureNotifierRegistered()
 	require.NoError(t, unittest.PrepareTestDatabase())
+
+	doer, err := user_model.GetUserByID(db.DefaultContext, 2)
+	require.NoError(t, err)
 
 	// User 2's followers: users 4, 8.
 	// Repo 1 watchers (excluding mode=2): users 1, 4, 9, 11.
-	// User 4 appears in BOTH followers and watchers — should only get one record.
-	err := PublishHackforgerAction(db.DefaultContext, &HackforgerActionOpts{
-		ActUserID:    2,
+	// User 4 appears in BOTH followers and watchers -- should only get one record.
+	notify_service.HackforgerEntityStatusChanged(db.DefaultContext, doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyDelivered,
 		RepoID:       1,
-		AudienceType: AudienceFollowers | AudienceRepoWatchers,
+		AudienceType: notify_service.AudienceFollowers | notify_service.AudienceRepoWatchers,
 		Content: &hackforger_model.HackforgerActionContent{
 			EntityType: "bounty",
 			EntityID:   4,
 			EntityName: "Dedup Bounty",
 		},
 	})
-	require.NoError(t, err)
 
-	// Count records for user 4 — should be exactly 1 (dedup).
+	// Count records for user 4 -- should be exactly 1 (dedup).
 	var user4Actions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND user_id = 4 AND act_user_id = 2", hackforger_model.ActionBountyDelivered).
@@ -159,8 +176,6 @@ func TestPublishHackforgerAction_Dedup(t *testing.T) {
 	assert.Len(t, user4Actions, 1, "user 4 should appear exactly once despite being in both followers and watchers")
 
 	// Verify action records were created for each unique audience member.
-	// The exact count depends on fixture data (follow + watch tables).
-	// The key invariant is: actor gets 1 record + each unique target gets 1 record.
 	var allActions []*hackforger_model.HackforgerAction
 	err = db.GetEngine(db.DefaultContext).
 		Where("op_type = ? AND act_user_id = 2", hackforger_model.ActionBountyDelivered).

@@ -1,0 +1,29 @@
+<div id="hf-search-modal" class="hf-search-modal" style="display:none">
+  <div class="hf-search-overlay"></div>
+  <div class="hf-search-dialog">
+    <div class="hf-search-input-wrap">
+      {{svg "octicon-search" 16 "hf-search-icon"}}
+      <input id="hf-search-input" type="text"
+        placeholder="{{ctx.Locale.Tr "hackforger.search.placeholder"}}"
+        autocomplete="off">
+      <kbd class="hf-search-kbd">&#8984;K</kbd>
+    </div>
+
+    {{/* AI assistant panel — hidden for v0.1, will be enabled in future release */}}
+
+    <div id="hf-search-results" class="hf-search-results"
+      data-empty-text="{{ctx.Locale.Tr "hackforger.search.no_results"}}"
+      data-group-hackathons="{{ctx.Locale.Tr "hackforger.search.group.hackathons"}}"
+      data-group-bounties="{{ctx.Locale.Tr "hackforger.search.group.bounties"}}"
+      data-group-grants="{{ctx.Locale.Tr "hackforger.search.group.grants"}}"
+      data-group-submissions="{{ctx.Locale.Tr "hackforger.search.group.submissions"}}"
+      data-group-repos="{{ctx.Locale.Tr "hackforger.search.group.repos"}}"
+      data-group-users="{{ctx.Locale.Tr "hackforger.search.group.users"}}"
+      data-group-issues="{{ctx.Locale.Tr "hackforger.search.group.issues"}}"
+      data-view-all="{{ctx.Locale.Tr "hackforger.search.view_all"}}">
+      <div class="hf-search-empty">
+        {{ctx.Locale.Tr "hackforger.search.no_results"}}
+      </div>
+    </div>
+  </div>
+</div>

@@ -9,6 +9,8 @@ import (
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
+	user_model "forgejo.org/models/user"
+	notify_service "forgejo.org/services/notify"
 )
 
 // CriteriaScore holds a judge's score for a single criterion.
@@ -122,15 +124,20 @@ func SubmitScores(ctx context.Context, judgeID, submissionID int64, scores []Cri
 	}
 
 	// 8. Publish feed event
-	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    judgeID,
-		OpType:       hackforger_model.ActionHackathonScored,
-		AudienceType: AudienceFollowers,
-		Content: hackforger_model.HackforgerActionContent{
-			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
-			Extra: map[string]any{"submission_id": submissionID, "track_id": sub.TrackID},
-		},
-	})
+	if doer, err := user_model.GetUserByID(ctx, judgeID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionHackathonScored,
+			EntityType:   "hackathon",
+			EntityID:     h.ID,
+			EntityName:   h.Name,
+			EntitySlug:   h.Slug,
+			AudienceType: notify_service.AudienceFollowers,
+			Content: hackforger_model.HackforgerActionContent{
+				EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+				Extra: map[string]any{"submission_id": submissionID, "track_id": sub.TrackID},
+			},
+		})
+	}
 	return nil
 }
 

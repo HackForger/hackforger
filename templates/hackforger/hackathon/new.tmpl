@@ -7,29 +7,67 @@
 				<form class="ui form" method="post" action="{{AppSubUrl}}/hackathons/new">
 					<div class="required field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
-						<input name="name" required>
+						<input name="name" required placeholder="{{ctx.Locale.Tr "hackforger.hackathon.field.name_hint"}}">
 					</div>
 					<div class="required field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.slug"}}</label>
-						<input name="slug" required pattern="[a-z0-9\-]+">
+						<input name="slug" required pattern="[a-z0-9\-]+" placeholder="my-hackathon">
+						<p class="help">{{ctx.Locale.Tr "hackforger.hackathon.field.slug_hint"}}</p>
 					</div>
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.description"}}</label>
-						<textarea name="description" rows="5"></textarea>
+						{{template "shared/combomarkdowneditor" (dict
+							"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
+							"MarkdownPreviewContext" ""
+							"TextareaName" "description"
+							"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.hackathon.field.description_hint")
+							"DropzoneParentContainer" "form"
+						)}}
+					</div>
+					{{if .IsAttachmentEnabled}}
+					<div class="field">
+						{{template "repo/upload" .}}
+					</div>
+					{{end}}
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.prize_summary"}}</label>
+						<textarea name="prize_summary" rows="3" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.field.prize_hint"}}"></textarea>
+						<p class="help">{{ctx.Locale.Tr "hackforger.hackathon.field.prize_markdown"}}</p>
+					</div>
+
+					<h4 class="tw-mt-4 tw-mb-2">{{ctx.Locale.Tr "hackforger.hackathon.field.schedule"}}</h4>
+					<div class="two fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.registration_start"}}</label>
+							<input name="registration_start" type="datetime-local">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.registration_end"}}</label>
+							<input name="registration_end" type="datetime-local">
+						</div>
+					</div>
+					<div class="two fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.hacking_start"}}</label>
+							<input name="hacking_start" type="datetime-local">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.hacking_end"}}</label>
+							<input name="hacking_end" type="datetime-local">
+						</div>
 					</div>
 					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.org"}}</label>
-						<input name="org_id" type="number" value="0">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.judging_end"}}</label>
+						<input name="judging_end" type="datetime-local">
 					</div>
+
+					<h4 class="tw-mt-4 tw-mb-2">{{ctx.Locale.Tr "hackforger.hackathon.field.settings"}}</h4>
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.max_team_size"}}</label>
 						<input name="max_team_size" type="number" value="5" min="1">
 					</div>
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.hackathon.field.prize_summary"}}</label>
-						<textarea name="prize_summary" rows="3"></textarea>
-					</div>
-					<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.create"}}</button>
+
+					<button class="hf-btn hf-btn-primary tw-mt-4" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.create"}}</button>
 				</form>
 			</div>
 		</div>

@@ -72,6 +72,8 @@ type ListSubmissionsOptions struct {
 	HackathonID int64
 	TrackID     int64
 	Status      *SubmissionStatus
+	Keyword     string
+	SortBy      string
 }
 
 func (opts ListSubmissionsOptions) ToConds() builder.Cond {
@@ -85,7 +87,28 @@ func (opts ListSubmissionsOptions) ToConds() builder.Cond {
 	if opts.Status != nil {
 		cond = cond.And(builder.Eq{"hackathon_submission.status": *opts.Status})
 	}
+	if opts.Keyword != "" {
+		cond = cond.And(builder.Or(
+			builder.Like{"hackathon_submission.title", opts.Keyword},
+			builder.Like{"hackathon_submission.description", opts.Keyword},
+		))
+	}
 	return cond
+}
+
+func (opts ListSubmissionsOptions) ToOrders() string {
+	switch opts.SortBy {
+	case "oldest":
+		return "hackathon_submission.created_unix ASC"
+	case "score":
+		return "hackathon_submission.total_score DESC"
+	case "rank":
+		return "hackathon_submission.rank ASC"
+	case "alphabetically":
+		return "hackathon_submission.title ASC"
+	default: // "newest"
+		return "hackathon_submission.created_unix DESC"
+	}
 }
 
 // GetSubmissionByID returns a submission by its ID.

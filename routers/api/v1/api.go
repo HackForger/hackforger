@@ -1550,7 +1550,7 @@ func Routes() *web.Route {
 						m.Put("/applications/{application_id}", reqToken(), bind(hackforger_api.ReviewApplicationForm{}), hackforger_api.ReviewApplication)
 						m.Post("/review", reqToken(), hackforger_api.StartReviewAPI)
 						m.Post("/complete", reqToken(), hackforger_api.CompleteBountyAPI)
-						m.Post("/reject-delivery", reqToken(), hackforger_api.RejectDeliveryAPI)
+						m.Post("/reject", reqToken(), hackforger_api.RejectDeliveryAPI)
 						m.Post("/pay", reqToken(), hackforger_api.MarkPaidAPI)
 						m.Post("/cancel", reqToken(), hackforger_api.CancelBountyAPI)
 						m.Post("/expire", reqToken(), hackforger_api.ExpireBountyAPI)
@@ -1771,8 +1771,7 @@ func Routes() *web.Route {
 				m.Delete("", reqToken(), hackforger_api.DeleteHackathon)
 				m.Post("/publish", reqToken(), hackforger_api.PublishHackathon)
 				m.Post("/start", reqToken(), hackforger_api.StartHackathon)
-				m.Post("/start-judging", reqToken(), hackforger_api.StartJudgingHackathon)
-				m.Post("/finalize", reqToken(), hackforger_api.FinalizeHackathon)
+				m.Post("/judge", reqToken(), hackforger_api.StartJudgingHackathon)
 				m.Post("/cancel", reqToken(), hackforger_api.CancelHackathon)
 				m.Get("/tracks", hackforger_api.ListTracks)
 				m.Post("/tracks", reqToken(), bind(hackforger_api.CreateTrackForm{}), hackforger_api.CreateTrack)
@@ -1799,7 +1798,7 @@ func Routes() *web.Route {
 				m.Get("/tracks/{tid}/criteria", hackforger_api.GetTrackEffectiveRubric)
 				m.Put("/tracks/{tid}/criteria/{cid}", reqToken(), bind(hackforger_api.TrackCriteriaOverrideForm{}), hackforger_api.SetTrackCriteriaOverrideAPI)
 				m.Get("/finalize-preview", reqToken(), hackforger_api.FinalizePreviewAPI)
-				m.Post("/finalize-confirm", reqToken(), hackforger_api.FinalizeConfirmAPI)
+				m.Post("/finalize", reqToken(), hackforger_api.FinalizeConfirmAPI)
 			})
 
 			// Bounty global routes
@@ -1807,6 +1806,7 @@ func Routes() *web.Route {
 			m.Get("/bounties/stats", hackforger_api.BountyStats)
 			m.Get("/bounties/leaderboard", hackforger_api.HunterLeaderboard)
 			m.Get("/feed", hackforger_api.GetFeed)
+			m.Get("/search", hackforger_api.SearchAPI)
 
 			// Grant Round routes
 			m.Group("/grant-rounds", func() {
@@ -1851,7 +1851,7 @@ func Routes() *web.Route {
 					})
 					m.Post("", reqToken(), bind(hackforger_api.RedeemForm{}), hackforger_api.Redeem)
 					m.Get("/orders", reqToken(), hackforger_api.ListRedeemOrders)
-					m.Post("/orders/batch-fulfill", reqToken(), reqSiteAdmin(), bind(hackforger_api.BatchFulfillForm{}), hackforger_api.BatchFulfill)
+					m.Post("/orders/fulfill", reqToken(), reqSiteAdmin(), bind(hackforger_api.BatchFulfillForm{}), hackforger_api.BatchFulfill)
 					m.Post("/orders/{oid}/fulfill", reqToken(), reqSiteAdmin(), bind(hackforger_api.FulfillOrderForm{}), hackforger_api.FulfillOrder)
 					m.Post("/orders/{oid}/cancel", reqToken(), reqSiteAdmin(), hackforger_api.CancelOrder)
 				})
@@ -1861,11 +1861,21 @@ func Routes() *web.Route {
 				}, reqToken(), reqSiteAdmin())
 			})
 
+			// Admin routes (site admin only)
+			m.Group("/admin", func() {
+				m.Post("/reindex", hackforger_api.AdminReindex)
+			}, reqToken(), reqSiteAdmin())
+
 			// Reputation routes
 			m.Group("/reputation", func() {
 				m.Get("/users/{username}", hackforger_api.GetUserReputation)
 				m.Get("/leaderboard", hackforger_api.GetReputationLeaderboard)
 				m.Post("/recalculate/{username}", reqToken(), reqSiteAdmin(), hackforger_api.AdminRecalculateReputation)
+			})
+
+			// Assistant routes
+			m.Group("/assistant", func() {
+				m.Post("/chat", reqToken(), bind(hackforger_api.ChatForm{}), hackforger_api.ChatAPI)
 			})
 		})
 	}, sudo())

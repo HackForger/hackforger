@@ -5,6 +5,8 @@
 - `admin` deposits 2000 Credits to `organizer` for the grant round
 - hacker1 (950 Credits), hacker2 (400 Credits) exist
 
+> **v0.1 集成场景：** Grant Round 可在 Hackathon 进行期间创建，用于额外资助特定赛道的参赛者。详见 `docs/tests/e2e/tasks/user-journey-full-cycle.md` Phase 5。
+
 ### Step 3.0: Admin deposits Credits to organizer for grant round
 
 - **Role**: `admin`
@@ -132,6 +134,7 @@
     - organizer: -1000 (balance: 2400 - 1000 = 1400)
   - Project 1 status: `Approved` → `Funded`
   - Transaction type: `deposit` for hacker1, `withdraw` from organizer
+  - 验证: organizer 余额 2400 → 1400, hacker1 余额 +1000
   - Feed event: (covered by round state change)
 - **Fixture Hint**: `grant_round(id=1, status=Distributed)`, `grant_project(id=1, status=Funded)`, `credit_transaction(deposit, hacker1, 1000)`
 

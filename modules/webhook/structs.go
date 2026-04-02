@@ -30,6 +30,28 @@ type HookEvents struct {
 	ActionRunFailure         bool `json:"action_run_failure"`
 	ActionRunRecover         bool `json:"action_run_recover"`
 	ActionRunSuccess         bool `json:"action_run_success"`
+
+	// HackForger events
+	HackathonCreated       bool `json:"hackathon_created"`
+	HackathonStatusChanged bool `json:"hackathon_status_changed"`
+	HackathonSubmission    bool `json:"hackathon_submission"`
+	HackathonScored        bool `json:"hackathon_scored"`
+	HackathonFinalized     bool `json:"hackathon_finalized"`
+	BountyCreated          bool `json:"bounty_created"`
+	BountyApplication      bool `json:"bounty_application"`
+	BountyClaimed          bool `json:"bounty_claimed"`
+	BountyCompleted        bool `json:"bounty_completed"`
+	BountyPaid             bool `json:"bounty_paid"`
+	BountyWinners          bool `json:"bounty_winners"`
+	BountyExpired          bool `json:"bounty_expired"`
+	BountyCancelled        bool `json:"bounty_cancelled"`
+	GrantRoundCreated      bool `json:"grant_round_created"`
+	GrantRoundOpened       bool `json:"grant_round_opened"`
+	GrantProjectSubmitted  bool `json:"grant_project_submitted"`
+	GrantAwarded           bool `json:"grant_awarded"`
+	GrantRoundFinalized    bool `json:"grant_round_finalized"`
+	CreditsDeposited       bool `json:"credits_deposited"`
+	CreditsRedeemed        bool `json:"credits_redeemed"`
 }
 
 // HookEvent represents events that will deliver a hook.

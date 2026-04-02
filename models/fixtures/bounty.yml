@@ -23,3 +23,81 @@
   deadline: 1735689600
   created_unix: 1672578100
   updated_unix: 1672578100
+
+-
+  id: 3
+  repo_id: 2
+  issue_id: 4
+  publisher_id: 2
+  claimer_id: 4
+  title: "Optimize database queries"
+  status: 1
+  mode: 0
+  deadline: 1735689600
+  created_unix: 1672578200
+  updated_unix: 1672578200
+
+-
+  id: 4
+  repo_id: 2
+  issue_id: 7
+  publisher_id: 2
+  claimer_id: 4
+  title: "Add dark mode support"
+  status: 2
+  mode: 0
+  deadline: 1735689600
+  created_unix: 1672578300
+  updated_unix: 1672578300
+
+-
+  id: 5
+  repo_id: 3
+  issue_id: 6
+  publisher_id: 2
+  claimer_id: 4
+  title: "Write integration tests"
+  status: 3
+  mode: 0
+  deadline: 1735689600
+  created_unix: 1672578400
+  updated_unix: 1672578400
+
+-
+  id: 6
+  repo_id: 3
+  issue_id: 12
+  publisher_id: 2
+  claimer_id: 4
+  title: "Implement webhook notifications"
+  status: 4
+  mode: 0
+  deadline: 1735689600
+  created_unix: 1672578500
+  updated_unix: 1672578500
+
+-
+  id: 7
+  repo_id: 5
+  issue_id: 15
+  publisher_id: 2
+  claimer_id: 0
+  title: "Expired bounty for testing"
+  status: 5
+  mode: 0
+  deadline: 1609459200
+  created_unix: 1672578600
+  updated_unix: 1672578600
+
+-
+  id: 8
+  repo_id: 10
+  issue_id: 8
+  publisher_id: 2
+  claimer_id: 0
+  title: "Cancelled bounty"
+  status: 6
+  mode: 0
+  deadline: 1735689600
+  created_unix: 1672578700
+  updated_unix: 1672578700

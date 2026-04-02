@@ -112,6 +112,12 @@
 			</div>
 			{{end}}
 
+			<button class="item not-mobile tw-mx-0" id="hf-search-trigger"
+				data-tooltip-content="{{ctx.Locale.Tr "hackforger.search.placeholder"}}"
+				aria-label="{{ctx.Locale.Tr "hackforger.search.placeholder"}}">
+				{{svg "octicon-search"}}
+			</button>
+
 			<a class="item not-mobile tw-mx-0" href="{{AppSubUrl}}/notifications" data-tooltip-content="{{ctx.Locale.Tr "notifications"}}" aria-label="{{ctx.Locale.Tr "notifications"}}">
 				<div class="tw-relative">
 					{{svg "octicon-bell"}}
@@ -247,4 +253,6 @@
 			</a>
 		{{end}}
 	</div><!-- end full right menu -->
+
+	{{template "hackforger/search_modal" .}}
 </nav>

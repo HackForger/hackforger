@@ -31,6 +31,22 @@ type UpdateTrackForm struct {
 }
 
 // ListTracks returns all tracks for a hackathon.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/tracks hackforger hackforgerListTracks
+// ---
+// summary: List tracks for a hackathon
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "200":
+//     description: Track list
 func ListTracks(ctx *context.APIContext) {
 	tracks, err := hackforger_model.ListTracksByHackathon(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -41,6 +57,31 @@ func ListTracks(ctx *context.APIContext) {
 }
 
 // CreateTrack adds a new track to a hackathon, creating a repo in the linked org.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/tracks hackforger hackforgerCreateTrack
+// ---
+// summary: Create a track for a hackathon
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/CreateTrackForm"
+// responses:
+//   "201":
+//     description: Track created
+//   "404":
+//     "$ref": "#/responses/notFound"
 func CreateTrack(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*CreateTrackForm)
 	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
@@ -68,6 +109,37 @@ func CreateTrack(ctx *context.APIContext) {
 }
 
 // UpdateTrack updates an existing hackathon track.
+//
+// swagger:operation PUT /hackforger/hackathons/{id}/tracks/{tid} hackforger hackforgerUpdateTrack
+// ---
+// summary: Update a hackathon track
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: tid
+//   in: path
+//   description: ID of the track
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/UpdateTrackForm"
+// responses:
+//   "200":
+//     description: Updated track
+//   "404":
+//     "$ref": "#/responses/notFound"
 func UpdateTrack(ctx *context.APIContext) {
 	t, err := hackforger_model.GetTrackByID(ctx, ctx.ParamsInt64(":tid"))
 	if err != nil {
@@ -102,6 +174,26 @@ func UpdateTrack(ctx *context.APIContext) {
 }
 
 // DeleteTrack removes a track from a hackathon.
+//
+// swagger:operation DELETE /hackforger/hackathons/{id}/tracks/{tid} hackforger hackforgerDeleteTrack
+// ---
+// summary: Delete a hackathon track
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: tid
+//   in: path
+//   description: ID of the track
+//   type: integer
+//   format: int64
+//   required: true
+// responses:
+//   "204":
+//     description: Track deleted
 func DeleteTrack(ctx *context.APIContext) {
 	if err := hackforger_model.DeleteTrack(ctx, ctx.ParamsInt64(":tid")); err != nil {
 		ctx.InternalServerError(err)

@@ -44,6 +44,7 @@
 - **Expected Result**:
   ```json
   { "balance": 1950 }
+  // 来源: 500 (Hackathon 1st) + 300 (Bounty Exclusive) + 150 (Bounty Competitive 1st) + 1000 (Grant) = 1950
   ```
 - **Fixture Hint**: `credit_account(user=hacker1, balance=1950)`
 

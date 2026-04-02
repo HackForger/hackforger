@@ -9,15 +9,34 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	hackforger_model "forgejo.org/models/hackforger"
 	organization_model "forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_service "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
+
+// parseDatetimeLocal converts an HTML datetime-local input value (e.g. "2026-04-15T10:00")
+// to a timeutil.TimeStamp. Returns 0 if the string is empty or cannot be parsed.
+func parseDatetimeLocal(s string) timeutil.TimeStamp {
+	if s == "" {
+		return 0
+	}
+	t, err := time.ParseInLocation("2006-01-02T15:04", s, time.Local)
+	if err != nil {
+		return 0
+	}
+	return timeutil.TimeStamp(t.Unix())
+}
 
 const (
 	tplExplore          = "hackforger/explore"
@@ -116,6 +135,17 @@ func ExploreHackathons(ctx *context.Context) {
 
 func NewHackathon(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
+	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
+	ctx.Data["AttachmentAllowedTypes"] = setting.Attachment.AllowedTypes
+	ctx.Data["AttachmentMaxSize"] = setting.Attachment.MaxSize
+	ctx.Data["AttachmentMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
+	ctx.Data["UploadRemoveUrl"] = ""
+	ctx.Data["UploadLinkUrl"] = ""
+	ctx.Data["UploadAccepts"] = strings.ReplaceAll(setting.Attachment.AllowedTypes, "|", ",")
+	ctx.Data["UploadMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadMaxSize"] = setting.Attachment.MaxSize
+	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
 	ctx.HTML(http.StatusOK, tplNew)
 }
 
@@ -124,15 +154,18 @@ func NewHackathonPost(ctx *context.Context) {
 	if maxTeamSize <= 0 {
 		maxTeamSize = 5
 	}
-	orgID, _ := strconv.ParseInt(ctx.FormString("org_id"), 10, 64)
 	h := &hackforger_model.Hackathon{
-		OrgID:        orgID,
-		OwnerID:      ctx.Doer.ID,
-		Name:         ctx.FormString("name"),
-		Slug:         ctx.FormString("slug"),
-		Description:  ctx.FormString("description"),
-		PrizeSummary: ctx.FormString("prize_summary"),
-		MaxTeamSize:  maxTeamSize,
+		OwnerID:           ctx.Doer.ID,
+		Name:              ctx.FormString("name"),
+		Slug:              ctx.FormString("slug"),
+		Description:       ctx.FormString("description"),
+		PrizeSummary:      ctx.FormString("prize_summary"),
+		MaxTeamSize:       maxTeamSize,
+		RegistrationStart: parseDatetimeLocal(ctx.FormString("registration_start")),
+		RegistrationEnd:   parseDatetimeLocal(ctx.FormString("registration_end")),
+		HackingStart:      parseDatetimeLocal(ctx.FormString("hacking_start")),
+		HackingEnd:        parseDatetimeLocal(ctx.FormString("hacking_end")),
+		JudgingEnd:        parseDatetimeLocal(ctx.FormString("judging_end")),
 	}
 	if err := hackforger_service.CreateHackathon(ctx, ctx.Doer, h); err != nil {
 		ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
@@ -224,6 +257,25 @@ func ViewHackathon(ctx *context.Context) {
 		orgs, _ := organization_model.GetUserOrgsList(ctx, ctx.Doer)
 		ctx.Data["UserOrgs"] = orgs
 	}
+
+	// Render Markdown for description and prize summary
+	if h.Description != "" {
+		rendered, err := markdown.RenderString(&markup.RenderContext{
+			Ctx: ctx,
+		}, h.Description)
+		if err == nil {
+			ctx.Data["DescriptionHTML"] = rendered
+		}
+	}
+	if h.PrizeSummary != "" {
+		rendered, err := markdown.RenderString(&markup.RenderContext{
+			Ctx: ctx,
+		}, h.PrizeSummary)
+		if err == nil {
+			ctx.Data["PrizeSummaryHTML"] = rendered
+		}
+	}
+
 	ctx.HTML(http.StatusOK, tplView)
 }
 
@@ -243,6 +295,16 @@ func RegisterPost(ctx *context.Context) {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
+	}
+
+	// Check: judges cannot register as participants
+	judges, _ := hackforger_model.ListJudges(ctx, h.ID)
+	for _, j := range judges {
+		if j.UserID == ctx.Doer.ID {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.judge_cannot_register"))
+			ctx.Redirect("/hackathon/" + h.Slug)
+			return
+		}
 	}
 
 	orgID, _ := strconv.ParseInt(ctx.FormString("org_id"), 10, 64)
@@ -267,6 +329,7 @@ func RegisterPost(ctx *context.Context) {
 		UserID:      ctx.Doer.ID,
 		OrgID:       orgID,
 		TeamName:    teamName,
+		Status:      hackforger_model.RegistrationStatusApproved,
 	}
 	if err := hackforger_model.CreateRegistration(ctx, r); err != nil {
 		if hackforger_model.IsErrDuplicateRegistration(err) {
@@ -284,10 +347,13 @@ func RegisterPost(ctx *context.Context) {
 	}
 
 	// Publish registered feed event
-	_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionHackathonRegistered,
-		AudienceType: hackforger_service.AudienceFollowers,
+		EntityType:   "hackathon",
+		EntityID:     h.ID,
+		EntityName:   h.Name,
+		EntitySlug:   h.Slug,
+		AudienceType: notify_service.AudienceFollowers,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon",
 			EntityID:   h.ID,
@@ -322,6 +388,13 @@ func SubmitForm(ctx *context.Context) {
 		Private: true,
 	})
 	ctx.Data["UserRepos"] = repos
+	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
+	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
+	ctx.Data["UploadRemoveUrl"] = ""
+	ctx.Data["UploadLinkUrl"] = ""
+	ctx.Data["UploadAccepts"] = strings.ReplaceAll(setting.Attachment.AllowedTypes, "|", ",")
+	ctx.Data["UploadMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadMaxSize"] = setting.Attachment.MaxSize
 
 	ctx.HTML(http.StatusOK, tplSubmit)
 }
@@ -369,8 +442,23 @@ func ManageHackathon(ctx *context.Context) {
 	if h == nil {
 		return
 	}
+	if ctx.Doer == nil || (ctx.Doer.ID != h.OwnerID && !ctx.Doer.IsAdmin) {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_permission"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.manage")
 	ctx.Data["Hackathon"] = h
+	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
+	ctx.Data["AttachmentAllowedTypes"] = setting.Attachment.AllowedTypes
+	ctx.Data["AttachmentMaxSize"] = setting.Attachment.MaxSize
+	ctx.Data["AttachmentMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
+	ctx.Data["UploadRemoveUrl"] = ""
+	ctx.Data["UploadLinkUrl"] = ""
+	ctx.Data["UploadAccepts"] = strings.ReplaceAll(setting.Attachment.AllowedTypes, "|", ",")
+	ctx.Data["UploadMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadMaxSize"] = setting.Attachment.MaxSize
 	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.Status)
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 	ctx.Data["Tracks"] = tracks
@@ -393,7 +481,53 @@ func ManageHackathon(ctx *context.Context) {
 		trackCriteria[t.ID] = tc
 	}
 	ctx.Data["TrackCriteria"] = trackCriteria
+
+	// Render Markdown for description preview
+	if h.Description != "" {
+		if rendered, err := markdown.RenderString(&markup.RenderContext{Ctx: ctx}, h.Description); err == nil {
+			ctx.Data["DescriptionHTML"] = rendered
+		}
+	}
+	if h.PrizeSummary != "" {
+		if rendered, err := markdown.RenderString(&markup.RenderContext{Ctx: ctx}, h.PrizeSummary); err == nil {
+			ctx.Data["PrizeSummaryHTML"] = rendered
+		}
+	}
+
 	ctx.HTML(http.StatusOK, tplManage)
+}
+
+// UpdateHackathonPost handles editing hackathon details from the manage page.
+func UpdateHackathonPost(ctx *context.Context) {
+	h := loadHackathon(ctx)
+	if h == nil {
+		return
+	}
+	if ctx.Doer == nil || (ctx.Doer.ID != h.OwnerID && !ctx.Doer.IsAdmin) {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_permission"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
+
+	h.Name = ctx.FormString("name")
+	h.Description = ctx.FormString("description")
+	h.PrizeSummary = ctx.FormString("prize_summary")
+	h.RegistrationStart = parseDatetimeLocal(ctx.FormString("registration_start"))
+	h.RegistrationEnd = parseDatetimeLocal(ctx.FormString("registration_end"))
+	h.HackingStart = parseDatetimeLocal(ctx.FormString("hacking_start"))
+	h.HackingEnd = parseDatetimeLocal(ctx.FormString("hacking_end"))
+	h.JudgingEnd = parseDatetimeLocal(ctx.FormString("judging_end"))
+	maxTeamSize, _ := strconv.Atoi(ctx.FormString("max_team_size"))
+	if maxTeamSize > 0 {
+		h.MaxTeamSize = maxTeamSize
+	}
+
+	if err := hackforger_model.UpdateHackathon(ctx, h); err != nil {
+		ctx.Flash.Error(err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("hackforger.hackathon.manage.update_success"))
+	}
+	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }
 
 func ManagePhasePost(ctx *context.Context) {
@@ -414,7 +548,7 @@ func ManagePhasePost(ctx *context.Context) {
 		err = hackforger_service.PublishHackathon(ctx, ctx.Doer.ID, h)
 	case "start":
 		err = hackforger_service.StartHacking(ctx, ctx.Doer.ID, h)
-	case "start-judging":
+	case "judge":
 		err = hackforger_service.StartJudging(ctx, ctx.Doer.ID, h)
 	case "cancel":
 		err = hackforger_service.CancelHackathon(ctx, ctx.Doer.ID, h)
@@ -511,12 +645,38 @@ func ManageJudgePost(ctx *context.Context) {
 		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 		return
 	}
-	if err := hackforger_model.AddJudge(ctx, h.ID, trackID, u.ID); err != nil {
-		if hackforger_model.IsErrDuplicateJudge(err) {
-			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.duplicate_judge"))
-		} else {
-			log.Error("AddJudge: %v", err)
-			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+	// Check: registered participants cannot be judges
+	if _, regErr := hackforger_model.GetRegistration(ctx, h.ID, u.ID); regErr == nil {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.participant_cannot_be_judge"))
+		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+		return
+	}
+	if trackID == 0 {
+		// Auto-assign judge to all tracks
+		tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
+		if len(tracks) == 0 {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_tracks"))
+			ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+			return
+		}
+		for _, t := range tracks {
+			if err := hackforger_model.AddJudge(ctx, h.ID, t.ID, u.ID); err != nil {
+				if !hackforger_model.IsErrDuplicateJudge(err) {
+					log.Error("AddJudge: %v", err)
+					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+					ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+					return
+				}
+			}
+		}
+	} else {
+		if err := hackforger_model.AddJudge(ctx, h.ID, trackID, u.ID); err != nil {
+			if hackforger_model.IsErrDuplicateJudge(err) {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.duplicate_judge"))
+			} else {
+				log.Error("AddJudge: %v", err)
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+			}
 		}
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")

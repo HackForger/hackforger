@@ -12,6 +12,7 @@ import (
 	hackforger_model "forgejo.org/models/hackforger"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/util"
+	notify_service "forgejo.org/services/notify"
 )
 
 // GetOrCreateCreditAccount returns the credit account for a user,
@@ -163,18 +164,17 @@ func Redeem(ctx context.Context, userID int64, optionID int64) (*hackforger_mode
 	}
 
 	// Publish feed event for the redemption
-	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    userID,
-		OpType:       hackforger_model.ActionCreditsRedeemed,
-		EntityType:   "credits",
-		EntityName:   optionName,
-		AudienceType: AudienceFollowers,
-		Content: &hackforger_model.HackforgerActionContent{
-			EntityType: "credits",
-			EntityName: optionName,
-		},
-	}); err != nil {
-		return order, err
+	if doer, err := user_model.GetUserByID(ctx, userID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionCreditsRedeemed,
+			EntityType:   "credits",
+			EntityName:   optionName,
+			AudienceType: notify_service.AudienceFollowers,
+			Content: &hackforger_model.HackforgerActionContent{
+				EntityType: "credits",
+				EntityName: optionName,
+			},
+		})
 	}
 
 	return order, nil
@@ -324,19 +324,20 @@ func FulfillOrder(ctx context.Context, admin *user_model.User, orderID int64, no
 
 // notifyOrderStatusChange publishes a feed event when an order status changes.
 func notifyOrderStatusChange(ctx context.Context, order *hackforger_model.RedeemOrder, adminID int64, actionType activities_model.ActionType, optionName string) {
-	_ = PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    adminID,
-		OpType:       actionType,
-		EntityType:   "credits",
-		EntityName:   optionName,
-		AudienceType: AudienceDirectUser,
-		TargetUserID: order.UserID,
-		Content: &hackforger_model.HackforgerActionContent{
-			EntityType: "credits",
-			EntityName: optionName,
-			Extra:      map[string]any{"order_id": order.ID},
-		},
-	})
+	if doer, err := user_model.GetUserByID(ctx, adminID); err == nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       actionType,
+			EntityType:   "credits",
+			EntityName:   optionName,
+			AudienceType: notify_service.AudienceDirectUser,
+			TargetUserID: order.UserID,
+			Content: &hackforger_model.HackforgerActionContent{
+				EntityType: "credits",
+				EntityName: optionName,
+				Extra:      map[string]any{"order_id": order.ID},
+			},
+		})
+	}
 }
 
 // CancelOrder cancels a pending order and refunds the credits. Only site admins can call this.

@@ -23,6 +23,9 @@ var Indexer = struct {
 	IssueIndexerName string
 	StartupTimeout   time.Duration
 
+	HackforgerType string
+	HackforgerPath string
+
 	RepoIndexerEnabled     bool
 	RepoIndexerRepoTypes   []string
 	RepoIndexerEnableFuzzy bool
@@ -41,7 +44,10 @@ var Indexer = struct {
 	IssueConnAuth:    "",
 	IssueIndexerName: "gitea_issues",
 
-	RepoIndexerEnabled:     false,
+	HackforgerType: "bleve",
+	HackforgerPath: "indexers/hackforger.bleve",
+
+	RepoIndexerEnabled: false,
 	RepoIndexerRepoTypes:   []string{"sources", "forks", "mirrors", "templates"},
 	RepoIndexerEnableFuzzy: false,
 	RepoType:               "bleve",
@@ -86,6 +92,12 @@ func loadIndexerFrom(rootCfg ConfigProvider) {
 	}
 
 	Indexer.IssueIndexerName = sec.Key("ISSUE_INDEXER_NAME").MustString(Indexer.IssueIndexerName)
+
+	Indexer.HackforgerType = sec.Key("HACKFORGER_INDEXER_TYPE").MustString("bleve")
+	Indexer.HackforgerPath = filepath.ToSlash(sec.Key("HACKFORGER_INDEXER_PATH").MustString(filepath.ToSlash(filepath.Join(AppDataPath, "indexers/hackforger.bleve"))))
+	if !filepath.IsAbs(Indexer.HackforgerPath) {
+		Indexer.HackforgerPath = filepath.ToSlash(filepath.Join(AppWorkPath, Indexer.HackforgerPath))
+	}
 
 	Indexer.RepoIndexerEnabled = sec.Key("REPO_INDEXER_ENABLED").MustBool(false)
 	Indexer.RepoIndexerRepoTypes = strings.Split(sec.Key("REPO_INDEXER_REPO_TYPES").MustString("sources,forks,mirrors,templates"), ",")

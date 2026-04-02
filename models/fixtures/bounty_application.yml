@@ -6,3 +6,39 @@
   message: "I can fix this"
   created_unix: 1672578200
   updated_unix: 1672578200
+
+-
+  id: 2
+  bounty_id: 3
+  user_id: 4
+  status: 1
+  message: "I can optimize those queries"
+  created_unix: 1672578250
+  updated_unix: 1672578260
+
+-
+  id: 3
+  bounty_id: 4
+  user_id: 4
+  status: 1
+  message: "Dark mode is my specialty"
+  created_unix: 1672578350
+  updated_unix: 1672578360
+
+-
+  id: 4
+  bounty_id: 5
+  user_id: 4
+  status: 1
+  message: "Happy to write tests"
+  created_unix: 1672578450
+  updated_unix: 1672578460
+
+-
+  id: 5
+  bounty_id: 3
+  user_id: 5
+  status: 2
+  message: "Rejected application for testing"
+  created_unix: 1672578120
+  updated_unix: 1672578180

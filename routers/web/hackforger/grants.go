@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
@@ -14,6 +15,9 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_service "forgejo.org/services/hackforger"
@@ -134,6 +138,13 @@ func ExploreGrants(ctx *context.Context) {
 func NewGrantRound(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("hackforger.grant.round.new")
 	ctx.Data["PageIsExploreGrants"] = true
+	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
+	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
+	ctx.Data["UploadRemoveUrl"] = ""
+	ctx.Data["UploadLinkUrl"] = ""
+	ctx.Data["UploadAccepts"] = strings.ReplaceAll(setting.Attachment.AllowedTypes, "|", ",")
+	ctx.Data["UploadMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadMaxSize"] = setting.Attachment.MaxSize
 	ctx.HTML(http.StatusOK, tplGrantNew)
 }
 
@@ -233,6 +244,14 @@ func GrantRoundDetail(ctx *context.Context) {
 	ctx.Data["UsedCredits"] = usedCredits
 	ctx.Data["StatusName"] = hackforger_model.GrantRoundStatusNames[round.Status]
 	ctx.Data["IsOwner"] = isOwner
+
+	if round.Description != "" {
+		rendered, err := markdown.RenderString(&markup.RenderContext{Ctx: ctx}, round.Description)
+		if err == nil {
+			ctx.Data["DescriptionHTML"] = rendered
+		}
+	}
+
 	ctx.HTML(http.StatusOK, tplGrantDetail)
 }
 
@@ -330,6 +349,13 @@ func SubmitGrantProject(ctx *context.Context) {
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["Round"] = round
 	ctx.Data["Repos"] = repos
+	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
+	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
+	ctx.Data["UploadRemoveUrl"] = ""
+	ctx.Data["UploadLinkUrl"] = ""
+	ctx.Data["UploadAccepts"] = strings.ReplaceAll(setting.Attachment.AllowedTypes, "|", ",")
+	ctx.Data["UploadMaxFiles"] = setting.Attachment.MaxFiles
+	ctx.Data["UploadMaxSize"] = setting.Attachment.MaxSize
 	ctx.HTML(http.StatusOK, tplGrantSubmit)
 }
 
@@ -567,6 +593,14 @@ func ManageGrantProject(ctx *context.Context) {
 	ctx.Data["Round"] = round
 	ctx.Data["Project"] = project
 	ctx.Data["StatusName"] = hackforger_model.GrantRoundStatusNames[round.Status]
+
+	if project.Description != "" {
+		rendered, err := markdown.RenderString(&markup.RenderContext{Ctx: ctx}, project.Description)
+		if err == nil {
+			ctx.Data["DescriptionHTML"] = rendered
+		}
+	}
+
 	ctx.HTML(http.StatusOK, tplGrantManageProject)
 }
 

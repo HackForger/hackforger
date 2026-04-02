@@ -518,8 +518,12 @@ func registerRoutes(m *web.Route) {
 		m.Get("/hackathons", hackforger_web.ExploreHackathons)
 		m.Get("/bounties", hackforger_web.ExploreBounties)
 		m.Get("/grants", hackforger_web.ExploreGrants)
+		m.Get("/submissions", hackforger_web.ExploreSubmissions)
 		m.Get("/reputation", hackforger_web.ExploreReputation)
 	}, ignExploreSignIn)
+
+	// HackForger: public search route (JSON endpoint for web frontend)
+	m.Get("/hackforger/search", hackforger_web.SearchWeb)
 
 	// HackForger: public hackathon routes
 	m.Get("/hackathon/{slug}", hackforger_web.ViewHackathon)
@@ -529,16 +533,19 @@ func registerRoutes(m *web.Route) {
 	m.Group("", func() {
 		m.Get("/hackathons/new", hackforger_web.NewHackathon)
 		m.Post("/hackathons/new", hackforger_web.NewHackathonPost)
+		m.Post("/hackforger/attachments", hackforger_web.UploadHackforgerAttachment)
+		m.Post("/hackforger/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
 		m.Post("/hackathon/{slug}/register", hackforger_web.RegisterPost)
 		m.Get("/hackathon/{slug}/submit", hackforger_web.SubmitForm)
 		m.Post("/hackathon/{slug}/submit", hackforger_web.SubmitPost)
 		m.Group("/hackathon/{slug}/manage", func() {
 			m.Get("", hackforger_web.ManageHackathon)
+			m.Post("/update", hackforger_web.UpdateHackathonPost)
 			m.Post("/publish", hackforger_web.ManagePhasePost)
 			m.Post("/start", hackforger_web.ManagePhasePost)
-			m.Post("/start-judging", hackforger_web.ManagePhasePost)
+			m.Post("/judge", hackforger_web.ManagePhasePost)
 			m.Get("/finalize-preview", hackforger_web.FinalizePreview)
-			m.Post("/finalize-confirm", hackforger_web.FinalizeConfirm)
+			m.Post("/finalize", hackforger_web.FinalizeConfirm)
 			m.Post("/cancel", hackforger_web.ManagePhasePost)
 			m.Post("/tracks", hackforger_web.ManageTrackPost)
 			m.Post("/registrations/{rid}", hackforger_web.ManageRegistrationPost)
@@ -589,6 +596,10 @@ func registerRoutes(m *web.Route) {
 		m.Get("/orders", hackforger_web.CreditOrders)
 	}, reqSignIn)
 	// ***** END: HackForger Credits *****
+
+	// ***** START: HackForger Assistant *****
+	m.Post("/hackforger/assistant/chat", reqSignIn, hackforger_web.ChatWeb)
+	// ***** END: HackForger Assistant *****
 
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)
@@ -925,7 +936,7 @@ func registerRoutes(m *web.Route) {
 			m.Get("/options/{id}/keys", hackforger_web.AdminRedeemOptionKeys)
 			m.Post("/options/{id}/keys", hackforger_web.AdminRedeemOptionKeysAdd)
 			m.Get("/orders", hackforger_web.AdminCreditOrders)
-			m.Post("/orders/batch-fulfill", hackforger_web.AdminCreditOrdersBatchFulfill)
+			m.Post("/orders/fulfill", hackforger_web.AdminCreditOrdersBatchFulfill)
 			m.Post("/orders/{oid}/fulfill", hackforger_web.AdminCreditOrdersFulfill)
 			m.Post("/orders/{oid}/cancel", hackforger_web.AdminCreditOrdersCancel)
 		})

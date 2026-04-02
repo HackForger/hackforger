@@ -14,8 +14,10 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	org_model "forgejo.org/models/organization"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
+	notify_service "forgejo.org/services/notify"
 )
 
 // SubmitProjectOpts holds the parameters for submitting a project to a grant round.
@@ -107,19 +109,25 @@ var validTransitions = map[hackforger_model.GrantRoundStatus][]hackforger_model.
 
 // checkGrantRoundAccess verifies that doerID is an owner or admin of the round's org.
 func checkGrantRoundAccess(ctx context.Context, doerID int64, round *hackforger_model.GrantRound) error {
-	isOwner, err := org_model.IsOrganizationOwner(ctx, round.OrgID, doerID)
-	if err != nil {
-		return err
-	}
-	if isOwner {
+	// Direct owner check (covers non-org grant rounds where owner_id = creator)
+	if round.OwnerID == doerID {
 		return nil
 	}
-	isAdmin, err := org_model.IsOrganizationAdmin(ctx, round.OrgID, doerID)
-	if err != nil {
-		return err
-	}
-	if isAdmin {
-		return nil
+	if round.OrgID > 0 {
+		isOwner, err := org_model.IsOrganizationOwner(ctx, round.OrgID, doerID)
+		if err != nil {
+			return err
+		}
+		if isOwner {
+			return nil
+		}
+		isAdmin, err := org_model.IsOrganizationAdmin(ctx, round.OrgID, doerID)
+		if err != nil {
+			return err
+		}
+		if isAdmin {
+			return nil
+		}
 	}
 	return ErrAccessDenied{UserID: doerID, OrgID: round.OrgID}
 }
@@ -161,16 +169,19 @@ func transitionRound(ctx context.Context, doerID, roundID int64, target hackforg
 	return round, nil
 }
 
-// publishGrantEvent builds a HackforgerActionContent and publishes a feed event.
-func publishGrantEvent(ctx context.Context, actUserID int64, opType activities_model.ActionType, round *hackforger_model.GrantRound, audience AudienceType) error {
+// publishGrantEvent builds a HackforgerEventOpts and dispatches a feed event.
+func publishGrantEvent(ctx context.Context, actUserID int64, opType activities_model.ActionType, round *hackforger_model.GrantRound, audience notify_service.HackforgerAudienceType) error {
+	doer, err := user_model.GetUserByID(ctx, actUserID)
+	if err != nil {
+		return err
+	}
 	content := &hackforger_model.HackforgerActionContent{
 		EntityType: "grant_round",
 		EntityID:   round.ID,
 		EntityName: round.Name,
 		EntitySlug: round.Slug,
 	}
-	return PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    actUserID,
+	opts := &notify_service.HackforgerEventOpts{
 		OpType:       opType,
 		EntityType:   "grant_round",
 		EntityID:     round.ID,
@@ -179,7 +190,13 @@ func publishGrantEvent(ctx context.Context, actUserID int64, opType activities_m
 		Content:      content,
 		AudienceType: audience,
 		OrgID:        round.OrgID,
-	})
+	}
+	if opType == hackforger_model.ActionGrantRoundCreated {
+		notify_service.HackforgerEntityCreated(ctx, doer, opts)
+	} else {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, opts)
+	}
+	return nil
 }
 
 // CreateGrantRound creates a new grant round and publishes a feed event.
@@ -201,7 +218,7 @@ func CreateGrantRound(ctx context.Context, doerID, orgID int64, opts CreateGrant
 		return nil, err
 	}
 
-	if err := publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundCreated, round, AudienceGlobal); err != nil {
+	if err := publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundCreated, round, notify_service.AudienceGlobal); err != nil {
 		return nil, err
 	}
 
@@ -246,7 +263,7 @@ func OpenRound(ctx context.Context, doerID, roundID int64) error {
 	if err != nil {
 		return err
 	}
-	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundOpened, round, AudienceGlobal)
+	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundOpened, round, notify_service.AudienceGlobal)
 }
 
 // CloseRound transitions a round from Open to Review.
@@ -255,7 +272,7 @@ func CloseRound(ctx context.Context, doerID, roundID int64) error {
 	if err != nil {
 		return err
 	}
-	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundClosed, round, AudienceGlobal)
+	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundClosed, round, notify_service.AudienceGlobal)
 }
 
 // FinalizeRound transitions a round from Review to Finalized.
@@ -300,7 +317,7 @@ func FinalizeRound(ctx context.Context, doerID, roundID int64) error {
 		return err
 	}
 
-	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundFinalized, round, AudienceGlobal)
+	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundFinalized, round, notify_service.AudienceGlobal)
 }
 
 // CancelRound transitions a round to Cancelled from any non-terminal status.
@@ -309,7 +326,7 @@ func CancelRound(ctx context.Context, doerID, roundID int64) error {
 	if err != nil {
 		return err
 	}
-	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundCancelled, round, AudienceGlobal)
+	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundCancelled, round, notify_service.AudienceGlobal)
 }
 
 // SubmitProject submits a project to an open grant round.
@@ -345,21 +362,19 @@ func SubmitProject(ctx context.Context, doerID, roundID int64, opts SubmitProjec
 		return nil, err
 	}
 
-	content := &hackforger_model.HackforgerActionContent{
-		EntityType: "grant_project",
-		EntityID:   project.ID,
-		EntityName: project.Title,
-	}
-	if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-		ActUserID:    doerID,
-		OpType:       hackforger_model.ActionGrantProjectSubmitted,
-		EntityType:   "grant_project",
-		EntityID:     project.ID,
-		EntityName:   project.Title,
-		Content:      content,
-		AudienceType: AudienceFollowers,
-	}); err != nil {
-		return nil, err
+	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+		notify_service.HackforgerEntityCreated(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionGrantProjectSubmitted,
+			EntityType:   "grant_project",
+			EntityID:     project.ID,
+			EntityName:   project.Title,
+			AudienceType: notify_service.AudienceFollowers,
+			Content: &hackforger_model.HackforgerActionContent{
+				EntityType: "grant_project",
+				EntityID:   project.ID,
+				EntityName: project.Title,
+			},
+		})
 	}
 
 	return project, nil
@@ -507,28 +522,26 @@ func DistributeProject(ctx context.Context, doerID, projectID int64) error {
 		}
 
 		// Publish award event
-		content := &hackforger_model.HackforgerActionContent{
-			EntityType: "grant_project",
-			EntityID:   project.ID,
-			EntityName: project.Title,
-			Extra: map[string]any{
-				"round_id":      round.ID,
-				"round_name":    round.Name,
-				"award_amount":  project.AwardAmount,
-				"award_credits": project.AwardCredits,
-			},
-		}
-		if err := PublishHackforgerAction(ctx, &HackforgerActionOpts{
-			ActUserID:    doerID,
-			OpType:       hackforger_model.ActionGrantAwarded,
-			EntityType:   "grant_project",
-			EntityID:     project.ID,
-			EntityName:   project.Title,
-			Content:      content,
-			AudienceType: AudienceGlobal,
-			OrgID:        round.OrgID,
-		}); err != nil {
-			return err
+		if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
+			notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+				OpType:       hackforger_model.ActionGrantAwarded,
+				EntityType:   "grant_project",
+				EntityID:     project.ID,
+				EntityName:   project.Title,
+				AudienceType: notify_service.AudienceGlobal,
+				OrgID:        round.OrgID,
+				Content: &hackforger_model.HackforgerActionContent{
+					EntityType: "grant_project",
+					EntityID:   project.ID,
+					EntityName: project.Title,
+					Extra: map[string]any{
+						"round_id":      round.ID,
+						"round_name":    round.Name,
+						"award_amount":  project.AwardAmount,
+						"award_credits": project.AwardCredits,
+					},
+				},
+			})
 		}
 
 		// Check if all approved projects are now funded; if so, auto-transition round to Distributed

@@ -30,3 +30,80 @@
   rank: 1
   note: "1st place"
   created_unix: 1672578100
+
+-
+  id: 4
+  bounty_id: 2
+  type: "credits"
+  amount: 0
+  currency: ""
+  credits: 500
+  rank: 2
+  note: "2nd place"
+  created_unix: 1672578100
+
+-
+  id: 5
+  bounty_id: 2
+  type: "credits"
+  amount: 0
+  currency: ""
+  credits: 250
+  rank: 3
+  note: "3rd place"
+  created_unix: 1672578100
+
+-
+  id: 6
+  bounty_id: 3
+  type: "money"
+  amount: 200
+  currency: "EUR"
+  credits: 0
+  rank: 1
+  note: "claimed bounty reward"
+  created_unix: 1672578200
+
+-
+  id: 7
+  bounty_id: 4
+  type: "credits"
+  amount: 0
+  currency: ""
+  credits: 750
+  rank: 1
+  note: "in-review bounty reward"
+  created_unix: 1672578300
+
+-
+  id: 8
+  bounty_id: 5
+  type: "money"
+  amount: 300
+  currency: "USD"
+  credits: 0
+  rank: 1
+  note: "completed bounty payout"
+  created_unix: 1672578400
+
+-
+  id: 9
+  bounty_id: 6
+  type: "credits"
+  amount: 0
+  currency: ""
+  credits: 1000
+  rank: 1
+  note: "paid bounty credits"
+  created_unix: 1672578500
+
+-
+  id: 10
+  bounty_id: 6
+  type: "money"
+  amount: 1000
+  currency: "USD"
+  credits: 0
+  rank: 1
+  note: "paid bounty cash"
+  created_unix: 1672578500

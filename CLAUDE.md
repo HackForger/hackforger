@@ -57,8 +57,10 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 
 ## Local Testing
 - See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
-- See [docs/tests/e2e-lessons-learned.md](docs/tests/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
-- See [docs/tests/e2e-testing-guide.md](docs/tests/e2e-testing-guide.md) for E2E automated testing with agent-browser (localhost:3000, web-first, screenshots)
+- See [docs/tests/e2e/e2e-lessons-learned.md](docs/tests/e2e/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
+- See [docs/tests/e2e/e2e-testing-guide.md](docs/tests/e2e/e2e-testing-guide.md) for E2E automated testing with agent-browser (localhost:3000, web-first, screenshots)
+- See [docs/tests/e2e/templates/](docs/tests/e2e/templates/) for E2E test templates (single feature, regression)
+- See [docs/tests/e2e/tasks/](docs/tests/e2e/tasks/) for E2E test tasks (user journey full cycle, feature tests)
 - **Key**: always copy `custom/conf/app.ini` from main repo before starting server in a worktree
 - **E2E testing**: use `agent-browser` via `http://localhost:3000` (not HTTPS — local proxy blocks Tailscale TLS). Web-first with screenshots in reports.
 
@@ -91,8 +93,10 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 
 ## Internal Instance
 - Login: hackforger / admin1234
-- Caddy reverse proxy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
-- Caddy management: `launchctl load|unload ~/Library/LaunchAgents/com.h2os.caddy.plist`
+- Caddy reverse proxy: managed by launchd (com.h2os.caddy), do NOT restart or unload
+- Check Caddy status: `launchctl list com.h2os.caddy`
+- Caddy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
+- ⚠️ If Caddy config reload is needed, MUST confirm with developer first: `caddy reload --config ~/.config/caddy/Caddyfile`
 - Default branch: v0.1-dev/hackforger
 
 ## Git Remotes

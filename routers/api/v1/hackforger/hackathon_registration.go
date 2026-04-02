@@ -7,9 +7,10 @@ import (
 	"net/http"
 
 	hackforger_model "forgejo.org/models/hackforger"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
-	hackforger_service "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
 
 // RegisterForm is the form for registering to a hackathon.
@@ -24,6 +25,35 @@ type UpdateRegistrationForm struct {
 }
 
 // Register registers the authenticated user to a hackathon.
+//
+// swagger:operation POST /hackforger/hackathons/{id}/registrations hackforger hackforgerRegister
+// ---
+// summary: Register for a hackathon
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/RegisterForm"
+// responses:
+//   "201":
+//     description: Registration created
+//   "400":
+//     description: Hackathon is not accepting registrations
+//   "404":
+//     "$ref": "#/responses/notFound"
+//   "409":
+//     description: Already registered
 func Register(ctx *context.APIContext) {
 	h, err := hackforger_model.GetHackathonByID(ctx, ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -55,14 +85,13 @@ func Register(ctx *context.APIContext) {
 	}
 
 	// Publish feed event for registration (global + followers so it appears in entity timelines)
-	_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionHackathonRegistered,
 		EntityType:   "hackathon",
 		EntityID:     h.ID,
 		EntityName:   h.Name,
 		EntitySlug:   h.Slug,
-		AudienceType: hackforger_service.AudienceGlobal | hackforger_service.AudienceFollowers,
+		AudienceType: notify_service.AudienceGlobal | notify_service.AudienceFollowers,
 		Content: hackforger_model.HackforgerActionContent{
 			EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
 		},
@@ -72,6 +101,30 @@ func Register(ctx *context.APIContext) {
 }
 
 // ListRegistrations returns a paginated list of registrations for a hackathon.
+//
+// swagger:operation GET /hackforger/hackathons/{id}/registrations hackforger hackforgerListRegistrations
+// ---
+// summary: List registrations for a hackathon
+// produces:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: page
+//   in: query
+//   description: page number of results to return (1-based)
+//   type: integer
+// - name: limit
+//   in: query
+//   description: page size of results
+//   type: integer
+// responses:
+//   "200":
+//     description: Registration list
 func ListRegistrations(ctx *context.APIContext) {
 	opts := hackforger_model.ListRegistrationsOptions{
 		HackathonID: ctx.ParamsInt64(":id"),
@@ -94,6 +147,33 @@ func ListRegistrations(ctx *context.APIContext) {
 }
 
 // UpdateRegistration updates a registration's status (approve/reject).
+//
+// swagger:operation PUT /hackforger/hackathons/{id}/registrations/{rid} hackforger hackforgerUpdateRegistration
+// ---
+// summary: Update registration status (approve/reject)
+// consumes:
+// - application/json
+// parameters:
+// - name: id
+//   in: path
+//   description: ID of the hackathon
+//   type: integer
+//   format: int64
+//   required: true
+// - name: rid
+//   in: path
+//   description: ID of the registration
+//   type: integer
+//   format: int64
+//   required: true
+// - name: body
+//   in: body
+//   required: true
+//   schema:
+//     "$ref": "#/definitions/UpdateRegistrationForm"
+// responses:
+//   "200":
+//     description: Registration updated
 func UpdateRegistration(ctx *context.APIContext) {
 	f := web.GetForm(ctx).(*UpdateRegistrationForm)
 	rid := ctx.ParamsInt64(":rid")
@@ -108,18 +188,19 @@ func UpdateRegistration(ctx *context.APIContext) {
 		if err == nil {
 			h, err := hackforger_model.GetHackathonByID(ctx, r.HackathonID)
 			if err == nil {
-				_ = hackforger_service.PublishHackforgerAction(ctx, &hackforger_service.HackforgerActionOpts{
-					ActUserID:    r.UserID,
-					OpType:       hackforger_model.ActionHackathonRegistered,
-					EntityType:   "hackathon",
-					EntityID:     h.ID,
-					EntityName:   h.Name,
-					EntitySlug:   h.Slug,
-					AudienceType: hackforger_service.AudienceFollowers,
-					Content: hackforger_model.HackforgerActionContent{
-						EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
-					},
-				})
+				if doer, err := user_model.GetUserByID(ctx, r.UserID); err == nil {
+					notify_service.HackforgerEntityCreated(ctx, doer, &notify_service.HackforgerEventOpts{
+						OpType:       hackforger_model.ActionHackathonRegistered,
+						EntityType:   "hackathon",
+						EntityID:     h.ID,
+						EntityName:   h.Name,
+						EntitySlug:   h.Slug,
+						AudienceType: notify_service.AudienceFollowers,
+						Content: hackforger_model.HackforgerActionContent{
+							EntityType: "hackathon", EntityID: h.ID, EntityName: h.Name, EntitySlug: h.Slug,
+						},
+					})
+				}
 			}
 		}
 	}

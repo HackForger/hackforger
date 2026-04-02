@@ -1,9 +1,69 @@
 -
   id: 1
   user_id: 4
+  type: "admin_deposit"
+  amount: 2000
+  balance: 2000
+  reference: "admin_seed"
+  note: "Initial seed deposit by admin"
+  created_unix: 1609459200
+
+-
+  id: 2
+  user_id: 4
+  type: "redeem"
+  amount: -500
+  balance: 1500
+  reference: "order_1"
+  note: "Redeemed Cloud Credits $10"
+  created_unix: 1609459260
+
+-
+  id: 3
+  user_id: 4
   type: "deposit"
-  amount: 1000
+  amount: 500
+  balance: 2000
+  reference: "refund_order_1"
+  note: "Refund for cancelled order"
+  created_unix: 1609459320
+
+-
+  id: 4
+  user_id: 4
+  type: "withdraw"
+  amount: -800
+  balance: 1200
+  reference: "payout_001"
+  note: "Credits withdrawal"
+  created_unix: 1609459380
+
+-
+  id: 5
+  user_id: 4
+  type: "admin_deduct"
+  amount: -200
   balance: 1000
-  reference: "grant_award"
-  note: "Grant award for project"
+  reference: "admin_correction"
+  note: "Admin balance correction"
+  created_unix: 1609459440
+
+-
+  id: 6
+  user_id: 2
+  type: "admin_deposit"
+  amount: 5000
+  balance: 5000
+  reference: "org_budget"
+  note: "Organizer budget allocation"
+  created_unix: 1609459200
+
+-
+  id: 7
+  user_id: 44
+  type: "admin_deposit"
+  amount: 100000
+  balance: 100000
+  reference: "platform_init"
+  note: "Platform bot initial balance"
   created_unix: 1609459200

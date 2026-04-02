@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_svc "forgejo.org/services/hackforger"
+	notify_service "forgejo.org/services/notify"
 )
 
 // BountyView combines a Bounty with display info for templates.
@@ -169,12 +170,14 @@ func NewBountyPost(ctx *context.Context) {
 	}
 
 	// Publish feed event.
-	_ = hackforger_svc.PublishHackforgerAction(ctx, &hackforger_svc.HackforgerActionOpts{
-		ActUserID:    ctx.Doer.ID,
+	notify_service.HackforgerEntityCreated(ctx, ctx.Doer, &notify_service.HackforgerEventOpts{
 		OpType:       hackforger_model.ActionBountyCreated,
+		EntityType:   "bounty",
+		EntityID:     bounty.ID,
+		EntityName:   bounty.Title,
 		RepoID:       bounty.RepoID,
+		AudienceType: notify_service.AudienceGlobal | notify_service.AudienceRepoWatchers,
 		Content:      &hackforger_model.HackforgerActionContent{EntityType: "bounty", EntityID: bounty.ID, EntityName: bounty.Title},
-		AudienceType: hackforger_svc.AudienceGlobal | hackforger_svc.AudienceRepoWatchers,
 	})
 
 	ctx.Flash.Success("Bounty created successfully")
@@ -193,10 +196,12 @@ func BountyAction(ctx *context.Context) {
 		_, err = hackforger_svc.ApplyForBounty(ctx, bountyID, ctx.Doer.ID, message)
 	case "complete":
 		err = hackforger_svc.CompleteBounty(ctx, bountyID, ctx.Doer.ID)
-	case "reject-delivery":
+	case "reject":
 		err = hackforger_svc.RejectDelivery(ctx, bountyID, ctx.Doer.ID)
 	case "pay":
 		err = hackforger_svc.MarkPaid(ctx, bountyID, ctx.Doer.ID)
+	case "deliver":
+		err = hackforger_svc.SubmitDelivery(ctx, bountyID, ctx.Doer.ID)
 	case "cancel":
 		err = hackforger_svc.CancelBounty(ctx, bountyID, ctx.Doer.ID)
 	case "review":

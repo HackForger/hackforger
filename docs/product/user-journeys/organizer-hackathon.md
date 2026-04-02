@@ -22,21 +22,34 @@
 
 - **Role**: `organizer`
 - **Operation**: Create a new hackathon "Web3 Innovation Challenge"
+- **Web UI**: Navigate to `/hackathons/new`
 - **API**: `POST /api/v1/hackforger/hackathons`
   ```json
   {
     "name": "Web3 Innovation Challenge",
     "slug": "web3-innovation",
-    "description": "Build the future of decentralized web",
-    "max_tracks": 3,
-    "prize_pool": 800
+    "description": "## Web3 Innovation Challenge\nBuild the future of decentralized web.\n\n![banner](url)\n\n- DeFi\n- NFT",
+    "prize_summary": "Grand Prize: 500 Credits, Runner-up: 300 Credits",
+    "max_team_size": 5,
+    "registration_start": "2026-04-10T09:00:00Z",
+    "registration_end": "2026-04-20T23:59:00Z",
+    "hacking_start": "2026-04-21T09:00:00Z",
+    "hacking_end": "2026-05-05T23:59:00Z",
+    "judging_end": "2026-05-12T23:59:00Z"
   }
   ```
 - **Git Operation**: Auto-creates Organization `web3-innovation` on Forgejo
 - **Expected Result**:
   - Hackathon created with status = `Draft(0)`
   - Org `web3-innovation` exists with `organizer` as owner
+  - Description rendered as Markdown (headings, lists, images, code blocks)
+  - Timeline shows phase dates on detail page
   - Feed event: `hackathon_created(30)` — audience: global
+
+> **编辑器：** 描述和奖品说明字段支持 Markdown 格式（标题、列表、链接、图片、代码块）。创建后可在管理页面通过"编辑详情"修改所有字段。
+
+> **日程安排：** 可设置报名开始/截止、开发开始/截止、评审截止五个时间节点，在详情页显示为时间轴。
+
 - **Fixture Hint**: `hackathon(id=1, status=Draft, org_id=<auto>)`
 
 ### Step 1.3: Organizer creates Tracks (Repos)
@@ -228,6 +241,8 @@
   - Feed event: `hackathon_submitted(32)` — audience: org + followers
 - **Fixture Hint**: `hackathon_submission(id=1, hackathon_id=1, track_id=1, user_id=hacker1, pull_id=<auto>)`
 
+> **v0.1 支持两种提交模式：** (1) Fork + PR 模式（如上，推荐的 Git-Native 方式）；(2) Link Repo 模式 — 参赛者在 CreateSubmission 时直接填写已有 Repo URL，不需要 Fork。Journey 中 hacker1 使用 Fork+PR，hacker2 可使用 Link Repo。
+
 ### Step 1.15: hacker2 submits via PR (team submission)
 
 - **Role**: `hacker2`
@@ -352,6 +367,16 @@
   - Leaderboard frozen and published
   - Feed event: `hackathon_finalized(51)` — audience: global
 - **Fixture Hint**: `hackathon(id=1, status=Finished)`, `credit_transaction(deposit, hacker1, 500)`, `credit_transaction(deposit, hacker2, 300)`
+
+### Step 1.19a: 验证积分发放
+
+- **Role**: `hacker1`, `hacker2`, `organizer`
+- **Operation**: 各角色查看积分余额确认变化
+- **Web**: `/credits` (积分概览页面)
+- **Expected Result**:
+  - hacker1 余额: +500（1st place DeFi Track）
+  - hacker2 余额: +300（2nd place DeFi Track）
+  - organizer 余额: 1000 - 500 - 300 = 200（剩余）
 
 ### Step 1.20: Verify leaderboard
 

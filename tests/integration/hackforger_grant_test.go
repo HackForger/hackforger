@@ -479,6 +479,121 @@ func TestAPIGrantAccessDenied(t *testing.T) {
 	MakeRequest(t, req, http.StatusForbidden)
 }
 
+// TestAPIGrantProjectReject tests rejecting a project.
+func TestAPIGrantProjectReject(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Owner of org 3.
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	ownerSession := loginUser(t, owner.Name)
+	ownerToken := getTokenForLoggedInUser(t, ownerSession, auth_model.AccessTokenScopeAll)
+
+	// User 5 submits to Open round 2.
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	user5Session := loginUser(t, user5.Name)
+	user5Token := getTokenForLoggedInUser(t, user5Session, auth_model.AccessTokenScopeAll)
+
+	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/grant-rounds/2/projects", map[string]any{
+		"title":       "Project to Reject",
+		"description": "This will be rejected",
+	}).AddTokenAuth(user5Token)
+	resp := MakeRequest(t, req, http.StatusCreated)
+	var project hackforger_model.GrantProject
+	DecodeJSON(t, resp, &project)
+	projectID := project.ID
+	assert.Equal(t, hackforger_model.GrantProjectStatusPending, project.Status)
+
+	// Close round to move to Review.
+	req = NewRequestf(t, "POST", "/api/v1/hackforger/grant-rounds/2/close").AddTokenAuth(ownerToken)
+	MakeRequest(t, req, http.StatusNoContent)
+
+	// Reject the project.
+	req = NewRequestWithJSON(t, "PUT", fmt.Sprintf("/api/v1/hackforger/grant-rounds/2/projects/%d", projectID), map[string]any{
+		"status": "rejected",
+	}).AddTokenAuth(ownerToken)
+	MakeRequest(t, req, http.StatusNoContent)
+
+	// Verify project is rejected.
+	req = NewRequestf(t, "GET", "/api/v1/hackforger/grant-rounds/2/projects/%d", projectID)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &project)
+	assert.Equal(t, hackforger_model.GrantProjectStatusRejected, project.Status)
+}
+
+// TestAPIGrantDistributeFromFinalized tests distributing from the finalized fixture (round 4).
+func TestAPIGrantDistributeFromFinalized(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	ownerSession := loginUser(t, owner.Name)
+	ownerToken := getTokenForLoggedInUser(t, ownerSession, auth_model.AccessTokenScopeAll)
+
+	// Round 4 is Finalized with project 4 (funded, user 4, 2000 credits) and project 6 (rejected).
+	// Distribute the whole round.
+	req := NewRequestf(t, "POST", "/api/v1/hackforger/grant-rounds/4/distribute").AddTokenAuth(ownerToken)
+	MakeRequest(t, req, http.StatusNoContent)
+
+	// Verify round transitioned to Distributed.
+	req = NewRequestf(t, "GET", "/api/v1/hackforger/grant-rounds/4").AddTokenAuth(ownerToken)
+	resp := MakeRequest(t, req, http.StatusOK)
+	var round hackforger_model.GrantRound
+	DecodeJSON(t, resp, &round)
+	assert.Equal(t, hackforger_model.GrantRoundStatusDistributed, round.Status)
+}
+
+// TestAPIGrantListWithStatusFilter tests listing rounds filtered by status.
+func TestAPIGrantListWithStatusFilter(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Filter by status=open (1).
+	req := NewRequest(t, "GET", "/api/v1/hackforger/grant-rounds?status=1")
+	resp := MakeRequest(t, req, http.StatusOK)
+	var rounds []hackforger_model.GrantRound
+	DecodeJSON(t, resp, &rounds)
+	for _, r := range rounds {
+		assert.Equal(t, hackforger_model.GrantRoundStatusOpen, r.Status)
+	}
+}
+
+// TestAPIGrantAllocateCreditsOverBudget tests that credits allocation over budget returns 422.
+func TestAPIGrantAllocateCreditsOverBudget(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Round 3 (Review, budget_credits=8000). Projects 2 and 3 have 2000+1500=3500 credits allocated.
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	ownerSession := loginUser(t, owner.Name)
+	ownerToken := getTokenForLoggedInUser(t, ownerSession, auth_model.AccessTokenScopeAll)
+
+	// Try to allocate credits that would exceed budget (3500 existing + 5000 new for project 2 = 6500+1500 > 8000).
+	req := NewRequestWithJSON(t, "PUT", "/api/v1/hackforger/grant-rounds/3/projects/2/award", map[string]any{
+		"amount":  5000,
+		"credits": 7000, // existing 1500 for project 3, plus 7000 for project 2 = 8500 > 8000
+	}).AddTokenAuth(ownerToken)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+}
+
+// TestAPIGrantGetProject tests fetching a single project by ID.
+func TestAPIGrantGetProject(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Fixture project 2 in round 3.
+	req := NewRequest(t, "GET", "/api/v1/hackforger/grant-rounds/3/projects/2")
+	resp := MakeRequest(t, req, http.StatusOK)
+	var project hackforger_model.GrantProject
+	DecodeJSON(t, resp, &project)
+	assert.Equal(t, int64(2), project.ID)
+	assert.Equal(t, int64(3), project.RoundID)
+	assert.Equal(t, "Eve's Approved Project", project.Title)
+}
+
+// TestAPIGrantGetNonExistentRound tests fetching a non-existent round returns 404.
+func TestAPIGrantGetNonExistentRound(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	req := NewRequest(t, "GET", "/api/v1/hackforger/grant-rounds/9999")
+	MakeRequest(t, req, http.StatusNotFound)
+}
+
 // TestAPIGrantSubmitToNonOpenRound tests that submitting to a non-open round returns 409.
 func TestAPIGrantSubmitToNonOpenRound(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()

@@ -136,17 +136,55 @@ func RecalculateReputation(ctx context.Context, userID int64) error {
 	return hackforger_model.UpdateReputation(ctx, rep)
 }
 
-// RecalculateAllReputations iterates every existing reputation record and
-// recomputes it. Errors for individual users are logged but do not abort the
-// loop, so a single bad record cannot block the rest of the batch.
+// RecalculateAllReputations discovers all users with HackForger activity and
+// recomputes their reputation scores. It first ensures reputation records exist
+// for users who have bounties, hackathon submissions, grant projects, or credits.
 func RecalculateAllReputations(ctx context.Context) error {
+	e := db.GetEngine(ctx)
+
+	// Collect user IDs from all activity sources
+	userIDs := make(map[int64]bool)
+
+	// Users with bounty activity (claimer)
+	var bountyUsers []int64
+	_ = e.Table("bounty").Distinct("claimer_id").Where("claimer_id > 0").Find(&bountyUsers)
+	for _, id := range bountyUsers {
+		userIDs[id] = true
+	}
+
+	// Users with hackathon submissions
+	var subUsers []int64
+	_ = e.Table("hackathon_submission").Distinct("user_id").Find(&subUsers)
+	for _, id := range subUsers {
+		userIDs[id] = true
+	}
+
+	// Users with grant projects
+	var grantUsers []int64
+	_ = e.Table("grant_project").Distinct("user_id").Find(&grantUsers)
+	for _, id := range grantUsers {
+		userIDs[id] = true
+	}
+
+	// Users with credit accounts
+	var creditUsers []int64
+	_ = e.Table("credit_account").Distinct("user_id").Find(&creditUsers)
+	for _, id := range creditUsers {
+		userIDs[id] = true
+	}
+
+	// Also include existing reputation records
 	var reps []*hackforger_model.Reputation
-	if err := db.GetEngine(ctx).Find(&reps); err != nil {
+	if err := e.Find(&reps); err != nil {
 		return err
 	}
 	for _, rep := range reps {
-		if err := RecalculateReputation(ctx, rep.UserID); err != nil {
-			log.Error("RecalculateReputation(user=%d): %v", rep.UserID, err)
+		userIDs[rep.UserID] = true
+	}
+
+	for uid := range userIDs {
+		if err := RecalculateReputation(ctx, uid); err != nil {
+			log.Error("RecalculateReputation(user=%d): %v", uid, err)
 		}
 	}
 	return nil
