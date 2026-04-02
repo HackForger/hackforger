@@ -78,11 +78,37 @@ Runner 使用 host 模式（非 Docker），标签：`ubuntu-latest:host`, `maco
 2. **关键验证节点必须截屏** — 使用 `agent-browser screenshot` 保存到 `docs/tests/e2e/screenshots/`，并在 E2E report 中引用作为测试证据。截图内容应能独立证明测试结果。
 3. **API 调用仅用于辅助** — 批量数据准备、密码重置等可用 API，但核心功能验证必须通过 Web 界面。
 
+## 目录结构
+
+```
+docs/tests/e2e/
+├── e2e-testing-guide.md          ← 本文件
+├── e2e-lessons-learned.md        ← 常见坑和经验
+├── tasks/                        ← E2E 测试任务（可执行的测试脚本）
+│   ├── user-journey-full-cycle.md    ← 5 角色 68 步完整用户旅程
+│   ├── week5-search-assistant-e2e.md
+│   ├── week5-webhook-e2e.md
+│   └── ...
+├── templates/                    ← 可复用的测试模版
+│   ├── single-feature-e2e.md         ← 单功能 E2E 测试模版
+│   └── regression-test.md            ← 回归测试模版
+├── reports/                      ← 测试报告（含结果和截图引用）
+├── screenshots/                  ← 截图证据
+└── pdf/                          ← 渲染的 PDF 报告
+```
+
 ## 测试模版
 
 | 模版 | 用途 | 路径 |
 |------|------|------|
-| 用户旅程全流程 | 5 角色 × 57 步骤的完整端到端测试 | [user-journey-full-cycle-template.md](templates/user-journey-full-cycle-template.md) |
+| 单功能 E2E | 针对单个功能的端到端测试 | [templates/single-feature-e2e.md](templates/single-feature-e2e.md) |
+| 回归测试 | 代码变更后的回归验证 | [templates/regression-test.md](templates/regression-test.md) |
+
+## 测试任务
+
+| 任务 | 用途 | 路径 |
+|------|------|------|
+| 用户旅程全流程 | 5 角色 × 68 步的完整端到端用户旅程 | [tasks/user-journey-full-cycle.md](tasks/user-journey-full-cycle.md) |
 
 ---
 
