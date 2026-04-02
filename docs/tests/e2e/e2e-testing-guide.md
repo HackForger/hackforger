@@ -108,7 +108,7 @@ docs/tests/e2e/
 
 | 任务 | 用途 | 路径 |
 |------|------|------|
-| 用户旅程全流程 | 5 角色 × 68 步的完整端到端用户旅程 | [tasks/user-journey-full-cycle.md](tasks/user-journey-full-cycle.md) |
+| 用户旅程全流程 | 5 角色 × 75 步，9 个文件可并行执行 | [tasks/full-cycle/README.md](tasks/full-cycle/README.md) |
 
 ---
 
