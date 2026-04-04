@@ -308,7 +308,7 @@ func RegisterPost(ctx *context.Context) {
 	}
 
 	orgID, _ := strconv.ParseInt(ctx.FormString("org_id"), 10, 64)
-	teamName := ctx.FormString("team_name")
+	var teamName string
 
 	if orgID > 0 {
 		isMember, err := organization_model.IsOrganizationMember(ctx, orgID, ctx.Doer.ID)
@@ -317,10 +317,10 @@ func RegisterPost(ctx *context.Context) {
 			ctx.Redirect("/hackathon/" + h.Slug)
 			return
 		}
-		if org, err := organization_model.GetOrgByID(ctx, orgID); err == nil && teamName == "" {
+		if org, err := organization_model.GetOrgByID(ctx, orgID); err == nil {
 			teamName = org.Name
 		}
-	} else if teamName == "" {
+	} else {
 		teamName = ctx.Doer.Name
 	}
 
