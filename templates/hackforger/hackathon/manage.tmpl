@@ -381,12 +381,12 @@
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.username"}}</label>
 							<input name="username" placeholder="Username" required>
 						</div>
-						<div class="field">
+						<div class="field hf-track-select">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.track"}}</label>
 							<select name="track_id" class="ui dropdown" required>
 								<option value="">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.select_track"}}</option>
 								{{range .Tracks}}
-								<option value="{{.ID}}">{{.Name}}</option>
+								<option value="{{.ID}}" title="{{.Name}}">{{.Name}}</option>
 								{{end}}
 							</select>
 						</div>
