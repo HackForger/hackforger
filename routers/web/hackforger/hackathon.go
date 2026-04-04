@@ -451,8 +451,12 @@ func SubmitPost(ctx *context.Context) {
 		Status:         hackforger_model.SubmissionStatusSubmitted,
 	}
 	if err := hackforger_service.CreateSubmission(ctx, ctx.Doer, h, s); err != nil {
-		log.Error("CreateSubmission: %v", err)
-		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+		if hackforger_service.IsErrDuplicateSubmission(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.duplicate_submission"))
+		} else {
+			log.Error("CreateSubmission: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+		}
 		ctx.Redirect("/hackathon/" + h.Slug + "/submit")
 		return
 	}

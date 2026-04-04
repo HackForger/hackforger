@@ -47,6 +47,19 @@ func (e ErrNoSubmissions) Error() string {
 // IsErrNoSubmissions checks if err is ErrNoSubmissions.
 func IsErrNoSubmissions(err error) bool { _, ok := err.(ErrNoSubmissions); return ok }
 
+// ErrDuplicateSubmission means a user has already submitted to this track.
+type ErrDuplicateSubmission struct {
+	UserID  int64
+	TrackID int64
+}
+
+func (e ErrDuplicateSubmission) Error() string {
+	return fmt.Sprintf("duplicate submission [user: %d, track: %d]", e.UserID, e.TrackID)
+}
+
+// IsErrDuplicateSubmission checks if err is ErrDuplicateSubmission.
+func IsErrDuplicateSubmission(err error) bool { _, ok := err.(ErrDuplicateSubmission); return ok }
+
 // CreateHackathon creates a Forgejo Organization for the hackathon,
 // then creates the hackathon record and publishes a creation event.
 // ErrDuplicateHackathonName indicates a hackathon with the same name already exists.
@@ -447,6 +460,17 @@ func HackathonStatusLabel(status hackforger_model.HackathonStatus) string {
 // of). If the submission targets a track with a linked repository, a Forgejo
 // Actions workflow is dispatched to update SUBMISSIONS.md and submissions.json.
 func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, sub *hackforger_model.HackathonSubmission) error {
+	// 0. Check for duplicate submission per user+track
+	if sub.TrackID > 0 {
+		exists, err := hackforger_model.SubmissionExistsByUserAndTrack(ctx, doer.ID, sub.TrackID)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return ErrDuplicateSubmission{UserID: doer.ID, TrackID: sub.TrackID}
+		}
+	}
+
 	// 1. If user provided a repo_id, validate it exists and belongs to the doer
 	if sub.RepoID > 0 {
 		repo, err := repo_model.GetRepositoryByID(ctx, sub.RepoID)
