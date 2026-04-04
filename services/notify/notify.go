@@ -395,3 +395,31 @@ func ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorSt
 		notifier.ActionRunNowDone(ctx, run, priorStatus, lastRun)
 	}
 }
+
+// HackforgerEntityCreated notifies creation of a HackForger entity to all notifiers.
+func HackforgerEntityCreated(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+	for _, notifier := range notifiers {
+		notifier.HackforgerEntityCreated(ctx, doer, opts)
+	}
+}
+
+// HackforgerEntityUpdated notifies update of a HackForger entity to all notifiers.
+func HackforgerEntityUpdated(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+	for _, notifier := range notifiers {
+		notifier.HackforgerEntityUpdated(ctx, doer, opts)
+	}
+}
+
+// HackforgerEntityDeleted notifies deletion of a HackForger entity to all notifiers.
+func HackforgerEntityDeleted(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+	for _, notifier := range notifiers {
+		notifier.HackforgerEntityDeleted(ctx, doer, opts)
+	}
+}
+
+// HackforgerEntityStatusChanged notifies status change of a HackForger entity to all notifiers.
+func HackforgerEntityStatusChanged(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+	for _, notifier := range notifiers {
+		notifier.HackforgerEntityStatusChanged(ctx, doer, opts)
+	}
+}

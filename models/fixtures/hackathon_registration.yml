@@ -1,0 +1,51 @@
+-
+  id: 1
+  hackathon_id: 4
+  user_id: 4
+  org_id: 0
+  team_name: "Team Alpha"
+  track_id: 5
+  status: 1
+  team_id: 0
+  repo_id: 0
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 2
+  hackathon_id: 4
+  user_id: 5
+  org_id: 0
+  team_name: "Team Beta"
+  track_id: 5
+  status: 1
+  team_id: 0
+  repo_id: 0
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 3
+  hackathon_id: 3
+  user_id: 4
+  org_id: 0
+  team_name: ""
+  track_id: 0
+  status: 0
+  team_id: 0
+  repo_id: 0
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 4
+  hackathon_id: 3
+  user_id: 5
+  org_id: 0
+  team_name: ""
+  track_id: 0
+  status: 2
+  team_id: 0
+  repo_id: 0
+  created_unix: 1672578000
+  updated_unix: 1672578000

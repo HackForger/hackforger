@@ -25,6 +25,7 @@ import (
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
+	hackforger_model "forgejo.org/models/hackforger"
 	access_model "forgejo.org/models/perm/access"
 	project_model "forgejo.org/models/project"
 	pull_model "forgejo.org/models/pull"
@@ -356,6 +357,22 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	ctx.Data["Issues"] = issues
 	ctx.Data["CommitLastStatus"] = lastStatus
 	ctx.Data["CommitStatuses"] = commitStatuses
+
+	// Build BountyMap for issue list badge rendering.
+	if len(issues) > 0 {
+		issueIDs := make([]int64, len(issues))
+		for i, issue := range issues {
+			issueIDs[i] = issue.ID
+		}
+		bountyMap := make(map[int64]*hackforger_model.Bounty)
+		var bounties []*hackforger_model.Bounty
+		if err := db.GetEngine(ctx).In("issue_id", issueIDs).Find(&bounties); err == nil {
+			for _, b := range bounties {
+				bountyMap[b.IssueID] = b
+			}
+		}
+		ctx.Data["BountyMap"] = bountyMap
+	}
 
 	// Get assignees.
 	assigneeUsers, err := repo_model.GetRepoAssignees(ctx, repo)
@@ -2101,6 +2118,40 @@ func ViewIssue(ctx *context.Context) {
 		return
 	}
 	ctx.Data["Tags"] = tags
+
+	// Load HackForger Bounty data if linked to this issue
+	if bountyData, err := hackforger_model.GetBountyByIssueID(ctx, issue.ID); err == nil {
+		ctx.Data["BountyData"] = bountyData
+		if rewards, err := hackforger_model.ListBountyRewards(ctx, bountyData.ID); err == nil {
+			ctx.Data["BountyRewards"] = rewards
+		}
+		if bountyData.ClaimerID > 0 {
+			if claimer, err := user_model.GetUserByID(ctx, bountyData.ClaimerID); err == nil {
+				ctx.Data["BountyClaimer"] = claimer
+			}
+		}
+		// Load winners for competitive bounties
+		if bountyData.Mode == hackforger_model.BountyModeCompetitive {
+			if winners, err := hackforger_model.ListBountyWinners(ctx, bountyData.ID); err == nil && len(winners) > 0 {
+				type WinnerView struct {
+					*hackforger_model.BountyWinner
+					Username string
+				}
+				winnerViews := make([]WinnerView, 0, len(winners))
+				for _, w := range winners {
+					wv := WinnerView{BountyWinner: w}
+					if u, err := user_model.GetUserByID(ctx, w.UserID); err == nil {
+						wv.Username = u.Name
+					}
+					winnerViews = append(winnerViews, wv)
+				}
+				ctx.Data["BountyWinners"] = winnerViews
+			}
+		}
+	} else if !hackforger_model.IsErrBountyNotExist(err) {
+		ctx.ServerError("GetBountyByIssueID", err)
+		return
+	}
 
 	ctx.HTML(http.StatusOK, tplIssueView)
 }

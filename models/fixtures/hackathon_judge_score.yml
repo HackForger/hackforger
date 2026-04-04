@@ -1,0 +1,44 @@
+# Judge scores for hackathon 1 submissions (track 6 = AI Track)
+-
+  id: 1
+  hackathon_id: 1
+  submission_id: 8
+  judge_id: 8
+  criteria_id: 1
+  score: 9.0
+  comment: "Excellent work"
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 2
+  hackathon_id: 1
+  submission_id: 9
+  judge_id: 8
+  criteria_id: 1
+  score: 7.0
+  comment: "Good but needs improvement"
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 3
+  hackathon_id: 1
+  submission_id: 8
+  judge_id: 9
+  criteria_id: 1
+  score: 8.0
+  comment: "Very impressive"
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 4
+  hackathon_id: 1
+  submission_id: 9
+  judge_id: 9
+  criteria_id: 1
+  score: 7.0
+  comment: "Decent effort"
+  created_unix: 1672578000
+  updated_unix: 1672578000

@@ -1,0 +1,47 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		{{template "hackforger/explore_search" .}}
+
+		{{if .Grants}}
+		<div class="hf-card">
+			{{range .Grants}}
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<a class="tw-text-lg tw-font-medium" href="{{AppSubUrl}}/grants/{{.Slug}}">{{.Name}}</a>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1 markup">{{.Description}}</div>{{end}}
+						<div class="tw-mt-1 tw-flex tw-items-center tw-gap-2">
+							<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-purple{{else}}hf-badge-red{{end}}">
+								{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.grant.round.status.draft"}}
+								{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.grant.round.status.open"}}
+								{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.grant.round.status.review"}}
+								{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.grant.round.status.finalized"}}
+								{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.grant.round.status.distributed"}}
+								{{else}}{{ctx.Locale.Tr "hackforger.grant.round.status.cancelled"}}
+								{{end}}
+							</span>
+							<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.grant.budget"}}: {{.Budget}} {{.Currency}}</span>
+							{{if gt .BudgetCredits 0}}
+								<span class="tw-text-sm tw-text-gray">+ {{.BudgetCredits}} {{ctx.Locale.Tr "hackforger.credits"}}</span>
+							{{end}}
+						</div>
+					</div>
+				</div>
+			</div>
+			{{end}}
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="hf-card">
+			<div class="hf-empty">
+				{{svg "octicon-heart" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.grant.round.no_rounds"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

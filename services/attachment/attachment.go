@@ -20,6 +20,7 @@ import (
 )
 
 // NewAttachment creates a new attachment object, but do not verify.
+// RepoID=-1 is allowed for HackForger platform-level attachments (hackathon descriptions, etc.)
 func NewAttachment(ctx context.Context, attach *repo_model.Attachment, file io.Reader, size int64) (*repo_model.Attachment, error) {
 	if attach.RepoID == 0 {
 		return nil, fmt.Errorf("attachment %s should belong to a repository", attach.Name)

@@ -1,0 +1,44 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.credits.redeem.confirm"}}</h2>
+
+		{{template "base/alert" .}}
+
+		<div class="hf-card">
+			<div class="hf-card-body">
+				<div class="tw-mb-2">
+					<strong>{{ctx.Locale.Tr "hackforger.credits.redeem.option"}}:</strong> {{.Option.Name}}
+				</div>
+				{{if .Option.Description}}
+					<div class="tw-mb-2">
+						<strong>{{ctx.Locale.Tr "hackforger.grant.round.description"}}:</strong> {{.Option.Description}}
+					</div>
+				{{end}}
+				<div class="tw-mb-2">
+					<strong>{{ctx.Locale.Tr "hackforger.credits.cost"}}:</strong> {{.Option.Cost}} {{ctx.Locale.Tr "hackforger.credits"}}
+				</div>
+				<div class="tw-mb-2">
+					<strong>{{ctx.Locale.Tr "hackforger.credits.your_balance"}}:</strong> {{.Account.Balance}} {{ctx.Locale.Tr "hackforger.credits"}}
+				</div>
+				{{if lt .Account.Balance .Option.Cost}}
+					<div class="tw-mb-2">
+						<div class="ui red message">
+							{{ctx.Locale.Tr "hackforger.credits.insufficient"}}
+						</div>
+					</div>
+				{{end}}
+			</div>
+		</div>
+
+		<div class="tw-flex tw-gap-2">
+			{{if ge .Account.Balance .Option.Cost}}
+				<form action="/credits/redeem/{{.Option.ID}}" method="post">
+					<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.credits.redeem.confirm_button"}}</button>
+				</form>
+			{{end}}
+			<a class="hf-btn hf-btn-secondary" href="/credits">{{ctx.Locale.Tr "cancel"}}</a>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

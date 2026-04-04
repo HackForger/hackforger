@@ -1,0 +1,20 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content hackathon">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.hackathon.judge"}} — {{.Hackathon.Name}}</h2>
+		<div class="hf-card">
+			<div class="hf-card-body">
+				<div id="hackforger-judge-scorecard"
+					data-hackathon-slug="{{.Hackathon.Slug}}"
+					data-tracks="{{.TracksJSON}}"
+					data-submissions="{{.SubmissionsJSON}}"
+					data-rubrics="{{.RubricsJSON}}">
+				</div>
+				<noscript>
+					<div class="ui warning message">JavaScript is required for the scoring interface.</div>
+				</noscript>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -1,0 +1,444 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content hackathon">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.hackathon.manage"}} — {{.Hackathon.Name}}</h2>
+
+		{{/* 0. Details — preview by default, edit on click */}}
+		<div class="hf-card tw-mb-4" id="hackathon-details-card">
+			{{/* Preview mode (default) */}}
+			<div id="hackathon-details-preview">
+				<div class="hf-card-head">
+					<div class="hf-card-head-left">{{svg "octicon-info" 16}} {{ctx.Locale.Tr "hackforger.hackathon.manage.details"}}</div>
+					<button type="button" class="hf-btn hf-btn-secondary tw-text-sm" onclick="document.getElementById('hackathon-details-preview').style.display='none';document.getElementById('hackathon-details-edit').style.display='block';">{{svg "octicon-pencil" 14}} {{ctx.Locale.Tr "hackforger.hackathon.manage.edit_details"}}</button>
+				</div>
+				<div class="hf-card-body">
+					{{/* Description */}}
+					{{if .DescriptionHTML}}
+					<div class="markup">{{.DescriptionHTML}}</div>
+					{{else if .Hackathon.Description}}
+					<p>{{.Hackathon.Description}}</p>
+					{{else}}
+					<p class="tw-text-gray tw-italic">{{ctx.Locale.Tr "hackforger.hackathon.manage.no_description"}}</p>
+					{{end}}
+				</div>
+
+				{{/* Meta info — visually separated */}}
+				<div class="hf-card-body tw-border-t tw-pt-3" style="border-color: var(--color-secondary-alpha-40);">
+					<div class="tw-flex tw-flex-wrap tw-gap-x-6 tw-gap-y-2 tw-text-sm">
+						{{if .Hackathon.PrizeSummary}}
+						<div>
+							{{svg "octicon-gift" 14}} <strong>{{ctx.Locale.Tr "hackforger.hackathon.field.prize_summary"}}</strong>:
+							{{if .PrizeSummaryHTML}}<span class="markup tw-inline">{{.PrizeSummaryHTML}}</span>{{else}}{{.Hackathon.PrizeSummary}}{{end}}
+						</div>
+						{{end}}
+						<div>{{svg "octicon-people" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.max_team_size"}}: {{.Hackathon.MaxTeamSize}}</div>
+					</div>
+
+					{{if or .Hackathon.RegistrationStart .Hackathon.RegistrationEnd .Hackathon.HackingStart .Hackathon.HackingEnd .Hackathon.JudgingEnd}}
+					<div class="tw-flex tw-flex-wrap tw-gap-x-6 tw-gap-y-1 tw-text-sm tw-mt-2 tw-text-gray">
+						{{if .Hackathon.RegistrationStart}}<div>{{svg "octicon-calendar" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.registration_start"}}: {{DateUtils.AbsoluteShort .Hackathon.RegistrationStart}}</div>{{end}}
+						{{if .Hackathon.RegistrationEnd}}<div>→ {{ctx.Locale.Tr "hackforger.hackathon.field.registration_end"}}: {{DateUtils.AbsoluteShort .Hackathon.RegistrationEnd}}</div>{{end}}
+						{{if .Hackathon.HackingStart}}<div>{{svg "octicon-code" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.hacking_start"}}: {{DateUtils.AbsoluteShort .Hackathon.HackingStart}}</div>{{end}}
+						{{if .Hackathon.HackingEnd}}<div>→ {{ctx.Locale.Tr "hackforger.hackathon.field.hacking_end"}}: {{DateUtils.AbsoluteShort .Hackathon.HackingEnd}}</div>{{end}}
+						{{if .Hackathon.JudgingEnd}}<div>{{svg "octicon-law" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.judging_end"}}: {{DateUtils.AbsoluteShort .Hackathon.JudgingEnd}}</div>{{end}}
+					</div>
+					{{end}}
+				</div>
+			</div>
+
+			{{/* Edit mode (hidden by default) */}}
+			<div id="hackathon-details-edit" style="display:none;">
+				<div class="hf-card-head">
+					<div class="hf-card-head-left">{{svg "octicon-pencil" 16}} {{ctx.Locale.Tr "hackforger.hackathon.manage.edit_details"}}</div>
+					<button type="button" class="hf-btn hf-btn-secondary tw-text-sm" onclick="document.getElementById('hackathon-details-edit').style.display='none';document.getElementById('hackathon-details-preview').style.display='block';">{{ctx.Locale.Tr "cancel"}}</button>
+				</div>
+				<div class="hf-card-body">
+					<form class="ui form" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/update">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
+							<input name="name" value="{{.Hackathon.Name}}" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.description"}}</label>
+							{{template "shared/combomarkdowneditor" (dict
+								"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
+								"MarkdownPreviewContext" ""
+								"TextareaName" "description"
+								"TextareaContent" .Hackathon.Description
+								"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.hackathon.field.description_hint")
+								"DropzoneParentContainer" "form"
+							)}}
+						</div>
+						{{if .IsAttachmentEnabled}}
+						<div class="field">
+							{{template "repo/upload" .}}
+						</div>
+						{{end}}
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.prize_summary"}}</label>
+							<textarea name="prize_summary" rows="3">{{.Hackathon.PrizeSummary}}</textarea>
+						</div>
+						<h4 class="tw-mt-2 tw-mb-2">{{ctx.Locale.Tr "hackforger.hackathon.field.schedule"}}</h4>
+						<div class="two fields">
+							<div class="field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.registration_start"}}</label>
+								<input name="registration_start" type="datetime-local" {{if .Hackathon.RegistrationStart}}value="{{.Hackathon.RegistrationStart.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
+							</div>
+							<div class="field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.registration_end"}}</label>
+								<input name="registration_end" type="datetime-local" {{if .Hackathon.RegistrationEnd}}value="{{.Hackathon.RegistrationEnd.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
+							</div>
+						</div>
+						<div class="two fields">
+							<div class="field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.hacking_start"}}</label>
+								<input name="hacking_start" type="datetime-local" {{if .Hackathon.HackingStart}}value="{{.Hackathon.HackingStart.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
+							</div>
+							<div class="field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.hacking_end"}}</label>
+								<input name="hacking_end" type="datetime-local" {{if .Hackathon.HackingEnd}}value="{{.Hackathon.HackingEnd.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
+							</div>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.judging_end"}}</label>
+							<input name="judging_end" type="datetime-local" {{if .Hackathon.JudgingEnd}}value="{{.Hackathon.JudgingEnd.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.max_team_size"}}</label>
+							<input name="max_team_size" type="number" value="{{.Hackathon.MaxTeamSize}}" min="1">
+						</div>
+						<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.save_changes"}}</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		{{/* 1. Phase Control */}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">Phase Control</div>
+				{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.Status "Label" .StatusLabel}}
+			</div>
+			<div class="hf-card-body">
+				<div class="tw-flex tw-gap-2">
+				{{if eq .Hackathon.Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/publish" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.publish"}}</button></form>
+				{{else if eq .Hackathon.Status 1}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/start" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start"}}</button></form>
+				{{else if eq .Hackathon.Status 2}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judge" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start_judging"}}</button></form>
+				{{else if eq .Hackathon.Status 3}}<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize-preview">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview"}}</a>
+				{{end}}
+				{{if and (ne .Hackathon.Status 4) (ne .Hackathon.Status 5)}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline"><button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button></form>{{end}}
+				</div>
+			</div>
+		</div>
+
+		{{/* 2. Tracks */}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks"}}</div>
+			</div>
+			<div class="hf-card-body">
+				{{range .Tracks}}
+					<div class="tw-mb-2">
+						<strong>{{.Name}}</strong>
+						{{if .PrizeCredits}}
+							<span class="hf-badge hf-badge-neutral">{{.PrizeCredits}} {{ctx.Locale.Tr "hackforger.credits.title"}}</span>
+						{{end}}
+						{{if .PrizeDistMode}}
+							<span class="hf-badge hf-badge-blue">{{.PrizeDistMode}}</span>
+						{{end}}
+					</div>
+				{{end}}
+				{{if eq .Hackathon.Status 0}}
+					<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/tracks">
+						<div class="fields">
+							<div class="four wide field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
+								<input name="name" placeholder="Track name" required>
+							</div>
+							<div class="three wide field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_credits"}}</label>
+								<input name="prize_credits" type="number" min="0" value="0">
+							</div>
+							<div class="three wide field">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_mode"}}</label>
+								<select name="prize_dist_mode" id="prizeDistMode" onchange="toggleRatiosField()">
+									<option value="winner_takes_all">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.winner_takes_all"}}</option>
+									<option value="tiered">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.tiered"}}</option>
+									<option value="equal">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.equal"}}</option>
+								</select>
+							</div>
+							<div class="four wide field" id="ratiosField" style="display:none">
+								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_ratios"}}</label>
+								<textarea name="prize_dist_ratios" rows="3" placeholder='[{"rank":1,"pct":60},{"rank":2,"pct":40}]'></textarea>
+							</div>
+						</div>
+						<button class="hf-btn hf-btn-secondary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.add"}}</button>
+					</form>
+					<script>
+						function toggleRatiosField() {
+							var mode = document.getElementById('prizeDistMode');
+							var field = document.getElementById('ratiosField');
+							if (mode && field) {
+								field.style.display = mode.value === 'tiered' ? '' : 'none';
+							}
+						}
+					</script>
+				{{end}}
+			</div>
+		</div>
+
+		{{/* 3. Scoring Criteria */}}
+		{{if le .Hackathon.Status 1}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria"}}</div>
+			</div>
+			<div class="hf-card-body">
+				{{if .Criteria}}
+				<table class="tw-w-full">
+					<thead>
+						<tr>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.name"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.description"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.max_score"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.weight"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.sort_order"}}</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Criteria}}
+						<tr>
+							<td>
+								<form class="ui form" method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}/update">
+									<input name="name" value="{{.Name}}" required>
+							</td>
+							<td><input name="description" value="{{.Description}}"></td>
+							<td><input name="max_score" type="number" step="0.1" value="{{.MaxScore}}" required></td>
+							<td><input name="weight" type="number" step="0.1" value="{{.Weight}}" required></td>
+							<td><input name="sort_order" type="number" value="{{.SortOrder}}"></td>
+							<td class="tw-flex tw-gap-1">
+									<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.edit"}}</button>
+								</form>
+								<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}/delete" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.delete_confirm"}}');">
+									<button class="hf-btn hf-btn-danger" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.delete"}}</button>
+								</form>
+							</td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+				{{else}}
+				<div class="ui info message">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.empty"}}</div>
+				{{end}}
+
+				{{if and (not .Criteria) (le .Hackathon.Status 1)}}
+				<div class="ui warning message">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.warning_no_criteria"}}</div>
+				{{end}}
+
+				{{/* Add criterion form */}}
+				<form class="ui form tw-mt-3" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/criteria">
+					<h4>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.add"}}</h4>
+					<div class="fields">
+						<div class="four wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.name"}}</label>
+							<input name="name" placeholder="e.g. Innovation" required>
+						</div>
+						<div class="four wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.description"}}</label>
+							<input name="description" placeholder="Optional description">
+						</div>
+						<div class="two wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.max_score"}}</label>
+							<input name="max_score" type="number" step="0.1" value="10" required>
+						</div>
+						<div class="two wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.weight"}}</label>
+							<input name="weight" type="number" step="0.1" value="25" required>
+						</div>
+						<div class="two wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.sort_order"}}</label>
+							<input name="sort_order" type="number" value="0">
+						</div>
+						<div class="two wide field tw-self-end">
+							<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.add"}}</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		{{end}}
+
+		{{/* 4. Track Scoring Overrides */}}
+		{{if and .Tracks .Criteria}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria"}}</div>
+			</div>
+			<div class="hf-card-body">
+				{{range $t := .Tracks}}
+				<h4>{{$t.Name}}</h4>
+				<table class="tw-w-full tw-mb-4">
+					<thead>
+						<tr>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.name"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.enabled"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.weight"}}</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{$tcList := index $.TrackCriteria $t.ID}}
+						{{range $c := $.Criteria}}
+						{{$override := false}}
+						{{$enabled := true}}
+						{{$weight := 0.0}}
+						{{range $tc := $tcList}}
+							{{if eq $tc.CriteriaID $c.ID}}
+								{{$override = true}}
+								{{$enabled = $tc.Enabled}}
+								{{$weight = $tc.Weight}}
+							{{end}}
+						{{end}}
+						<tr>
+							<td>{{$c.Name}}</td>
+							<td colspan="2">
+								<form class="ui form tw-inline-flex tw-items-center tw-gap-2" method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/tracks/{{$t.ID}}/criteria">
+									<input type="hidden" name="criteria_id" value="{{$c.ID}}">
+									<div class="ui checkbox">
+										<input type="checkbox" name="enabled" {{if $enabled}}checked{{end}}>
+										<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.enabled"}}</label>
+									</div>
+							</td>
+							<td>
+									<div class="ui mini input">
+										<input name="weight" type="number" step="0.1" value="{{$weight}}" placeholder="0 = {{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.use_default"}}">
+									</div>
+									<button class="hf-btn hf-btn-secondary" type="submit">Save</button>
+								</form>
+							</td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+				{{end}}
+			</div>
+		</div>
+		{{end}}
+
+		{{/* 5. Registrations */}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations"}} <span class="hf-count">{{len .Registrations}}</span></div>
+			</div>
+			<div class="hf-card-body">
+				<table class="tw-w-full"><thead><tr><th>Team</th><th>Status</th><th>Action</th></tr></thead><tbody>
+				{{range .Registrations}}<tr><td>{{.TeamName}}</td><td>{{if eq .Status 0}}Pending{{else if eq .Status 1}}Approved{{else}}Rejected{{end}}</td><td>{{if eq .Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="1"><button class="hf-btn hf-btn-primary">Approve</button></form><form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="2"><button class="hf-btn hf-btn-danger">Reject</button></form>{{end}}</td></tr>{{end}}
+				</tbody></table>
+			</div>
+		</div>
+
+		{{/* 6. Judges */}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges"}} <span class="hf-count">{{len .Judges}}</span></div>
+			</div>
+			<div class="hf-card-body">
+				{{if .Judges}}
+				<table class="tw-w-full">
+					<thead>
+						<tr>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.username"}}</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.track"}}</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Judges}}
+						{{$name := index $.JudgeNames .UserID}}
+						{{$judgeTrackID := .TrackID}}
+						<tr>
+							<td>{{if $name}}<a href="{{AppSubUrl}}/{{$name}}">{{$name}}</a>{{else}}User #{{.UserID}}{{end}}</td>
+							<td>{{$trackFound := false}}{{range $.Tracks}}{{if eq .ID $judgeTrackID}}{{.Name}}{{$trackFound = true}}{{end}}{{end}}{{if not $trackFound}}Track #{{.TrackID}}{{end}}</td>
+							<td>
+								<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/judges/{{.UserID}}/remove" class="tw-inline">
+									<input type="hidden" name="track_id" value="{{.TrackID}}">
+									<button class="hf-btn hf-btn-danger">Remove</button>
+								</form>
+							</td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+				{{else}}
+				<p>No judges assigned yet.</p>
+				{{end}}
+
+				{{/* Add judge form */}}
+				<form class="ui form tw-mt-3" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judges">
+					<div class="inline fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.username"}}</label>
+							<input name="username" placeholder="Username" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.track"}}</label>
+							<select name="track_id" class="ui dropdown" required>
+								<option value="">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.select_track"}}</option>
+								{{range .Tracks}}
+								<option value="{{.ID}}">{{.Name}}</option>
+								{{end}}
+							</select>
+						</div>
+						<div class="field">
+							<button class="hf-btn hf-btn-secondary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.add"}}</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		{{/* 7. Finalize Preview */}}
+		{{if .ShowPreview}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview"}}</div>
+			</div>
+			<div class="hf-card-body">
+				{{if .Rankings}}
+					{{range $t := .Tracks}}
+					{{$ranked := index $.Rankings $t.ID}}
+					{{if $ranked}}
+					<h4>{{$t.Name}}</h4>
+					<table class="tw-w-full tw-mb-4">
+						<thead>
+							<tr>
+								<th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.rank"}}</th>
+								<th>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</th>
+								<th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.weighted_total"}}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{{range $ranked}}
+							<tr {{if eq .Rank 1}}class="positive"{{end}}>
+								<td>#{{.Rank}}</td>
+								<td>{{.Title}}</td>
+								<td>{{printf "%.2f" .WeightedTotal}}</td>
+							</tr>
+							{{end}}
+						</tbody>
+					</table>
+					{{end}}
+					{{end}}
+					<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize" class="tw-mt-3">
+						<button class="hf-btn hf-btn-primary" type="submit" onclick="return confirm('{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_confirm_dialog"}}');">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_confirm"}}</button>
+					</form>
+				{{else}}
+				<div class="ui info message">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview.empty"}}</div>
+				{{end}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

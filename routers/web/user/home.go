@@ -16,6 +16,7 @@ import (
 	activities_model "forgejo.org/models/activities"
 	asymkey_model "forgejo.org/models/asymkey"
 	"forgejo.org/models/db"
+	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
@@ -113,28 +114,52 @@ func Dashboard(ctx *context.Context) {
 		ctx.Data["HeatmapTotalContributions"] = activities_model.GetTotalContributionsInHeatmap(data)
 	}
 
-	feeds, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
-		RequestedUser:   ctxUser,
-		RequestedTeam:   ctx.Org.Team,
-		Actor:           ctx.Doer,
-		IncludePrivate:  true,
-		OnlyPerformedBy: false,
-		Date:            ctx.FormString("date"),
-		ListOptions: db.ListOptions{
-			Page:     page,
-			PageSize: setting.UI.FeedPagingNum,
-		},
-	})
-	if err != nil {
-		ctx.ServerError("GetFeeds", err)
-		return
+	feedType := ctx.FormString("feed")
+	if feedType == "" {
+		feedType = "code"
 	}
+	ctx.Data["FeedType"] = feedType
 
-	ctx.Data["Feeds"] = feeds
-
-	pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
-	pager.AddParam(ctx, "date", "Date")
-	ctx.Data["Page"] = pager
+	if feedType == "community" {
+		feeds, count, err := hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
+			UserID:        uid,
+			IncludeGlobal: true,
+			ListOptions:   db.ListOptions{Page: page, PageSize: setting.UI.FeedPagingNum},
+		})
+		if err != nil {
+			ctx.ServerError("GetHackforgerFeeds", err)
+			return
+		}
+		if err := hackforger_model.LoadActUsers(ctx, feeds); err != nil {
+			ctx.ServerError("LoadActUsers", err)
+			return
+		}
+		ctx.Data["HackforgerFeeds"] = feeds
+		pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
+		pager.AddParam(ctx, "feed", "FeedType")
+		ctx.Data["Page"] = pager
+	} else {
+		feeds, count, err := activities_model.GetFeeds(ctx, activities_model.GetFeedsOptions{
+			RequestedUser:   ctxUser,
+			RequestedTeam:   ctx.Org.Team,
+			Actor:           ctx.Doer,
+			IncludePrivate:  true,
+			OnlyPerformedBy: false,
+			Date:            ctx.FormString("date"),
+			ListOptions: db.ListOptions{
+				Page:     page,
+				PageSize: setting.UI.FeedPagingNum,
+			},
+		})
+		if err != nil {
+			ctx.ServerError("GetFeeds", err)
+			return
+		}
+		ctx.Data["Feeds"] = feeds
+		pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
+		pager.AddParam(ctx, "date", "Date")
+		ctx.Data["Page"] = pager
+	}
 
 	ctx.HTML(http.StatusOK, tplDashboard)
 }
@@ -639,6 +664,22 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 		return
 	}
 	ctx.Data["Issues"] = issues
+
+	// Build BountyMap for issue list badge rendering.
+	if len(issues) > 0 {
+		issueIDs := make([]int64, len(issues))
+		for i, issue := range issues {
+			issueIDs[i] = issue.ID
+		}
+		bountyMap := make(map[int64]*hackforger_model.Bounty)
+		var bounties []*hackforger_model.Bounty
+		if err := db.GetEngine(ctx).In("issue_id", issueIDs).Find(&bounties); err == nil {
+			for _, b := range bounties {
+				bountyMap[b.IssueID] = b
+			}
+		}
+		ctx.Data["BountyMap"] = bountyMap
+	}
 
 	approvalCounts, err := issues.GetApprovalCounts(ctx)
 	if err != nil {

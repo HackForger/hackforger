@@ -1,0 +1,17 @@
+-
+  id: 1
+  user_id: 4
+  balance: 1000
+  updated_unix: 1609459200
+
+-
+  id: 2
+  user_id: 2
+  balance: 5000
+  updated_unix: 1609459200
+
+-
+  id: 3
+  user_id: 44
+  balance: 100000
+  updated_unix: 1609459200

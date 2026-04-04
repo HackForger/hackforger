@@ -5,6 +5,9 @@
 		<div class="ui stackable grid">
 			<div class="ui four wide column">
 				{{template "shared/user/profile_big_avatar" .}}
+			{{if .Reputation}}
+				{{template "hackforger/reputation/card" .}}
+			{{end}}
 			</div>
 			<div class="ui twelve wide column tw-mb-4">
 				{{template "user/overview/header" .}}
@@ -58,6 +61,16 @@
 						{{.ProfileReadme}}
 					{{end}}
 					</div>
+				{{else if eq .TabName "community"}}
+					{{if .HackforgerFeeds}}
+						{{template "hackforger/feed/community_feeds" .}}
+					{{else}}
+						<div class="tw-py-8 tw-text-center text grey">
+							{{ctx.Locale.Tr "hackforger.feed.community_empty"}}
+						</div>
+					{{end}}
+				{{else if eq .TabName "reputation"}}
+					{{template "hackforger/reputation/detail" .}}
 				{{else}}
 					{{template "shared/repo_search" .}}
 					{{template "explore/repo_list" .}}

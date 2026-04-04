@@ -1,0 +1,14 @@
+# Track criteria linking AI Track (id=6) to judge criteria
+-
+  id: 1
+  track_id: 6
+  criteria_id: 1
+  enabled: true
+  weight: 40
+
+-
+  id: 2
+  track_id: 6
+  criteria_id: 2
+  enabled: true
+  weight: 60

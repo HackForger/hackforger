@@ -31,6 +31,7 @@ import (
 	"forgejo.org/routers/web/devtest"
 	"forgejo.org/routers/web/events"
 	"forgejo.org/routers/web/explore"
+	hackforger_web "forgejo.org/routers/web/hackforger"
 	"forgejo.org/routers/web/feed"
 	"forgejo.org/routers/web/healthcheck"
 	"forgejo.org/routers/web/misc"
@@ -134,9 +135,23 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	}
 }
 
+// crossOriginProtection is shared across all web routes.
+// It trusts the origin derived from ROOT_URL so that form POSTs
+// behind a reverse proxy (Caddy/nginx) are not rejected.
+var crossOriginProtection = func() *http.CrossOriginProtection {
+	cop := http.NewCrossOriginProtection()
+	// Extract origin (scheme + host) from ROOT_URL configured in app.ini.
+	// e.g., "https://hackforger.inside.h2os.cloud/" → "https://hackforger.inside.h2os.cloud"
+	if appURL := strings.TrimRight(setting.AppURL, "/"); appURL != "" {
+		if err := cop.AddTrustedOrigin(appURL); err != nil {
+			log.Error("CrossOriginProtection: failed to add trusted origin %q: %v", appURL, err)
+		}
+	}
+	return cop
+}()
+
 // verifyAuthWithOptions checks authentication according to options
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Context) {
-	crossOriginProtection := http.NewCrossOriginProtection()
 	return func(ctx *context.Context) {
 		// Check prohibit login users.
 		if ctx.IsSigned {
@@ -500,7 +515,92 @@ func registerRoutes(m *web.Route) {
 			}
 		}, explore.Code)
 		m.Get("/topics/search", explore.TopicSearch)
+		m.Get("/hackathons", hackforger_web.ExploreHackathons)
+		m.Get("/bounties", hackforger_web.ExploreBounties)
+		m.Get("/grants", hackforger_web.ExploreGrants)
+		m.Get("/submissions", hackforger_web.ExploreSubmissions)
+		m.Get("/reputation", hackforger_web.ExploreReputation)
 	}, ignExploreSignIn)
+
+	// HackForger: public search route (JSON endpoint for web frontend)
+	m.Get("/hackforger/search", hackforger_web.SearchWeb)
+
+	// HackForger: public hackathon routes
+	m.Get("/hackathon/{slug}", hackforger_web.ViewHackathon)
+	m.Get("/hackathon/{slug}/leaderboard", hackforger_web.Leaderboard)
+
+	// HackForger: authenticated hackathon routes
+	m.Group("", func() {
+		m.Get("/hackathons/new", hackforger_web.NewHackathon)
+		m.Post("/hackathons/new", hackforger_web.NewHackathonPost)
+		m.Post("/hackforger/attachments", hackforger_web.UploadHackforgerAttachment)
+		m.Post("/hackforger/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
+		m.Post("/hackathon/{slug}/register", hackforger_web.RegisterPost)
+		m.Get("/hackathon/{slug}/submit", hackforger_web.SubmitForm)
+		m.Post("/hackathon/{slug}/submit", hackforger_web.SubmitPost)
+		m.Group("/hackathon/{slug}/manage", func() {
+			m.Get("", hackforger_web.ManageHackathon)
+			m.Post("/update", hackforger_web.UpdateHackathonPost)
+			m.Post("/publish", hackforger_web.ManagePhasePost)
+			m.Post("/start", hackforger_web.ManagePhasePost)
+			m.Post("/judge", hackforger_web.ManagePhasePost)
+			m.Get("/finalize-preview", hackforger_web.FinalizePreview)
+			m.Post("/finalize", hackforger_web.FinalizeConfirm)
+			m.Post("/cancel", hackforger_web.ManagePhasePost)
+			m.Post("/tracks", hackforger_web.ManageTrackPost)
+			m.Post("/registrations/{rid}", hackforger_web.ManageRegistrationPost)
+			m.Post("/judges", hackforger_web.ManageJudgePost)
+			m.Post("/judges/{uid}/remove", hackforger_web.ManageJudgeRemovePost)
+			m.Post("/criteria", hackforger_web.ManageCriteriaPost)
+			m.Post("/criteria/{cid}/update", hackforger_web.ManageCriteriaUpdatePost)
+			m.Post("/criteria/{cid}/delete", hackforger_web.ManageCriteriaDeletePost)
+			m.Post("/tracks/{tid}/criteria", hackforger_web.ManageTrackCriteriaPost)
+		})
+		m.Group("/hackathon/{slug}/judge", func() {
+			m.Get("", hackforger_web.JudgePage)
+			m.Post("/{sid}/scores", hackforger_web.JudgeScoresPost)
+		})
+	}, reqSignIn)
+
+	// ***** START: HackForger Grants *****
+	m.Group("/grants", func() {
+		m.Combo("/new").Get(hackforger_web.NewGrantRound).Post(hackforger_web.NewGrantRoundPost)
+		m.Group("/{slug}", func() {
+			m.Get("", hackforger_web.GrantRoundDetail)
+			m.Get("/projects", hackforger_web.GrantRoundProjects)
+			m.Combo("/submit").Get(hackforger_web.SubmitGrantProject).Post(hackforger_web.SubmitGrantProjectPost)
+			m.Get("/export", hackforger_web.ExportGrantRoundCSV)
+			m.Group("/manage", func() {
+				m.Get("", hackforger_web.ManageGrantRound)
+				m.Post("/open", hackforger_web.ManageGrantRoundOpen)
+				m.Post("/close", hackforger_web.ManageGrantRoundClose)
+				m.Post("/finalize", hackforger_web.ManageGrantRoundFinalize)
+				m.Post("/distribute", hackforger_web.ManageGrantRoundDistribute)
+				m.Post("/cancel", hackforger_web.ManageGrantRoundCancel)
+				m.Group("/projects/{pid}", func() {
+					m.Get("", hackforger_web.ManageGrantProject)
+					m.Post("/approve", hackforger_web.ManageGrantProjectApprove)
+					m.Post("/reject", hackforger_web.ManageGrantProjectReject)
+					m.Post("/award", hackforger_web.ManageGrantProjectAward)
+					m.Post("/distribute", hackforger_web.ManageGrantProjectDistribute)
+				})
+			})
+		})
+	}, reqSignIn)
+	// ***** END: HackForger Grants *****
+
+	// ***** START: HackForger Credits *****
+	m.Group("/credits", func() {
+		m.Get("", hackforger_web.CreditsOverview)
+		m.Combo("/redeem/{id}").Get(hackforger_web.RedeemConfirm).Post(hackforger_web.RedeemConfirmPost)
+		m.Get("/orders", hackforger_web.CreditOrders)
+	}, reqSignIn)
+	// ***** END: HackForger Credits *****
+
+	// ***** START: HackForger Assistant *****
+	m.Post("/hackforger/assistant/chat", reqSignIn, hackforger_web.ChatWeb)
+	// ***** END: HackForger Assistant *****
+
 	m.Group("/issues", func() {
 		m.Get("", user.Issues)
 		m.Get("/search", repo.SearchIssues)
@@ -824,6 +924,31 @@ func registerRoutes(m *web.Route) {
 			})
 			m.Post("/abuse_reports/act", admin.PerformAction)
 		}
+
+		// ***** START: HackForger Admin Credits *****
+		m.Group("/credits", func() {
+			m.Get("", hackforger_web.AdminCredits)
+			m.Post("/deposit", hackforger_web.AdminCreditsDeposit)
+			m.Post("/deduct", hackforger_web.AdminCreditsDeduct)
+			m.Get("/options", hackforger_web.AdminRedeemOptions)
+			m.Post("/options", hackforger_web.AdminRedeemOptionsCreate)
+			m.Post("/options/{id}", hackforger_web.AdminRedeemOptionsUpdate)
+			m.Get("/options/{id}/keys", hackforger_web.AdminRedeemOptionKeys)
+			m.Post("/options/{id}/keys", hackforger_web.AdminRedeemOptionKeysAdd)
+			m.Get("/orders", hackforger_web.AdminCreditOrders)
+			m.Post("/orders/fulfill", hackforger_web.AdminCreditOrdersBatchFulfill)
+			m.Post("/orders/{oid}/fulfill", hackforger_web.AdminCreditOrdersFulfill)
+			m.Post("/orders/{oid}/cancel", hackforger_web.AdminCreditOrdersCancel)
+		})
+		// ***** END: HackForger Admin Credits *****
+
+		// ***** START: HackForger Admin Reputation *****
+		m.Group("/hackforger/reputation", func() {
+			m.Get("", hackforger_web.AdminReputation)
+			m.Post("", hackforger_web.AdminReputationPost)
+			m.Post("/recalc", hackforger_web.AdminReputationRecalc)
+		})
+		// ***** END: HackForger Admin Reputation *****
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
@@ -1375,6 +1500,21 @@ func registerRoutes(m *web.Route) {
 	m.Group("/{username}/{reponame}", func() {
 		m.Post("/topics", repo.TopicsPost)
 	}, context.RepoAssignment, context.RepoMustNotBeArchived(), reqRepoAdmin)
+
+	// HackForger Bounty web routes
+	m.Group("/{username}/{reponame}", func() {
+		m.Group("/bounties", func() {
+			m.Combo("/new").Get(hackforger_web.NewBounty).
+				Post(hackforger_web.NewBountyPost)
+			m.Group("/{bounty_id}", func() {
+				m.Get("/applications", hackforger_web.BountyListApplications)
+				m.Get("/winners", hackforger_web.BountyListWinners)
+				m.Post("/applications/{application_id}", hackforger_web.BountyApplicationAction)
+				m.Post("/winners", hackforger_web.BountySelectWinners)
+				m.Post("/{action}", hackforger_web.BountyAction)
+			})
+		})
+	}, reqSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoMustNotBeArchived())
 
 	m.Group("/{username}/{reponame}", func() {
 		m.Group("", func() {

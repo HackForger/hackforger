@@ -216,3 +216,19 @@ func (*NullNotifier) ChangeDefaultBranch(ctx context.Context, repo *repo_model.R
 // ActionRunNowDone places a place holder function
 func (*NullNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status, lastRun *actions_model.ActionRun) {
 }
+
+// HackforgerEntityCreated places a place holder function
+func (*NullNotifier) HackforgerEntityCreated(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+}
+
+// HackforgerEntityUpdated places a place holder function
+func (*NullNotifier) HackforgerEntityUpdated(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+}
+
+// HackforgerEntityDeleted places a place holder function
+func (*NullNotifier) HackforgerEntityDeleted(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+}
+
+// HackforgerEntityStatusChanged places a place holder function
+func (*NullNotifier) HackforgerEntityStatusChanged(ctx context.Context, doer *user_model.User, opts *HackforgerEventOpts) {
+}

@@ -1,0 +1,100 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<div class="list-header">
+			<form class="ui form ignore-dirty list-header-search">
+				{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr "hackforger.explore.submissions")}}
+			</form>
+			<!-- Sort -->
+			<details class="dropdown dir-rtl">
+				<summary class="options">
+					{{ctx.Locale.Tr "hackforger.explore.sort"}}
+					{{svg "octicon-triangle-down" 14}}
+				</summary>
+				<div class="content">
+					<ul>
+						<li>
+							<a class="{{if eq .SortType "newest"}}active{{end}}" href="?sort=newest&q={{$.Keyword}}">{{ctx.Locale.Tr "hackforger.explore.sort.newest"}}</a>
+						</li>
+						<li>
+							<a class="{{if eq .SortType "oldest"}}active{{end}}" href="?sort=oldest&q={{$.Keyword}}">{{ctx.Locale.Tr "hackforger.explore.sort.oldest"}}</a>
+						</li>
+						<li>
+							<a class="{{if eq .SortType "score"}}active{{end}}" href="?sort=score&q={{$.Keyword}}">{{ctx.Locale.Tr "hackforger.submission.score"}}</a>
+						</li>
+						<li>
+							<a class="{{if eq .SortType "alphabetically"}}active{{end}}" href="?sort=alphabetically&q={{$.Keyword}}">{{ctx.Locale.Tr "hackforger.explore.sort.alphabetically"}}</a>
+						</li>
+					</ul>
+				</div>
+			</details>
+		</div>
+		<div class="divider"></div>
+
+		{{if .Submissions}}
+		<div class="hf-card">
+			{{range .Submissions}}
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<div class="tw-flex tw-items-center tw-gap-2 tw-mb-1">
+							<a class="tw-text-lg tw-font-semibold" href="{{AppSubUrl}}/hackathon/{{.HackathonSlug}}">{{.Title}}</a>
+							{{if .DemoURL}}
+								<a href="{{.DemoURL}}" target="_blank" rel="noopener noreferrer" class="tw-text-gray" title="{{ctx.Locale.Tr "hackforger.submission.demo"}}">
+									{{svg "octicon-link-external" 14}}
+								</a>
+							{{end}}
+						</div>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1 markup">{{.Description}}</div>{{end}}
+						<div class="tw-text-sm tw-text-gray tw-flex tw-items-center tw-gap-3 tw-flex-wrap">
+							<span class="tw-flex tw-items-center tw-gap-1">
+								{{if .AuthorAvatar}}<img class="tw-rounded-full" src="{{.AuthorAvatar}}" width="16" height="16" alt="">{{end}}
+								{{ctx.Locale.Tr "hackforger.submission.by"}} {{.AuthorName}}
+							</span>
+							{{if .HackathonName}}
+								<span>{{svg "octicon-rocket" 14}} <a href="{{AppSubUrl}}/hackathon/{{.HackathonSlug}}">{{.HackathonName}}</a></span>
+							{{end}}
+							{{if .TrackName}}
+								<span>{{svg "octicon-git-branch" 14}} {{.TrackName}}</span>
+							{{end}}
+						</div>
+					</div>
+				</div>
+				<div class="tw-flex tw-items-center tw-gap-3">
+					{{/* Show score/rank only when hackathon is Finished (status=4) */}}
+					{{if eq .HackathonStatus 4}}
+						{{if gt .TotalScore 0.0}}
+							<span class="tw-text-sm tw-font-medium" title="{{ctx.Locale.Tr "hackforger.submission.score"}}">
+								{{svg "octicon-star" 14}} {{printf "%.1f" .TotalScore}}
+							</span>
+						{{end}}
+						{{if gt .Rank 0}}
+							<span class="hf-badge hf-badge-blue" title="{{ctx.Locale.Tr "hackforger.submission.rank"}}">
+								#{{.Rank}}
+							</span>
+						{{end}}
+					{{end}}
+					<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else}}hf-badge-blue{{end}}">
+						{{if eq .Status 0}}Draft
+						{{else if eq .Status 1}}Submitted
+						{{else}}Judged
+						{{end}}
+					</span>
+				</div>
+			</div>
+			{{end}}
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="hf-card">
+			<div class="hf-empty">
+				{{svg "octicon-file-code" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.submission.no_submissions"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

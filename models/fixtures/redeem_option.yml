@@ -1,0 +1,21 @@
+-
+  id: 1
+  name: "Cloud Credits $10"
+  description: "10 USD cloud computing credits"
+  cost: 500
+  stock: 10
+  is_active: 1
+  fulfill_mode: "manual"
+  created_unix: 1609459200
+  updated_unix: 1609459200
+
+-
+  id: 2
+  name: "Unlimited License"
+  description: "Software license"
+  cost: 2000
+  stock: -1
+  is_active: 1
+  fulfill_mode: "auto"
+  created_unix: 1609459200
+  updated_unix: 1609459200

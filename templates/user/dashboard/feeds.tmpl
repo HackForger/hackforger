@@ -1,5 +1,7 @@
 <div id="activity-feed" class="flex-list">
 	{{range .Feeds}}
+		{{/* Skip HackForger events (op_type >= 30) — they belong in the Community tab */}}
+		{{if ge .GetOpType 30}}{{continue}}{{end}}
 		<div class="flex-item">
 			<div class="flex-item-leading">
 				{{ctx.AvatarUtils.AvatarByAction .}}
@@ -80,6 +82,10 @@
 						{{$index := index .GetIssueInfos 0}}
 						{{$reviewer := index .GetIssueInfos 1}}
 						{{ctx.Locale.Tr "action.review_dismissed" (printf "%s/pulls/%s" (.GetRepoLink ctx) $index) $index (.ShortRepoPath ctx) $reviewer}}
+					{{else if .GetOpType.InActions "hackforger_order_fulfilled"}}
+						{{ctx.Locale.Tr "action.hackforger_order_fulfilled"}}
+					{{else if .GetOpType.InActions "hackforger_order_cancelled"}}
+						{{ctx.Locale.Tr "action.hackforger_order_cancelled"}}
 					{{end}}
 					{{DateUtils.TimeSince .GetCreate}}
 				</div>

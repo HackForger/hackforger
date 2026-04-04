@@ -1,0 +1,41 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		{{template "hackforger/explore_search" .}}
+
+		{{if .Hackathons}}
+		<div class="hf-card">
+			{{range .Hackathons}}
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<a class="tw-text-lg tw-font-semibold" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1 markup">{{.Description}}</div>{{end}}
+					</div>
+				</div>
+				<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">
+					{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
+					{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
+					{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
+					{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
+					{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
+					{{else}}{{ctx.Locale.Tr "hackforger.hackathon.status.cancelled"}}
+					{{end}}
+				</span>
+			</div>
+			{{end}}
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="hf-card">
+			<div class="hf-empty">
+				{{svg "octicon-rocket" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.hackathon.no_hackathons"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

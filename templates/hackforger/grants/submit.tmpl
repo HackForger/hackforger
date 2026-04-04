@@ -1,0 +1,46 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>
+			{{ctx.Locale.Tr "hackforger.grant.project.submit"}}
+			&mdash; <a href="/grants/{{.Round.Slug}}">{{.Round.Name}}</a>
+		</h2>
+
+		{{template "base/alert" .}}
+
+		<form class="ui form" action="/grants/{{.Round.Slug}}/submit" method="post">
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.title"}}</label>
+				<input type="text" name="title" required placeholder="{{ctx.Locale.Tr "hackforger.grant.project.title_placeholder"}}">
+			</div>
+			<div class="field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.description"}}</label>
+				{{template "shared/combomarkdowneditor" (dict
+					"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
+					"MarkdownPreviewContext" ""
+					"TextareaName" "description"
+					"TextareaContent" ""
+					"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.grant.project.description")
+					"DropzoneParentContainer" "form"
+				)}}
+				{{if .IsAttachmentEnabled}}
+				<div class="field">{{template "repo/upload" .}}</div>
+				{{end}}
+			</div>
+			<div class="required field">
+				<label>{{ctx.Locale.Tr "hackforger.grant.project.repo"}}</label>
+				<select name="repo_id" class="ui search dropdown" required>
+					<option value="">{{ctx.Locale.Tr "hackforger.grant.project.select_repo"}}</option>
+					{{range .Repos}}
+					<option value="{{.ID}}">{{.FullName}}</option>
+					{{end}}
+				</select>
+			</div>
+			<div class="field">
+				<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.project.submit"}}</button>
+				<a class="hf-btn hf-btn-secondary" href="/grants/{{.Round.Slug}}">{{ctx.Locale.Tr "cancel"}}</a>
+			</div>
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

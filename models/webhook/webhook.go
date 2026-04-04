@@ -323,6 +323,106 @@ func (w *Webhook) HasPullRequestReviewRequestEvent() bool {
 		(w.ChooseEvents && w.PullRequestReviewRequest)
 }
 
+// HasHackathonCreatedEvent returns true if hook enabled hackathon_created event.
+func (w *Webhook) HasHackathonCreatedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.HackathonCreated)
+}
+
+// HasHackathonStatusChangedEvent returns true if hook enabled hackathon_status_changed event.
+func (w *Webhook) HasHackathonStatusChangedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.HackathonStatusChanged)
+}
+
+// HasHackathonSubmissionEvent returns true if hook enabled hackathon_submission event.
+func (w *Webhook) HasHackathonSubmissionEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.HackathonSubmission)
+}
+
+// HasHackathonScoredEvent returns true if hook enabled hackathon_scored event.
+func (w *Webhook) HasHackathonScoredEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.HackathonScored)
+}
+
+// HasHackathonFinalizedEvent returns true if hook enabled hackathon_finalized event.
+func (w *Webhook) HasHackathonFinalizedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.HackathonFinalized)
+}
+
+// HasBountyCreatedEvent returns true if hook enabled bounty_created event.
+func (w *Webhook) HasBountyCreatedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyCreated)
+}
+
+// HasBountyApplicationEvent returns true if hook enabled bounty_application event.
+func (w *Webhook) HasBountyApplicationEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyApplication)
+}
+
+// HasBountyClaimedEvent returns true if hook enabled bounty_claimed event.
+func (w *Webhook) HasBountyClaimedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyClaimed)
+}
+
+// HasBountyCompletedEvent returns true if hook enabled bounty_completed event.
+func (w *Webhook) HasBountyCompletedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyCompleted)
+}
+
+// HasBountyPaidEvent returns true if hook enabled bounty_paid event.
+func (w *Webhook) HasBountyPaidEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyPaid)
+}
+
+// HasBountyWinnersEvent returns true if hook enabled bounty_winners event.
+func (w *Webhook) HasBountyWinnersEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyWinners)
+}
+
+// HasBountyExpiredEvent returns true if hook enabled bounty_expired event.
+func (w *Webhook) HasBountyExpiredEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyExpired)
+}
+
+// HasBountyCancelledEvent returns true if hook enabled bounty_cancelled event.
+func (w *Webhook) HasBountyCancelledEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.BountyCancelled)
+}
+
+// HasGrantRoundCreatedEvent returns true if hook enabled grant_round_created event.
+func (w *Webhook) HasGrantRoundCreatedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.GrantRoundCreated)
+}
+
+// HasGrantRoundOpenedEvent returns true if hook enabled grant_round_opened event.
+func (w *Webhook) HasGrantRoundOpenedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.GrantRoundOpened)
+}
+
+// HasGrantProjectSubmittedEvent returns true if hook enabled grant_project_submitted event.
+func (w *Webhook) HasGrantProjectSubmittedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.GrantProjectSubmitted)
+}
+
+// HasGrantAwardedEvent returns true if hook enabled grant_awarded event.
+func (w *Webhook) HasGrantAwardedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.GrantAwarded)
+}
+
+// HasGrantRoundFinalizedEvent returns true if hook enabled grant_round_finalized event.
+func (w *Webhook) HasGrantRoundFinalizedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.GrantRoundFinalized)
+}
+
+// HasCreditsDepositedEvent returns true if hook enabled credits_deposited event.
+func (w *Webhook) HasCreditsDepositedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.CreditsDeposited)
+}
+
+// HasCreditsRedeemedEvent returns true if hook enabled credits_redeemed event.
+func (w *Webhook) HasCreditsRedeemedEvent() bool {
+	return w.SendEverything || (w.ChooseEvents && w.CreditsRedeemed)
+}
+
 // EventCheckers returns event checkers
 func (w *Webhook) EventCheckers() []struct {
 	Has  func() bool
@@ -358,6 +458,27 @@ func (w *Webhook) EventCheckers() []struct {
 		{w.HasActionRunFailureEvent, webhook_module.HookEventActionRunFailure},
 		{w.HasActionRunRecoverEvent, webhook_module.HookEventActionRunRecover},
 		{w.HasActionRunSuccessEvent, webhook_module.HookEventActionRunSuccess},
+		// HackForger events
+		{w.HasHackathonCreatedEvent, webhook_module.HookEventHackathonCreated},
+		{w.HasHackathonStatusChangedEvent, webhook_module.HookEventHackathonStatusChanged},
+		{w.HasHackathonSubmissionEvent, webhook_module.HookEventHackathonSubmission},
+		{w.HasHackathonScoredEvent, webhook_module.HookEventHackathonScored},
+		{w.HasHackathonFinalizedEvent, webhook_module.HookEventHackathonFinalized},
+		{w.HasBountyCreatedEvent, webhook_module.HookEventBountyCreated},
+		{w.HasBountyApplicationEvent, webhook_module.HookEventBountyApplication},
+		{w.HasBountyClaimedEvent, webhook_module.HookEventBountyClaimed},
+		{w.HasBountyCompletedEvent, webhook_module.HookEventBountyCompleted},
+		{w.HasBountyPaidEvent, webhook_module.HookEventBountyPaid},
+		{w.HasBountyWinnersEvent, webhook_module.HookEventBountyWinners},
+		{w.HasBountyExpiredEvent, webhook_module.HookEventBountyExpired},
+		{w.HasBountyCancelledEvent, webhook_module.HookEventBountyCancelled},
+		{w.HasGrantRoundCreatedEvent, webhook_module.HookEventGrantRoundCreated},
+		{w.HasGrantRoundOpenedEvent, webhook_module.HookEventGrantRoundOpened},
+		{w.HasGrantProjectSubmittedEvent, webhook_module.HookEventGrantProjectSubmitted},
+		{w.HasGrantAwardedEvent, webhook_module.HookEventGrantAwarded},
+		{w.HasGrantRoundFinalizedEvent, webhook_module.HookEventGrantRoundFinalized},
+		{w.HasCreditsDepositedEvent, webhook_module.HookEventCreditsDeposited},
+		{w.HasCreditsRedeemedEvent, webhook_module.HookEventCreditsRedeemed},
 	}
 }
 

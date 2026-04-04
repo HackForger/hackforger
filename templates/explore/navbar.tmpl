@@ -19,5 +19,17 @@
 			{{svg "octicon-code"}} {{ctx.Locale.Tr "explore.code"}}
 		</a>
 		{{end}}
+		<a class="{{if .PageIsExploreHackathons}}active {{end}}item" href="{{AppSubUrl}}/explore/hackathons">
+			{{svg "octicon-rocket"}} {{ctx.Locale.Tr "hackforger.explore.hackathons"}}
+		</a>
+		<a class="{{if .PageIsExploreBounties}}active {{end}}item" href="{{AppSubUrl}}/explore/bounties">
+			{{svg "octicon-gift"}} {{ctx.Locale.Tr "hackforger.explore.bounties"}}
+		</a>
+		<a class="{{if .PageIsExploreGrants}}active {{end}}item" href="{{AppSubUrl}}/explore/grants">
+			{{svg "octicon-heart"}} {{ctx.Locale.Tr "hackforger.explore.grants"}}
+		</a>
+		<a class="{{if .PageIsExploreSubmissions}}active {{end}}item" href="{{AppSubUrl}}/explore/submissions">
+			{{svg "octicon-file-code"}} {{ctx.Locale.Tr "hackforger.explore.submissions"}}
+		</a>
 	</div>
 </overflow-menu>

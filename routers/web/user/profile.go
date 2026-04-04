@@ -16,6 +16,7 @@ import (
 
 	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
+	hackforger_model "forgejo.org/models/hackforger"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
@@ -156,6 +157,11 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 
 	private := ctx.FormOptionalBool("private")
 	ctx.Data["IsPrivate"] = private
+
+	// Load reputation for sidebar card (all tabs)
+	if rep, err := hackforger_model.GetOrCreateReputation(ctx, ctx.ContextUser.ID); err == nil {
+		ctx.Data["Reputation"] = rep
+	}
 
 	switch tab {
 	case "followers":
@@ -299,6 +305,23 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 				ctx.Data["IsProfileReadmePlain"] = true
 			}
 		}
+	case "community":
+		feeds, count, err := hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{
+			ActUserID:   ctx.ContextUser.ID,
+			ListOptions: db.ListOptions{Page: page, PageSize: setting.UI.FeedPagingNum},
+		})
+		if err != nil {
+			ctx.ServerError("GetHackforgerFeeds", err)
+			return
+		}
+		if err := hackforger_model.LoadActUsers(ctx, feeds); err != nil {
+			ctx.ServerError("LoadActUsers", err)
+			return
+		}
+		ctx.Data["HackforgerFeeds"] = feeds
+		total = int(count)
+	case "reputation":
+		// Reputation already loaded above for sidebar card
 	default: // default to "repositories"
 		repos, count, err = repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
 			ListOptions: db.ListOptions{

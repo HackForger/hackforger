@@ -1,0 +1,187 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Hackathon.Name}}" class="page-content hackathon">
+	<div class="ui container">
+		{{/* Header */}}
+		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+			<div>
+				<h1 class="tw-mb-1">{{.Hackathon.Name}}</h1>
+				<div class="tw-flex tw-items-center tw-gap-2">
+					{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.Status "Label" .StatusLabel}}
+					{{if .Owner}}
+					<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.hackathon.view.organizer"}}: <a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a></span>
+					{{end}}
+					{{if .LinkedOrg}}
+					<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.hackathon.view.org"}}: <a href="{{AppSubUrl}}/{{.LinkedOrg.Name}}">{{svg "octicon-organization" 14}} {{.LinkedOrg.Name}}</a></span>
+					{{end}}
+				</div>
+			</div>
+			<div class="tw-flex tw-gap-2">
+				{{if .IsOwner}}<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage">{{svg "octicon-gear" 14}} {{ctx.Locale.Tr "hackforger.hackathon.manage"}}</a>{{end}}
+				{{if .IsJudge}}<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/judge">{{svg "octicon-checklist" 14}} {{ctx.Locale.Tr "hackforger.hackathon.judge"}}</a>{{end}}
+			</div>
+		</div>
+
+		{{/* Timeline */}}
+		{{if or .Hackathon.RegistrationEnd .Hackathon.HackingEnd .Hackathon.JudgingEnd}}
+		<div class="hf-timeline">
+			{{if .Hackathon.RegistrationEnd}}
+			<div class="hf-timeline-step {{if ge .Hackathon.Status 2}}hf-step-done{{else if eq .Hackathon.Status 1}}hf-step-active{{else}}hf-step-upcoming{{end}}">
+				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.registration_end"}}</div>
+				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.RegistrationEnd}}</div>
+				<div class="hf-step-status">{{if ge .Hackathon.Status 2}}Done{{else if eq .Hackathon.Status 1}}Active{{else}}Upcoming{{end}}</div>
+			</div>
+			{{end}}
+			{{if .Hackathon.HackingEnd}}
+			<div class="hf-timeline-step {{if ge .Hackathon.Status 3}}hf-step-done{{else if eq .Hackathon.Status 2}}hf-step-active{{else}}hf-step-upcoming{{end}}">
+				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.hacking_end"}}</div>
+				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.HackingEnd}}</div>
+				<div class="hf-step-status">{{if ge .Hackathon.Status 3}}Done{{else if eq .Hackathon.Status 2}}Active{{else}}Upcoming{{end}}</div>
+			</div>
+			{{end}}
+			{{if .Hackathon.JudgingEnd}}
+			<div class="hf-timeline-step {{if ge .Hackathon.Status 4}}hf-step-done{{else if eq .Hackathon.Status 3}}hf-step-active{{else}}hf-step-upcoming{{end}}">
+				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.judging_end"}}</div>
+				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.JudgingEnd}}</div>
+				<div class="hf-step-status">{{if ge .Hackathon.Status 4}}Done{{else if eq .Hackathon.Status 3}}Active{{else}}Upcoming{{end}}</div>
+			</div>
+			{{end}}
+		</div>
+		{{end}}
+
+		{{/* Description (Markdown rendered) */}}
+		{{if .Hackathon.Description}}
+		<div class="hf-card">
+			<div class="hf-card-body markup">{{if .DescriptionHTML}}{{.DescriptionHTML}}{{else}}<p>{{.Hackathon.Description}}</p>{{end}}</div>
+		</div>
+		{{end}}
+
+		{{/* Prizes (Markdown rendered) */}}
+		{{if .Hackathon.PrizeSummary}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.hackathon.view.prizes"}}</div>
+			</div>
+			<div class="hf-card-body markup">{{if .PrizeSummaryHTML}}{{.PrizeSummaryHTML}}{{else}}<p>{{.Hackathon.PrizeSummary}}</p>{{end}}</div>
+		</div>
+		{{end}}
+
+		{{/* Tracks */}}
+		{{if .Tracks}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{svg "octicon-tag" 16}} {{ctx.Locale.Tr "hackforger.hackathon.manage.tracks"}} <span class="hf-count">{{len .Tracks}}</span></div>
+			</div>
+			{{range .Tracks}}
+			<div class="hf-row">
+				<div class="hf-row-left">
+					<div>
+						<div class="tw-font-semibold">{{.Name}}</div>
+						{{if .Description}}<div class="tw-text-sm tw-text-gray">{{.Description}}</div>{{end}}
+					</div>
+				</div>
+				{{if .RepoID}}{{$repoName := index $.TrackRepoNames .ID}}<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/{{$.LinkedOrg.Name}}/{{$repoName}}">{{svg "octicon-repo" 14}} {{ctx.Locale.Tr "hackforger.hackathon.view.code"}}</a>{{end}}
+			</div>
+			{{end}}
+		</div>
+		{{end}}
+
+		{{/* Registration CTA */}}
+		{{if and (eq .Hackathon.Status 1) .SignedUserID (not .IsRegistered)}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{svg "octicon-person-add" 16}} {{ctx.Locale.Tr "hackforger.hackathon.register"}}</div>
+			</div>
+			<div class="hf-card-body">
+				<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/register" class="ui form">
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.register.mode"}}</label>
+						<select name="org_id" class="ui dropdown">
+							<option value="0">{{ctx.Locale.Tr "hackforger.hackathon.register.solo"}}</option>
+							{{range .UserOrgs}}
+							<option value="{{.ID}}">{{.Name}} ({{ctx.Locale.Tr "hackforger.hackathon.register.team"}})</option>
+							{{end}}
+						</select>
+					</div>
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.register.display_name"}}</label>
+						<input name="team_name" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.register.display_name_hint"}}">
+					</div>
+					<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.register"}}</button>
+				</form>
+			</div>
+		</div>
+		{{end}}
+
+		{{/* Already registered */}}
+		{{if .IsRegistered}}
+		<div class="ui positive message">{{svg "octicon-check" 16}} {{ctx.Locale.Tr "hackforger.hackathon.register.already_registered"}}</div>
+		{{end}}
+
+		{{/* Participants */}}
+		{{if .Registrations}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{svg "octicon-people" 16}} {{ctx.Locale.Tr "hackforger.hackathon.view.participants"}} <span class="hf-count">{{.RegistrationCount}}</span></div>
+			</div>
+			{{range .Registrations}}
+			<div class="hf-row">
+				<div class="hf-row-left"><span>{{.TeamName}}</span></div>
+				<span class="hf-badge {{if eq .Status 0}}hf-badge-yellow{{else if eq .Status 1}}hf-badge-green{{else}}hf-badge-red{{end}}">
+					{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.view.pending"}}
+					{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.view.approved"}}
+					{{else}}{{ctx.Locale.Tr "hackforger.hackathon.view.rejected"}}{{end}}
+				</span>
+			</div>
+			{{end}}
+		</div>
+		{{end}}
+
+		{{/* Submit button */}}
+		{{if and (eq .Hackathon.Status 2) .IsRegistered}}
+		<div class="tw-text-center tw-my-4">
+			<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/submit">{{svg "octicon-upload" 16}} {{ctx.Locale.Tr "hackforger.hackathon.submit"}}</a>
+		</div>
+		{{end}}
+
+		{{/* Submissions */}}
+		{{if .Submissions}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{svg "octicon-project" 16}} {{ctx.Locale.Tr "hackforger.hackathon.view.submissions"}} <span class="hf-count">{{len .Submissions}}</span></div>
+			</div>
+			<div class="hf-card-body">
+				<table class="tw-w-full">
+					<thead><tr>
+						<th>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.demo_url"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.hackathon.view.repo"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.hackathon.view.pr"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.score"}}</th>
+						<th>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.rank"}}</th>
+					</tr></thead>
+					<tbody>
+						{{range .Submissions}}
+						<tr {{if eq .Rank 1}}class="positive"{{end}}>
+							<td>{{.Title}}</td>
+							<td>{{if .DemoURL}}<a href="{{.DemoURL}}">Demo</a>{{end}}</td>
+							<td>{{if .RepoID}}{{$repo := index $.SubRepos .RepoID}}<a href="{{AppSubUrl}}/{{$repo}}">{{$repo}}</a>{{else}}-{{end}}</td>
+							<td>{{if .PullIndex}}<a href="{{AppSubUrl}}/{{$.LinkedOrg.Name}}/{{index $.TrackRepoNames .TrackID}}/pulls/{{.PullIndex}}">PR #{{.PullIndex}}</a>{{else}}-{{end}}</td>
+							<td>{{if gt .TotalScore 0.0}}{{printf "%.1f" .TotalScore}}{{else}}-{{end}}</td>
+							<td>{{if gt .Rank 0}}#{{.Rank}}{{else}}-{{end}}</td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+		</div>
+		{{end}}
+
+		{{/* Leaderboard link */}}
+		{{if eq .Hackathon.Status 4}}
+		<div class="tw-text-center tw-my-4">
+			<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/leaderboard">{{svg "octicon-trophy" 16}} {{ctx.Locale.Tr "hackforger.hackathon.leaderboard"}}</a>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

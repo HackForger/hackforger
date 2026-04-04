@@ -39,6 +39,7 @@ import (
 	"forgejo.org/services/cron"
 	federation_service "forgejo.org/services/federation"
 	feed_service "forgejo.org/services/feed"
+	hackforger_service "forgejo.org/services/hackforger"
 	indexer_service "forgejo.org/services/indexer"
 	"forgejo.org/services/mailer"
 	mailer_incoming "forgejo.org/services/mailer/incoming"
@@ -119,6 +120,7 @@ func InitWebInstalled(ctx context.Context) {
 	mailer.NewContext(ctx)
 	mustInit(cache.Init)
 	mustInit(feed_service.Init)
+	mustInit(hackforger_service.Init)
 	mustInit(federation_service.Init)
 	mustInit(uinotification.Init)
 	mustInitCtx(ctx, archiver.Init)

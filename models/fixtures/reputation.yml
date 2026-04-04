@@ -1,0 +1,35 @@
+-
+  id: 1
+  user_id: 4
+  score: 1250
+  bounties_completed: 3
+  hackathon_wins: 1
+  grants_received: 2
+  total_stars: 15
+  total_credits_earned: 5000
+  tier: "Silver"
+  updated_unix: 1609459200
+
+-
+  id: 2
+  user_id: 5
+  score: 800
+  bounties_completed: 1
+  hackathon_wins: 0
+  grants_received: 1
+  total_stars: 8
+  total_credits_earned: 2500
+  tier: "Bronze"
+  updated_unix: 1609459200
+
+-
+  id: 3
+  user_id: 2
+  score: 3500
+  bounties_completed: 0
+  hackathon_wins: 0
+  grants_received: 0
+  total_stars: 42
+  total_credits_earned: 10000
+  tier: "Gold"
+  updated_unix: 1609459200

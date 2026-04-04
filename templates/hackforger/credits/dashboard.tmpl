@@ -1,0 +1,54 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content user">
+	<div class="ui container">
+		<h2 class="ui header">
+			{{svg "octicon-credit-card" 24}} {{ctx.Locale.Tr "hackforger.credits.title"}}
+		</h2>
+
+		<div class="hf-card">
+			<div class="hf-card-body">
+				<div class="hf-stat">
+					<div class="hf-stat-value">{{.Balance}}</div>
+					<div class="hf-stat-label">{{ctx.Locale.Tr "hackforger.credits.balance"}}</div>
+				</div>
+			</div>
+		</div>
+
+		<h3 class="ui header">{{ctx.Locale.Tr "hackforger.credits.transactions"}}</h3>
+		{{if .Transactions}}
+		<div class="hf-card">
+			<table class="tw-w-full">
+				<thead>
+					<tr>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.type"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.amount"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.balance_after"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.reference"}}</th>
+						<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.note"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Transactions}}
+					<tr>
+						<td class="tw-p-2">{{.Type}}</td>
+						<td class="tw-p-2">{{if gt .Amount 0}}<span class="hf-amount-positive">+{{.Amount}}</span>{{else}}<span class="hf-amount-negative">{{.Amount}}</span>{{end}}</td>
+						<td class="tw-p-2">{{.Balance}}</td>
+						<td class="tw-p-2">{{.Reference}}</td>
+						<td class="tw-p-2">{{.Note}}</td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{else}}
+		<div class="hf-card">
+			<div class="hf-empty">
+				{{svg "octicon-credit-card" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.credits.no_transactions"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

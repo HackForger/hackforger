@@ -1,0 +1,22 @@
+# Criteria for hackathon 1 (Judging hackathon)
+-
+  id: 1
+  hackathon_id: 1
+  name: "Innovation"
+  description: "How innovative is the solution?"
+  max_score: 10
+  weight: 40
+  sort_order: 1
+  created_unix: 1672578000
+  updated_unix: 1672578000
+
+-
+  id: 2
+  hackathon_id: 1
+  name: "Completeness"
+  description: "How complete is the implementation?"
+  max_score: 10
+  weight: 60
+  sort_order: 2
+  created_unix: 1672578000
+  updated_unix: 1672578000

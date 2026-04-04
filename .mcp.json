@@ -1,15 +1,5 @@
 {
   "mcpServers": {
-    "forgejo": {
-      "command": "forgejo-mcp",
-      "args": [
-        "--transport", "stdio",
-        "--url", "https://hackforger.inside.h2os.cloud"
-      ],
-      "env": {
-        "FORGEJO_ACCESS_TOKEN": "${FORGEJO_TOKEN}"
-      }
-    },
     "context7": {
       "command": "npx",
       "args": ["-y", "@anthropic/context7-mcp"]

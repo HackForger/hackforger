@@ -1,0 +1,48 @@
+<div class="list-header">
+	<form class="ui form ignore-dirty list-header-search">
+		{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr .SearchPlaceholderKey)}}
+		{{if .StatusFilter}}<input type="hidden" name="status" value="{{.StatusFilter}}">{{end}}
+	</form>
+	<!-- Status filter -->
+	<details class="dropdown dir-rtl">
+		<summary class="options">
+			{{if eq .StatusFilter ""}}{{ctx.Locale.Tr "hackforger.explore.filter.status"}}
+			{{else}}{{ctx.Locale.Tr .StatusLabelKey}}
+			{{end}}
+			{{svg "octicon-triangle-down" 14}}
+		</summary>
+		<div class="content">
+			<ul>
+				<li>
+					<a class="{{if eq .StatusFilter ""}}active{{end}}" href="?sort={{$.SortType}}&q={{$.Keyword}}">{{ctx.Locale.Tr "hackforger.explore.filter.all"}}</a>
+				</li>
+				{{range .StatusOptions}}
+				<li>
+					<a class="{{if eq $.StatusFilter .Value}}active{{end}}" href="?status={{.Value}}&sort={{$.SortType}}&q={{$.Keyword}}">{{ctx.Locale.Tr .LabelKey}}</a>
+				</li>
+				{{end}}
+			</ul>
+		</div>
+	</details>
+	<!-- Sort -->
+	<details class="dropdown dir-rtl">
+		<summary class="options">
+			{{ctx.Locale.Tr "hackforger.explore.sort"}}
+			{{svg "octicon-triangle-down" 14}}
+		</summary>
+		<div class="content">
+			<ul>
+				<li>
+					<a class="{{if eq .SortType "newest"}}active{{end}}" href="?sort=newest&q={{$.Keyword}}{{if $.StatusFilter}}&status={{$.StatusFilter}}{{end}}">{{ctx.Locale.Tr "hackforger.explore.sort.newest"}}</a>
+				</li>
+				<li>
+					<a class="{{if eq .SortType "oldest"}}active{{end}}" href="?sort=oldest&q={{$.Keyword}}{{if $.StatusFilter}}&status={{$.StatusFilter}}{{end}}">{{ctx.Locale.Tr "hackforger.explore.sort.oldest"}}</a>
+				</li>
+				<li>
+					<a class="{{if eq .SortType "alphabetically"}}active{{end}}" href="?sort=alphabetically&q={{$.Keyword}}{{if $.StatusFilter}}&status={{$.StatusFilter}}{{end}}">{{ctx.Locale.Tr "hackforger.explore.sort.alphabetically"}}</a>
+				</li>
+			</ul>
+		</div>
+	</details>
+</div>
+<div class="divider"></div>

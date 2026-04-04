@@ -1,0 +1,59 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.credits.orders"}}</h2>
+
+		{{template "base/alert" .}}
+
+		{{if .Orders}}
+			<div class="hf-card">
+				<table class="tw-w-full">
+					<thead>
+						<tr>
+							<th class="tw-p-2">ID</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.option"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.cost"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.delivery"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Orders}}
+							<tr>
+								<td class="tw-p-2">{{.ID}}</td>
+								<td class="tw-p-2">{{.OptionID}}</td>
+								<td class="tw-p-2">{{.Cost}}</td>
+								<td class="tw-p-2">
+									<span class="hf-badge {{if eq .Status "pending"}}hf-badge-yellow{{else if eq .Status "fulfilled"}}hf-badge-green{{else if eq .Status "cancelled"}}hf-badge-red{{else}}hf-badge-neutral{{end}}">
+										{{.Status}}
+									</span>
+								</td>
+								<td class="tw-p-2">
+									{{if and (eq .Status "fulfilled") .DeliveryType (ne .DeliveryType "")}}
+										<span class="hf-badge hf-badge-neutral">{{.DeliveryType}}</span>
+										{{.DeliveryValue}}
+									{{else}}
+										&mdash;
+									{{end}}
+								</td>
+								<td class="tw-p-2">{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+		{{else}}
+			<div class="hf-card">
+				<div class="hf-empty">
+					{{svg "octicon-package" 48}}
+					<br>
+					{{ctx.Locale.Tr "hackforger.credits.no_orders"}}
+				</div>
+			</div>
+		{{end}}
+
+		<a class="hf-btn hf-btn-secondary" href="/credits">{{ctx.Locale.Tr "hackforger.credits.back_to_overview"}}</a>
+	</div>
+</div>
+{{template "base/footer" .}}

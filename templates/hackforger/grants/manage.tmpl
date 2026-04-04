@@ -1,0 +1,118 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>
+			{{ctx.Locale.Tr "hackforger.grant.manage"}}
+			&mdash; <a href="/grants/{{.Round.Slug}}">{{.Round.Name}}</a>
+		</h2>
+
+		{{template "base/alert" .}}
+
+		{{/* Status and action buttons */}}
+		<div class="hf-card">
+			<div class="hf-card-body">
+				<div class="tw-flex tw-items-center tw-gap-4 tw-mb-4">
+					{{template "hackforger/helpers/status_badge" dict "Type" "grant" "Status" .Round.Status "Label" .StatusName}}
+					<div class="tw-flex tw-gap-2">
+						{{if eq .Round.Status 0}}
+							<form action="/grants/{{.Round.Slug}}/manage/open" method="post" class="tw-inline">
+								<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.action.open"}}</button>
+							</form>
+						{{end}}
+						{{if eq .Round.Status 1}}
+							<form action="/grants/{{.Round.Slug}}/manage/close" method="post" class="tw-inline">
+								<button class="hf-btn hf-btn-secondary">{{ctx.Locale.Tr "hackforger.grant.action.close"}}</button>
+							</form>
+						{{end}}
+						{{if eq .Round.Status 2}}
+							<form action="/grants/{{.Round.Slug}}/manage/finalize" method="post" class="tw-inline">
+								<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.action.finalize"}}</button>
+							</form>
+						{{end}}
+						{{if eq .Round.Status 3}}
+							<form action="/grants/{{.Round.Slug}}/manage/distribute" method="post" class="tw-inline">
+								<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.action.distribute"}}</button>
+							</form>
+						{{end}}
+						{{if and (ne .Round.Status 4) (ne .Round.Status 5)}}
+							<form action="/grants/{{.Round.Slug}}/manage/cancel" method="post" class="tw-inline">
+								<button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.grant.action.cancel"}}</button>
+							</form>
+						{{end}}
+					</div>
+				</div>
+
+				{{/* Budget usage */}}
+				<div class="tw-mb-4">
+					<h4>{{ctx.Locale.Tr "hackforger.grant.round.budget_usage"}}</h4>
+					{{if gt .Round.Budget 0.0}}
+						<div class="tw-mb-2">
+							<strong>{{.Round.Currency}}:</strong> {{.UsedAmount}} / {{.Round.Budget}}
+						</div>
+					{{end}}
+					{{if gt .Round.BudgetCredits 0}}
+						<div class="tw-mb-2">
+							<strong>{{ctx.Locale.Tr "hackforger.credits"}}:</strong> {{.UsedCredits}} / {{.Round.BudgetCredits}}
+						</div>
+					{{end}}
+				</div>
+
+				<a class="hf-btn hf-btn-secondary" href="/grants/{{.Round.Slug}}/export">{{ctx.Locale.Tr "hackforger.grant.export_csv"}}</a>
+			</div>
+		</div>
+
+		{{/* Projects table */}}
+		<h3>{{ctx.Locale.Tr "hackforger.grant.projects"}}</h3>
+		{{if .Projects}}
+			<div class="hf-card">
+				<table class="tw-w-full">
+					<thead>
+						<tr>
+							<th class="tw-p-2 tw-text-left">ID</th>
+							<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.grant.project.title"}}</th>
+							<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.grant.project.user"}}</th>
+							<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.grant.status"}}</th>
+							<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.grant.project.award"}}</th>
+							<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.grant.actions"}}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Projects}}
+							<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+								<td class="tw-p-2">{{.ID}}</td>
+								<td class="tw-p-2"><a href="/grants/{{$.Round.Slug}}/manage/projects/{{.ID}}">{{.Title}}</a></td>
+								<td class="tw-p-2">{{.UserID}}</td>
+								<td class="tw-p-2">
+									<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-red{{else}}hf-badge-blue{{end}}">
+										{{if eq .Status 0}}pending{{else if eq .Status 1}}approved{{else if eq .Status 2}}rejected{{else}}funded{{end}}
+									</span>
+								</td>
+								<td class="tw-p-2">
+									{{if or (gt .AwardAmount 0.0) (gt .AwardCredits 0)}}
+										{{.AwardAmount}} + {{.AwardCredits}} cr
+									{{else}}
+										&mdash;
+									{{end}}
+								</td>
+								<td class="tw-p-2">
+									<a class="hf-btn hf-btn-secondary" href="/grants/{{$.Round.Slug}}/manage/projects/{{.ID}}">
+										{{ctx.Locale.Tr "hackforger.grant.manage"}}
+									</a>
+								</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+		{{else}}
+			<div class="hf-card">
+				<div class="hf-empty">
+					{{svg "octicon-project" 48}}
+					<br>
+					{{ctx.Locale.Tr "hackforger.grant.no_projects"}}
+				</div>
+			</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

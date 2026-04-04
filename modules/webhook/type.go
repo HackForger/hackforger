@@ -37,6 +37,28 @@ const (
 	HookEventActionRunFailure          HookEventType = "action_run_failure"
 	HookEventActionRunRecover          HookEventType = "action_run_recover"
 	HookEventActionRunSuccess          HookEventType = "action_run_success"
+
+	// HackForger events
+	HookEventHackathonCreated       HookEventType = "hackathon_created"
+	HookEventHackathonStatusChanged HookEventType = "hackathon_status_changed"
+	HookEventHackathonSubmission    HookEventType = "hackathon_submission"
+	HookEventHackathonScored        HookEventType = "hackathon_scored"
+	HookEventHackathonFinalized     HookEventType = "hackathon_finalized"
+	HookEventBountyCreated          HookEventType = "bounty_created"
+	HookEventBountyApplication      HookEventType = "bounty_application"
+	HookEventBountyClaimed          HookEventType = "bounty_claimed"
+	HookEventBountyCompleted        HookEventType = "bounty_completed"
+	HookEventBountyPaid             HookEventType = "bounty_paid"
+	HookEventBountyWinners          HookEventType = "bounty_winners"
+	HookEventBountyExpired          HookEventType = "bounty_expired"
+	HookEventBountyCancelled        HookEventType = "bounty_cancelled"
+	HookEventGrantRoundCreated      HookEventType = "grant_round_created"
+	HookEventGrantRoundOpened       HookEventType = "grant_round_opened"
+	HookEventGrantProjectSubmitted  HookEventType = "grant_project_submitted"
+	HookEventGrantAwarded           HookEventType = "grant_awarded"
+	HookEventGrantRoundFinalized    HookEventType = "grant_round_finalized"
+	HookEventCreditsDeposited       HookEventType = "credits_deposited"
+	HookEventCreditsRedeemed        HookEventType = "credits_redeemed"
 )
 
 // Event returns the HookEventType as an event string
@@ -75,6 +97,15 @@ func (h HookEventType) Event() string {
 		return "action_run_recover"
 	case HookEventActionRunSuccess:
 		return "action_run_success"
+	case HookEventHackathonCreated, HookEventHackathonStatusChanged,
+		HookEventHackathonSubmission, HookEventHackathonScored, HookEventHackathonFinalized,
+		HookEventBountyCreated, HookEventBountyApplication, HookEventBountyClaimed,
+		HookEventBountyCompleted, HookEventBountyPaid, HookEventBountyWinners,
+		HookEventBountyExpired, HookEventBountyCancelled,
+		HookEventGrantRoundCreated, HookEventGrantRoundOpened,
+		HookEventGrantProjectSubmitted, HookEventGrantAwarded, HookEventGrantRoundFinalized,
+		HookEventCreditsDeposited, HookEventCreditsRedeemed:
+		return string(h)
 	}
 	return ""
 }

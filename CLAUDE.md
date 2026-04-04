@@ -12,13 +12,18 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 ## Architecture Rules
 - Forgejo uses strict layered architecture: routers -> services -> models -> modules
 - Upper layers may only call lower layers, never the reverse
+- CRUD data-access functions live in `models/`, not `services/` (matches Forgejo convention: models/issues/issue.go has GetIssueByID)
+- Web explore routes must be inside the existing `/explore` group in web.go to inherit `ignExploreSignIn` middleware
+- Use pointer types for optional enum filters in ListOptions (nil = no filter, avoids zero-value ambiguity)
+- NotifyWatchers only handles repo watchers; HackForger uses custom PublishHackforgerAction for 4 audience types
 - New Go package paths: `forgejo.org/models/hackforger/`, `forgejo.org/services/hackforger/`, etc.
 - Database: XORM ORM, define Go struct + tags for auto table creation
-- Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA)
+- Frontend: Go template SSR + partial Vue 3 component enhancement (not SPA) — see [docs/frontend-dev-guide.md](docs/frontend-dev-guide.md)
+- **Vue components must call web routes for actions, NOT `/api/v1/` routes** (session cookie auth vs token auth)
 
 ## Directory Structure
-- `models/hackforger/` -- Data models (15 tables)
-- `services/hackforger/` -- Business logic
+- `models/hackforger/` -- Data models (16 tables) + CRUD data-access functions (Get/List/Create/Update/Delete)
+- `services/hackforger/` -- Business logic only (state machines, transactional operations like Deposit/Redeem)
 - `routers/api/v1/hackforger/` -- REST API
 - `routers/web/hackforger/` -- Web page routes
 - `templates/hackforger/` -- Go HTML templates
@@ -32,17 +37,46 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Template files: snake_case (judge_panel.tmpl)
 - Vue components: PascalCase (BountyPanel.vue)
 
+## Error Handling & i18n
+- Service layer returns typed errors (`ErrNoTracks`, `ErrDuplicateRegistration`), NOT `fmt.Errorf("english")`
+- Web handlers check error type with `IsErr*()` then call `ctx.Tr()` for user-facing message
+- **Never show `err.Error()` to users** without type-checking first
+- See [docs/notes/i18n-error-pattern.md](docs/notes/i18n-error-pattern.md) for the pattern
+
+## CSRF / Cross-Origin Protection
+- Forgejo uses Go's `net/http.CrossOriginProtection` (NOT traditional CSRF tokens)
+- **Do NOT add `{{.CsrfTokenHtml}}` or `_csrf` hidden inputs to templates** — they don't exist in Forgejo
+- See [docs/notes/cross-origin-protection.md](docs/notes/cross-origin-protection.md) for full explanation and reverse proxy setup
+
+## Forgejo Actions Token 权限
+- `workflow.Dispatch(ctx, inputGetter, repo, doer)` 中的 **doer 决定 `github.token` 的权限**
+- Action token 对自身 repo 有内置写权限 (git push, 创建 PR)，但 **merge PR 需要 doer 有 `CanWrite(TypeCode)` 权限**
+- **Workflow 中如果需要 merge PR、创建 Release 等管理操作，dispatcher 必须是 repo owner / org admin**，不能用普通用户 (hacker/judge)
+- macOS host runner 使用 BSD shell 工具，不要用 GNU 扩展 (`sed \?` 等)，改用 POSIX 语法
+- See [docs/notes/forgejo-actions-token-permission.md](docs/notes/forgejo-actions-token-permission.md) for full permission matrix and checklist
+
+## Local Testing
+- See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
+- See [docs/tests/e2e/e2e-lessons-learned.md](docs/tests/e2e/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
+- See [docs/tests/e2e/e2e-testing-guide.md](docs/tests/e2e/e2e-testing-guide.md) for E2E automated testing with agent-browser (localhost:3000, web-first, screenshots)
+- See [docs/tests/e2e/templates/](docs/tests/e2e/templates/) for E2E test templates (single feature, regression)
+- See [docs/tests/e2e/tasks/](docs/tests/e2e/tasks/) for E2E test tasks (user journey full cycle, feature tests)
+- **Key**: always copy `custom/conf/app.ini` from main repo before starting server in a worktree
+- **E2E testing**: use `agent-browser` via `http://localhost:3000` (not HTTPS — local proxy blocks Tailscale TLS). Web-first with screenshots in reports.
+
 ## Common Commands
-- `make backend` -- Compile backend
-- `make frontend` -- Compile frontend
+- `TAGS="bindata sqlite sqlite_unlock_notify" make backend` -- Compile backend (bindata embeds templates, sqlite enables SQLite3)
+- `make frontend` -- Compile frontend (required after JS/Vue changes)
 - `go test ./models/hackforger/... -v` -- Run model tests
 - `go test ./services/hackforger/... -v` -- Run service tests
 - `./gitea web` -- Start server (http://localhost:3000)
+- Restart server: kill old process, remove LevelDB lock (`rm -f data/queues/common/LOCK`), then start
 
 ## Important Constraints
 - Use `gh` CLI for GitHub operations (not `tea` -- that's for Codeberg/Forgejo)
 - Do not modify upstream Forgejo files unless listed in the 11 injection points (see implementation-plan-draft.md section 1.2)
 - All state changes must call PublishHackforgerAction to write Feed events
+- **i18n**: All user-facing text MUST have both `locale_en-US.ini` and `locale_zh-CN.ini` entries under the `[hackforger]` section. Never add keys to only one locale file.
 - Credits Deposit/Redeem must use db.WithTx transactions
 - Internal HackForger instance: https://hackforger.inside.h2os.cloud
 - API base path: https://hackforger.inside.h2os.cloud/api/v1/hackforger/
@@ -56,6 +90,14 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `GITHUB_TOKEN` -- For gh CLI and GitHub API
 - `FORGEJO_TOKEN` -- For self-hosted HackForger instance API
 - `FORGEJO_URL` -- https://hackforger.inside.h2os.cloud
+
+## Internal Instance
+- Login: hackforger / admin1234
+- Caddy reverse proxy: managed by launchd (com.h2os.caddy), do NOT restart or unload
+- Check Caddy status: `launchctl list com.h2os.caddy`
+- Caddy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
+- ⚠️ If Caddy config reload is needed, MUST confirm with developer first: `caddy reload --config ~/.config/caddy/Caddyfile`
+- Default branch: v0.1-dev/hackforger
 
 ## Git Remotes
 - `origin` -- git@github.com:HackForger/hackforger.git (our repo)

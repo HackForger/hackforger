@@ -1,0 +1,97 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.credits.overview"}}</h2>
+
+		{{template "base/alert" .}}
+
+		{{/* Balance card */}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.credits.balance"}}</div>
+			</div>
+			<div class="hf-card-body">
+				<div class="hf-stat">
+					<div class="hf-stat-value">{{.Account.Balance}}</div>
+					<div class="hf-stat-label">{{ctx.Locale.Tr "hackforger.credits"}}</div>
+				</div>
+			</div>
+		</div>
+
+		{{/* Redeem options */}}
+		{{if .RedeemOptions}}
+			<h3>{{ctx.Locale.Tr "hackforger.credits.redeem_options"}}</h3>
+			<div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-4 tw-mb-4">
+				{{range .RedeemOptions}}
+					<div class="hf-card">
+						<div class="hf-card-head">
+							<div class="hf-card-head-left">{{.Name}}</div>
+						</div>
+						<div class="hf-card-body">
+							{{if .Description}}
+								<p class="tw-text-sm tw-mb-2">{{.Description}}</p>
+							{{end}}
+							<div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
+								<span>{{ctx.Locale.Tr "hackforger.credits.cost"}}: {{.Cost}}</span>
+								{{if gt .Stock 0}}
+									<span class="tw-text-sm">({{.Stock}} {{ctx.Locale.Tr "hackforger.credits.in_stock"}})</span>
+								{{end}}
+							</div>
+							<a class="hf-btn hf-btn-primary tw-w-full tw-justify-center" href="/credits/redeem/{{.ID}}">
+								{{ctx.Locale.Tr "hackforger.credits.redeem"}}
+							</a>
+						</div>
+					</div>
+				{{end}}
+			</div>
+		{{end}}
+
+		{{/* Transactions table */}}
+		<h3>{{ctx.Locale.Tr "hackforger.credits.transactions"}}</h3>
+		{{if .Transactions}}
+			<div class="hf-card">
+				<table class="tw-w-full">
+					<thead>
+						<tr>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.type"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.amount"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.balance_after"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.reference"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.note"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.date"}}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Transactions}}
+							<tr>
+								<td class="tw-p-2">
+									<span class="hf-badge {{if eq .Type "deposit"}}hf-badge-green{{else if eq .Type "withdraw"}}hf-badge-red{{else if eq .Type "redeem"}}hf-badge-yellow{{else if eq .Type "refund"}}hf-badge-blue{{else}}hf-badge-neutral{{end}}">
+										{{.Type}}
+									</span>
+								</td>
+								<td class="tw-p-2">{{if gt .Amount 0}}<span class="hf-amount-positive">+{{.Amount}}</span>{{else}}<span class="hf-amount-negative">{{.Amount}}</span>{{end}}</td>
+								<td class="tw-p-2">{{.Balance}}</td>
+								<td class="tw-p-2">{{.Reference}}</td>
+								<td class="tw-p-2">{{.Note}}</td>
+								<td class="tw-p-2">{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+		{{else}}
+			<div class="hf-card">
+				<div class="hf-empty">
+					{{svg "octicon-credit-card" 48}}
+					<br>
+					{{ctx.Locale.Tr "hackforger.credits.no_transactions"}}
+				</div>
+			</div>
+		{{end}}
+
+		<div class="tw-mt-4">
+			<a class="hf-btn hf-btn-secondary" href="/credits/orders">{{ctx.Locale.Tr "hackforger.credits.view_orders"}}</a>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

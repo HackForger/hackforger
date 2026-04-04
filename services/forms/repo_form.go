@@ -284,6 +284,26 @@ type WebhookCoreForm struct {
 	ActionFailure            bool
 	ActionRecover            bool
 	ActionSuccess            bool
+	HackathonCreated         bool
+	HackathonStatusChanged   bool
+	HackathonSubmission      bool
+	HackathonScored          bool
+	HackathonFinalized       bool
+	BountyCreated            bool
+	BountyApplication        bool
+	BountyClaimed            bool
+	BountyCompleted          bool
+	BountyPaid               bool
+	BountyWinners            bool
+	BountyExpired            bool
+	BountyCancelled          bool
+	GrantRoundCreated        bool
+	GrantRoundOpened         bool
+	GrantProjectSubmitted    bool
+	GrantAwarded             bool
+	GrantRoundFinalized      bool
+	CreditsDeposited         bool
+	CreditsRedeemed          bool
 	Active                   bool
 	BranchFilter             string `binding:"GlobPattern"`
 	AuthorizationHeader      string

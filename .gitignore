@@ -59,6 +59,7 @@ cpu.out
 /build/lint-locale-usage/lint-locale-usage
 /gitea
 /gitea-vet
+/hackforger-cli
 /debug
 /integrations.test
 /forgejo
@@ -67,6 +68,7 @@ cpu.out
 /dist
 /custom/*
 !/custom/conf/app.example.ini
+!/custom/public/assets/img/
 /data
 /indexers
 /log
@@ -143,3 +145,5 @@ claude.local.sh
 
 # MCP server secrets (API keys, tokens)
 .mcp.env
+docs/tests/e2e/*.pdf
+.claude/ralph-loop.local.md

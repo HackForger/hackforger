@@ -1,0 +1,79 @@
+{{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin credits keys")}}
+	<div class="admin-setting-content">
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.credits.admin.keys.title"}} &mdash; {{.Option.Name}}</div>
+			</div>
+			<div class="hf-card-body">
+				<div class="tw-flex tw-justify-center tw-gap-8 tw-mb-4">
+					<div class="hf-stat">
+						<div class="hf-stat-value">{{.KeysTotal}}</div>
+						<div class="hf-stat-label">{{ctx.Locale.Tr "hackforger.credits.admin.keys.total"}}</div>
+					</div>
+					<div class="hf-stat">
+						<div class="hf-stat-value">{{.KeysAvailable}}</div>
+						<div class="hf-stat-label">{{ctx.Locale.Tr "hackforger.credits.admin.keys.available"}}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		{{/* Add keys form */}}
+		<div class="hf-card">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.credits.admin.keys.add"}}</div>
+			</div>
+			<div class="hf-card-body">
+				<form class="ui form" action="{{AppSubUrl}}/admin/credits/options/{{.Option.ID}}/keys" method="post">
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.credits.admin.keys.add_hint"}}</label>
+						<textarea name="keys" rows="6" placeholder="KEY-001&#10;KEY-002&#10;KEY-003"></textarea>
+					</div>
+					<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.credits.admin.keys.add"}}</button>
+				</form>
+			</div>
+		</div>
+
+		{{/* Keys table */}}
+		{{if .Keys}}
+			<div class="hf-card">
+				<table class="tw-w-full">
+					<thead>
+						<tr>
+							<th class="tw-p-2">ID</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.keys.key_value"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.keys.status"}}</th>
+							<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.credits.admin.keys.order_id"}}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Keys}}
+							<tr>
+								<td class="tw-p-2">{{.ID}}</td>
+								<td class="tw-p-2"><code>{{.KeyValue}}</code></td>
+								<td class="tw-p-2">
+									{{if .IsUsed}}
+										<span class="hf-badge hf-badge-red">{{ctx.Locale.Tr "hackforger.credits.admin.keys.used"}}</span>
+									{{else}}
+										<span class="hf-badge hf-badge-green">{{ctx.Locale.Tr "hackforger.credits.admin.keys.unused"}}</span>
+									{{end}}
+								</td>
+								<td class="tw-p-2">{{if .OrderID}}{{.OrderID}}{{else}}&mdash;{{end}}</td>
+							</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+		{{else}}
+			<div class="hf-card">
+				<div class="hf-empty">
+					{{ctx.Locale.Tr "hackforger.credits.admin.keys.no_keys"}}
+				</div>
+			</div>
+		{{end}}
+
+		<div class="tw-mt-4">
+			<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/admin/credits/options">{{ctx.Locale.Tr "hackforger.credits.admin.back"}}</a>
+		</div>
+	</div>
+{{template "admin/layout_footer" .}}

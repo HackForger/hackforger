@@ -1,0 +1,334 @@
+/* HackForger component classes — 江峡泼墨 B1 variant */
+
+/* ===== Badge (with icon support) ===== */
+.hf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.hf-badge svg {
+  width: 10px;
+  height: 10px;
+}
+.hf-badge-jade { background: var(--hf-jade-bg); color: var(--hf-jade-text); }
+.hf-badge-spring { background: var(--hf-spring-bg); color: var(--hf-spring-text); }
+.hf-badge-gold { background: var(--hf-gold-bg); color: var(--hf-gold-text); }
+.hf-badge-verm { background: var(--hf-verm-bg); color: var(--hf-verm-text); }
+.hf-badge-sand { background: var(--hf-sand-bg); color: var(--hf-sand-text); }
+.hf-badge-ink { background: var(--hf-ink-bg); color: var(--hf-ink-text); }
+/* Legacy aliases */
+.hf-badge-green { background: var(--hf-jade-bg); color: var(--hf-jade-text); }
+.hf-badge-blue { background: var(--hf-jade-bg); color: var(--hf-jade-text); }
+.hf-badge-red { background: var(--hf-verm-bg); color: var(--hf-verm-text); }
+.hf-badge-yellow { background: var(--hf-gold-bg); color: var(--hf-gold-text); }
+.hf-badge-purple { background: var(--hf-jade-bg); color: var(--hf-jade-text); }
+.hf-badge-teal { background: var(--hf-spring-bg); color: var(--hf-spring-text); }
+.hf-badge-neutral { background: var(--hf-ink-bg); color: var(--hf-ink-text); }
+
+/* ===== Type Bar (category indicator) ===== */
+.hf-type-bar {
+  width: 3px;
+  min-height: 32px;
+  border-radius: 1.5px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.hf-type-jade { background: #1F8C65; }
+.hf-type-spring { background: #8EBA3A; }
+.hf-type-gold { background: #D4A22E; }
+.hf-type-verm { background: #C83C23; }
+.hf-type-sand { background: #C9A87A; }
+
+/* ===== Card ===== */
+.hf-card {
+  border: 1px solid var(--color-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: var(--color-box-body);
+}
+.hf-card-head {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--color-box-header);
+  border-bottom: 1px solid var(--color-secondary);
+}
+.hf-card-head svg {
+  width: 16px;
+  height: 16px;
+}
+.hf-card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hf-card-body {
+  padding: 12px 14px;
+}
+
+/* ===== Tabs with Icons ===== */
+.hf-tabs {
+  display: flex;
+  gap: 0;
+}
+.hf-tab {
+  padding: 8px 14px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-light-2);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+}
+.hf-tab svg {
+  width: 13px;
+  height: 13px;
+}
+.hf-tab:hover {
+  color: var(--color-text);
+}
+.hf-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ===== Timeline ===== */
+.hf-timeline {
+  display: flex;
+  border: 1px solid var(--color-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.hf-timeline-step {
+  flex: 1;
+  padding: 10px 12px;
+  text-align: center;
+}
+.hf-timeline-step + .hf-timeline-step {
+  border-left: 1px solid var(--color-secondary);
+}
+.hf-step-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-light-2);
+}
+.hf-step-date {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.hf-step-status {
+  font-size: 0.6rem;
+  font-weight: 500;
+  margin-top: 2px;
+  color: var(--color-text-light-2);
+}
+.hf-step-done { background: var(--hf-jade-bg); }
+.hf-step-done .hf-step-name,
+.hf-step-done .hf-step-status { color: var(--hf-jade-text); }
+.hf-step-active { background: var(--hf-gold-bg); }
+.hf-step-active .hf-step-name,
+.hf-step-active .hf-step-status { color: var(--hf-gold-text); }
+.hf-step-upcoming { background: var(--color-box-header); }
+
+/* ===== Stat ===== */
+.hf-stat {
+  text-align: center;
+  padding: 16px;
+}
+.hf-stat-value {
+  font-size: 1.75rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.hf-stat-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+  color: var(--color-text-light-2);
+}
+
+/* ===== Row (with type bar support) ===== */
+.hf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+}
+.hf-row + .hf-row {
+  border-top: 1px solid var(--color-secondary-alpha-40);
+}
+.hf-row:hover {
+  background: var(--color-hover);
+}
+.hf-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Row with type bar — tighter layout */
+.hf-row .hf-type-bar {
+  margin-top: 0;
+}
+
+/* ===== Button ===== */
+.hf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  transition: opacity 0.1s;
+}
+.hf-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.hf-btn:hover {
+  opacity: 0.85;
+}
+.hf-btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+.hf-btn-secondary {
+  background: var(--color-box-header);
+  color: var(--color-text);
+  border: 1px solid var(--color-secondary);
+}
+.hf-btn-danger {
+  background: transparent;
+  color: var(--hf-verm-text);
+  border: 1px solid var(--hf-verm-text);
+}
+.hf-btn-ink {
+  background: var(--color-text-dark);
+  color: var(--color-body);
+}
+
+/* ===== Count ===== */
+.hf-count {
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--hf-ink-bg);
+  color: var(--hf-ink-text);
+}
+
+/* ===== Amount colors ===== */
+.hf-amount-positive {
+  color: var(--hf-spring-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.hf-amount-negative {
+  color: var(--hf-verm-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Empty state ===== */
+.hf-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--color-text-light-2);
+}
+.hf-empty svg {
+  margin-bottom: 8px;
+}
+
+/* ===== Activity Heatmap ===== */
+.hf-heatmap {
+  padding: 16px 14px;
+  border-top: 1px solid var(--color-secondary-alpha-40);
+}
+.hf-heatmap-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text-light-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.hf-heatmap-grid {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.hf-heatmap-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.hf-hc-0 { background: var(--color-box-header); }
+.hf-hc-1 { background: var(--hf-jade-bg); }
+.hf-hc-2 { background: var(--hf-jade-text); opacity: 0.4; }
+.hf-hc-3 { background: var(--hf-jade-text); opacity: 0.7; }
+.hf-hc-4 { background: var(--hf-jade-text); }
+.hf-heatmap-legend {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 0.55rem;
+  color: var(--color-text-light-2);
+}
+.hf-heatmap-legend .hf-heatmap-cell {
+  width: 8px;
+  height: 8px;
+}
+
+/* ===== Detail Chip (metadata tag) ===== */
+.hf-chip {
+  font-size: 0.58rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--color-box-header);
+  color: var(--color-text-light-2);
+  border: 1px solid var(--color-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.hf-chip svg {
+  width: 9px;
+  height: 9px;
+}
+
+/* ===== Feed Action Icon (right-aligned) ===== */
+.hf-action-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-light-2);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.hf-action-icon svg {
+  width: 16px;
+  height: 16px;
+}

@@ -1,0 +1,50 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.reputation.leaderboard"}}</h2>
+		{{if .Leaderboard}}
+		<div class="hf-card">
+			<table class="tw-w-full">
+				<thead>
+					<tr>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.reputation.rank"}}</th>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "admin.users.name"}}</th>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.reputation.score"}}</th>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.reputation.tier"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Leaderboard}}
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{.Rank}}</td>
+						<td class="tw-p-2">
+							{{if .User}}
+								{{ctx.AvatarUtils.Avatar .User 20}}
+								<a href="{{AppSubUrl}}/{{.User.Name}}">{{.User.Name}}</a>
+							{{else}}
+								#{{.UserID}}
+							{{end}}
+						</td>
+						<td class="tw-p-2">{{.Score}}</td>
+						<td class="tw-p-2">
+							{{template "hackforger/helpers/status_badge" dict "Type" "tier" "TierName" .Tier "Label" .Tier}}
+						</td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="hf-card">
+			<div class="hf-empty">
+				{{svg "octicon-star" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.reputation.leaderboard"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

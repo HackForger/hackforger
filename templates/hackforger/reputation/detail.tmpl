@@ -1,0 +1,49 @@
+<div class="tw-mt-4">
+	<div class="hf-card">
+		<div class="hf-card-head">
+			<div class="hf-card-head-left">
+				{{template "hackforger/helpers/status_badge" dict "Type" "tier" "TierName" .Reputation.Tier "Label" .Reputation.Tier}}
+				<span class="tw-text-2xl tw-font-bold">
+					{{.Reputation.Score}} {{ctx.Locale.Tr "hackforger.reputation.score"}}
+				</span>
+			</div>
+		</div>
+		<div class="hf-card-body">
+			<table class="tw-w-full">
+				<thead>
+					<tr>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.reputation.tier"}}</th>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.reputation.score"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{svg "octicon-gift" 14}} {{ctx.Locale.Tr "hackforger.reputation.bounties_completed"}}</td>
+						<td class="tw-p-2">{{.Reputation.BountiesCompleted}}</td>
+					</tr>
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{svg "octicon-rocket" 14}} {{ctx.Locale.Tr "hackforger.reputation.hackathon_wins"}}</td>
+						<td class="tw-p-2">{{.Reputation.HackathonWins}}</td>
+					</tr>
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{svg "octicon-heart" 14}} {{ctx.Locale.Tr "hackforger.reputation.grants_received"}}</td>
+						<td class="tw-p-2">{{.Reputation.GrantsReceived}}</td>
+					</tr>
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{svg "octicon-star" 14}} {{ctx.Locale.Tr "hackforger.reputation.total_stars"}}</td>
+						<td class="tw-p-2">{{.Reputation.TotalStars}}</td>
+					</tr>
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{svg "octicon-credit-card" 14}} {{ctx.Locale.Tr "hackforger.reputation.credits_earned"}}</td>
+						<td class="tw-p-2">{{.Reputation.TotalCreditsEarned}}</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div class="hf-card-body tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+			<a href="{{AppSubUrl}}/explore/reputation" class="hf-btn hf-btn-secondary">
+				{{ctx.Locale.Tr "hackforger.reputation.leaderboard"}}
+			</a>
+		</div>
+	</div>
+</div>

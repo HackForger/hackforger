@@ -59,6 +59,31 @@ Exclusive（独占）：1 人认领 → 1 人交付，适合明确的 bug fix / 
 
 所有新代码集中在 `*/hackforger/` 独立目录。对 Forgejo 原有文件只改 11 处（每处 1-5 行），包括路由注册、Notifier 注册、模板 include 注入点。新 model 通过 `init()` + `db.RegisterModel()` 自动注册，无需修改 `models/db/engine.go`。这使得跟随上游版本的 cherry-pick 成本极低。
 
+**9. Hackathon 生命周期映射 Forgejo 原生实体**
+
+Hackathon 的核心实体直接映射到 Forgejo 原生概念：
+
+| HackForger | Forgejo 实体 | 说明 |
+|-----------|-------------|------|
+| Hackathon | Organization | 创建 Hackathon 自动创建 Org，Org owner = 组织者 |
+| Track | Repository | 每个赛道是 Org 内的一个 Repo（自动初始化） |
+| 报名 | Org Membership | 报名 = 加入 Org 成员 |
+| 提交 | Fork + PR | 参赛者 Fork 赛道 Repo，提交 PR 作为作品 |
+| 评审 | PR Review + 数字评分 | PR Review 用于文字反馈，数字评分(0-10)存扩展表 |
+
+扩展表（`hackathon`, `hackathon_track`, `hackathon_submission` 等）只存 Forgejo 没有的元数据：状态机、截止日期、奖品、数字评分、排名。这些表通过 foreign key（`LinkedOrgID`, `RepoID`, `PRID`）关联到 Forgejo 实体。
+
+**Milestone / Tag / Release 映射（Phase 2 实现）**
+
+| Hackathon 概念 | Forgejo 原语 | 作用 |
+|---------------|-------------|------|
+| 阶段截止日期 | Milestone.Deadline | 每个 Track Repo 自动创建 Registration / Hacking / Judging / Results 四个 Milestone，PR 归属当前阶段 Milestone |
+| 阶段切换 | Tag | `v0-kickoff`（Hacking 开始，模板代码基线）、`submission-deadline`（Hacking 结束，锁定提交）、`v1-results`（Finalize，包含获奖信息） |
+| 最终成果 | Release | Finalize 后自动创建 Release：标题=赛事名+赛道+Results，内容=排行榜+获奖者+PR 链接，可附评审报告 |
+| 参赛作品 | PR → Milestone | 按阶段分组查看所有提交 |
+
+参赛者 Fork 时基于 `v0-kickoff` Tag 开始开发，评审基于 `submission-deadline` Tag 对比 diff。
+
 ### 目标用户
 
 | 角色 | 说明 |
@@ -173,6 +198,8 @@ forgejo/
 ⑨ web_src/js/index.js onDomReady()       — import + 初始化 hackforger 模块
 ⑩ routers/web/user/home.go              — Dashboard feed 查询扩展
 ⑪ templates/user/dashboard/feeds.tmpl   — "关注动态" Tab + HackForger 事件渲染 include
+⑫ models/activities/action.go         — GetFeeds 改 INNER JOIN 为 LEFT JOIN（支持 repo_id=0 的 HackForger 事件）
+⑬ routers/web/web.go                  — CrossOriginProtection 添加 ROOT_URL 为 trusted origin
 ```
 
 ### 1.3 数据库 Migration
@@ -199,6 +226,13 @@ forgejo/
 ### 2.1-2.5 与 v2 相同（15 张新表）
 
 Hackathon 4 表、Bounty 4 表、Grant 2 表、Credits 4 表、Reputation 1 表。
+
+**Phase 1.1 新增字段：**
+- `hackathon.linked_org_id` — 自动创建的 Forgejo Organization ID
+- `hackathon_registration.org_id` — 0=个人参赛，>0=组织参赛
+- `hackathon_submission.fork_repo_id` — 参赛者 Fork 的 Repo ID
+- `hackathon_submission.pr_id` — Pull Request ID
+- `hackathon_submission.pull_index` — PR 在赛道 Repo 中的序号
 
 ### 2.6 Feed 系统（零新表）
 
@@ -292,6 +326,18 @@ Bounty-PR 联动通过 `HackForgerNotifier` 的 `MergePullRequest` 方法触发�
 
 Deposit 和 Redeem 操作均使用 `db.WithTx` 保证事务安全。Deposit 累加余额并写入 Transaction 记录；Redeem 扣减余额、扣减库存、创建 Order，三步在同一事务内完成。
 
+### 4.5 Hackathon-Org 生命周期联动
+
+| 操作 | Forgejo 动作 | HackForger 动作 |
+|------|-------------|----------------|
+| 创建 Hackathon | `CreateOrganization(slug)` | `INSERT hackathon (linked_org_id=org.ID)` |
+| 添加 Track | `CreateRepository(org, track-name)` | `INSERT hackathon_track (repo_id=repo.ID)` |
+| 报名（个人）| `AddOrgUser(org, user)` | `INSERT hackathon_registration (org_id=0)` |
+| 报名（团队）| `AddOrgUser(org, user)` | `INSERT hackathon_registration (org_id=team_org.ID)` |
+| 提交作品 | `ForkRepository` + `NewPullRequest` | `INSERT hackathon_submission (fork_repo_id, pr_id)` |
+
+个人→团队自动升级：如果个人已报名，再以组织身份报名同一 Hackathon，原个人记录自动升级为团队记录。
+
 ### 4.4 Web 路由表
 
 注：路由使用 go-chi router + `web.Route` wrapper 注册。权限中间件使用 `verifyAuthWithOptions` 模式。
@@ -351,7 +397,7 @@ POST   /hackathons/{id}/submissions/{sid}/score 打分
 GET    /hackathons/{id}/submissions/{sid}/scores 评分列表
 GET    /hackathons/{id}/leaderboard             排行榜
 GET    /hackathons/{id}/summary                 摘要（Agent 友好）
-POST   /hackathons/{id}/submissions/{sid}/ai-review  AI 评审
+POST   /hackathons/{id}/submissions/{sid}/review      评审（人类或 AI，由 reviewer 决定）
 ```
 
 **Bounty（Repo 级）**
@@ -593,7 +639,7 @@ MAX_CONTEXT_TOKENS = 4000
 
 **必须 Fork：** Hackathon 实体/展示页、结构化评审、Bounty 金额+状态机+多奖励+多人获奖、Grant 审批+金额分配、积分账本+兑换、声誉聚合、Explore 新 Tab、AI 助手、HackForgerNotifier 注册+Feed 事件发布+Dashboard Following Tab+Feed API。
 
-**原生 + Fork 胶水：** 组队（Team + 自动加人）、交付（PR merge + Bounty 状态 hook）、时间线（Milestone + 状态机）、赛道（Label + hackathon_track 表）、社区信号（Star 数 + Grant 管理页展示）。
+**原生 + Fork 胶水：** 组队（Organization + 自动加入成员）、交付（Fork + PR merge）、赛道（Repository in Hackathon Org）、时间线（Milestone + 状态机）、社区信号（Star 数 + Grant 管理页展示）。
 
 ---
 

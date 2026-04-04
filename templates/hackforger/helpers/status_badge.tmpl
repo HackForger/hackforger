@@ -1,0 +1,19 @@
+{{/*
+	HackForger status badge helper.
+	Usage: {{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Status "Label" .StatusLabel}}
+	Types: hackathon, bounty, registration, grant, grant_project, tier
+	For "tier" type, pass string status: {{template "hackforger/helpers/status_badge" dict "Type" "tier" "TierName" .Tier "Label" .Tier}}
+*/}}
+{{if eq .Type "hackathon"}}
+	<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">{{.Label}}</span>
+{{else if eq .Type "bounty"}}
+	<span class="hf-badge {{if eq .Status 0}}hf-badge-green{{else if eq .Status 1}}hf-badge-blue{{else if eq .Status 2}}hf-badge-yellow{{else if eq .Status 3}}hf-badge-purple{{else if eq .Status 4}}hf-badge-teal{{else if eq .Status 5}}hf-badge-red{{else}}hf-badge-neutral{{end}}">{{.Label}}</span>
+{{else if eq .Type "registration"}}
+	<span class="hf-badge {{if eq .Status 0}}hf-badge-yellow{{else if eq .Status 1}}hf-badge-green{{else}}hf-badge-red{{end}}">{{.Label}}</span>
+{{else if eq .Type "grant"}}
+	<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-purple{{else if eq .Status 5}}hf-badge-red{{end}}">{{.Label}}</span>
+{{else if eq .Type "grant_project"}}
+	<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-red{{else if eq .Status 3}}hf-badge-blue{{end}}">{{.Label}}</span>
+{{else if eq .Type "tier"}}
+	<span class="hf-badge {{if eq .TierName "Diamond"}}hf-badge-purple{{else if eq .TierName "Gold"}}hf-badge-yellow{{else if eq .TierName "Silver"}}hf-badge-neutral{{else}}hf-badge-yellow{{end}}">{{.Label}}</span>
+{{end}}

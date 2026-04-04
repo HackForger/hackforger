@@ -7,6 +7,7 @@ import (
 	"context"
 
 	actions_model "forgejo.org/models/actions"
+	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	packages_model "forgejo.org/models/packages"
 	"forgejo.org/models/perm"
@@ -945,5 +946,44 @@ func notifyPackage(ctx context.Context, sender *user_model.User, pd *packages_mo
 		Sender:  convert.ToUser(ctx, sender, nil),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
+	}
+}
+
+func (m *webhookNotifier) HackforgerEntityCreated(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	m.dispatchHackforgerWebhook(ctx, doer, opts)
+}
+
+func (m *webhookNotifier) HackforgerEntityUpdated(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	// No webhook for field updates (name/description changes)
+}
+
+func (m *webhookNotifier) HackforgerEntityDeleted(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	// No webhook for deletion
+}
+
+func (m *webhookNotifier) HackforgerEntityStatusChanged(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	m.dispatchHackforgerWebhook(ctx, doer, opts)
+}
+
+func (m *webhookNotifier) dispatchHackforgerWebhook(ctx context.Context, doer *user_model.User, opts *notify_service.HackforgerEventOpts) {
+	hookEvent, ok := hackforger_model.ActionTypeToHookEvent[opts.OpType]
+	if !ok {
+		return
+	}
+	payload := &api.HackforgerWebhookPayload{
+		Action:     string(hookEvent),
+		EntityType: opts.EntityType,
+		EntityID:   opts.EntityID,
+		EntityName: opts.EntityName,
+		Sender:     convert.ToUser(ctx, doer, nil),
+	}
+	source := EventSource{Owner: doer}
+	if opts.RepoID > 0 {
+		if repo, err := repo_model.GetRepositoryByID(ctx, opts.RepoID); err == nil {
+			source.Repository = repo
+		}
+	}
+	if err := PrepareWebhooks(ctx, source, hookEvent, payload); err != nil {
+		log.Error("PrepareWebhooks for HackForger event %s: %v", hookEvent, err)
 	}
 }

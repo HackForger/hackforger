@@ -85,5 +85,9 @@
 @import "./actions.css";
 @import "./migrate.css";
 
+@import "./hackforger-colors.css";
+@import "./hackforger.css";
+@import "./hackforger-search-modal.css";
+
 @tailwind utilities;
 @import "./helpers.css";
