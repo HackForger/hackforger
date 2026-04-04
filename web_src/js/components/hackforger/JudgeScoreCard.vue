@@ -126,9 +126,19 @@ export default {
   <div v-for="sub in activeSubmissions" :key="sub.id" class="hf-card">
     <div class="hf-card-head">
       <span>{{ sub.title }}</span>
+      <span v-if="sub.user_name" class="tw-text-sm tw-text-gray tw-ml-2">
+        by <a :href="'/' + sub.user_name">{{ sub.user_name }}</a>
+      </span>
       <span v-if="saved[sub.id]" class="hf-badge hf-badge-green">Scored</span>
     </div>
     <div class="hf-card-body">
+    <p v-if="sub.track_name" class="tw-text-sm tw-mb-1">
+      <span class="hf-badge">{{ sub.track_name }}</span>
+    </p>
+    <p v-if="sub.repo_full_name" class="tw-text-sm tw-mb-1">
+      <svg class="svg octicon-repo" width="16" height="16" aria-hidden="true"><use xlink:href="#octicon-repo"></use></svg>
+      <a :href="'/' + sub.repo_full_name">{{ sub.repo_full_name }}</a>
+    </p>
     <p v-if="sub.description" class="tw-text-sm tw-text-gray">{{ sub.description }}</p>
     <p v-if="sub.demo_url"><a :href="sub.demo_url" target="_blank">Demo</a></p>
 

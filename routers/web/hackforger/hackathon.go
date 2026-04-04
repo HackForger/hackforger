@@ -917,6 +917,9 @@ func JudgePage(ctx *context.Context) {
 		Title          string `json:"title"`
 		Description    string `json:"description"`
 		DemoURL        string `json:"demo_url"`
+		UserName       string `json:"user_name"`
+		RepoFullName   string `json:"repo_full_name"`
+		TrackName      string `json:"track_name"`
 		ExistingScores []struct {
 			CriteriaID int64   `json:"criteria_id"`
 			Score      float64 `json:"score"`
@@ -954,7 +957,15 @@ func JudgePage(ctx *context.Context) {
 		tidStr := strconv.FormatInt(t.ID, 10)
 		var subList []subInfo
 		for _, s := range subs {
-			si := subInfo{ID: s.ID, Title: s.Title, Description: s.Description, DemoURL: s.DemoURL}
+			si := subInfo{ID: s.ID, Title: s.Title, Description: s.Description, DemoURL: s.DemoURL, TrackName: t.Name}
+			if u, err := user_model.GetUserByID(ctx, s.UserID); err == nil {
+				si.UserName = u.Name
+			}
+			if s.RepoID > 0 {
+				if r, err := repo_model.GetRepositoryByID(ctx, s.RepoID); err == nil {
+					si.RepoFullName = r.FullName()
+				}
+			}
 			// Load judge's existing scores for this submission
 			existingScores, _ := hackforger_model.ListScoresByJudgeAndSubmission(ctx, ctx.Doer.ID, s.ID)
 			for _, es := range existingScores {
