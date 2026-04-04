@@ -65,6 +65,19 @@ The Phase System is a major architectural addition. See `docs/superpowers/specs/
 | 0.1 | Admin credits page loads | PASS | [p0-01-admin-credits.png](../../../tests/screenshots/full-cycle/p0-01-admin-credits.png) |
 | 0.1 | User credits page loads | PASS | [p0-01-user-credits.png](../../../tests/screenshots/full-cycle/p0-01-user-credits.png) |
 
+### Phase 1: Hackathon Lifecycle
+
+| Step | Description | Result | Screenshot |
+|------|-------------|--------|------------|
+| 1.1 | Create hackathon form loads | PASS | [p1-01-create-hackathon-form.png](../../../tests/screenshots/full-cycle/p1-01-create-hackathon-form.png) |
+| 1.1 | Hackathon created (e2e-test-2026) | PASS | [p1-01-hackathon-created.png](../../../tests/screenshots/full-cycle/p1-01-hackathon-created.png) |
+| 1.2 | Manage page loads | PASS | [p1-02-manage-hackathon.png](../../../tests/screenshots/full-cycle/p1-02-manage-hackathon.png) |
+| 1.2 | Publish without tracks shows error | PASS | [p1-02-publish-no-tracks-fixed.png](../../../tests/screenshots/full-cycle/p1-02-publish-no-tracks-fixed.png) |
+| 1.3 | Add track "AI Innovation" | PASS | [p1-03-track-added.png](../../../tests/screenshots/full-cycle/p1-03-track-added.png) |
+| 1.3 | Add scoring criteria "Innovation" | PASS | (implicit in publish step) |
+| 1.4 | Publish hackathon | PASS | [p1-04-hackathon-published.png](../../../tests/screenshots/full-cycle/p1-04-hackathon-published.png) |
+| 1.4 | Phase changes to "Open (Registration)" | PASS | (visible in screenshot) |
+
 ### Fix Verification
 
 | Fix | Verification | Result |
@@ -72,7 +85,18 @@ The Phase System is a major architectural addition. See `docs/superpowers/specs/
 | HF-028 Admin Nav | "活动管理" section in admin sidebar HTML | PASS |
 | HF-020 Credits Nav | "我的积分" link in user dropdown | PASS |
 | HF-025 JS Error | No JS console errors on pages | PASS (binary rebuilt with fix) |
+| HF-002 Publish Validation | "发布前需要添加至少一个赛道" flash error visible | PASS |
+| HF-026 Display Name | Field removed from creation form | PASS |
 | Error Handling | All err.Error() leaks replaced with i18n | PASS (code review) |
+| base/alert Fix | Flash messages visible on all HackForger pages | PASS (critical fix) |
+
+### Bugs Discovered During E2E
+
+| ID | Description | Severity | Status |
+|----|-------------|----------|--------|
+| NEW-1 | Markdown `\n` not rendered as newlines in description | Low | Known (raw text, not markdown rendering) |
+| NEW-2 | Phase Control status "Open (Registration)" not fully i18n'd | Low | Partially fixed by HF-001 |
+| FIXED | Flash messages invisible on all HackForger pages | Critical | FIXED — missing `{{template "base/alert" .}}` |
 
 ---
 
