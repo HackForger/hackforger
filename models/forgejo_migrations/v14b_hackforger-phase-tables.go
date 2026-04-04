@@ -9,6 +9,8 @@ func init() {
 	registerMigration(&Migration{
 		Description: "Create hackforger_phase_type and hackforger_phase tables with seed data",
 		Upgrade: func(x *xorm.Engine) error {
+			// XORM derives table names from struct names (snake_case).
+			// PhaseType → phase_type, Phase → phase (matching existing HackForger convention)
 			type PhaseType struct {
 				ID              int64  `xorm:"pk autoincr"`
 				ActivityKind    string `xorm:"VARCHAR(20) NOT NULL"`
@@ -40,8 +42,8 @@ func init() {
 				return err
 			}
 
-			// Create index for efficient phase lookups
-			if _, err := x.Exec("CREATE INDEX IF NOT EXISTS IDX_hackforger_phase_activity ON hackforger_phase(activity_kind, activity_id, sort_order)"); err != nil {
+			// Create index (table name is "phase" per XORM convention)
+			if _, err := x.Exec("CREATE INDEX IF NOT EXISTS IDX_phase_activity ON phase(activity_kind, activity_id, sort_order)"); err != nil {
 				return err
 			}
 
