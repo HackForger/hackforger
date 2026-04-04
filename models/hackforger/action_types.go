@@ -39,8 +39,11 @@ const (
 	ActionOrderFulfilled        activities_model.ActionType = 58
 	ActionOrderCancelled        activities_model.ActionType = 59
 
-	// Milestone events (60, future)
-	ActionMilestone activities_model.ActionType = 60
+	// Organization events (60-69)
+	ActionOrgJoinRequest activities_model.ActionType = 60
+
+	// Milestone events (70, future)
+	ActionMilestone activities_model.ActionType = 70
 )
 
 // HackforgerActionTypeName maps HackForger action types to string names.
@@ -69,6 +72,7 @@ var HackforgerActionTypeName = map[activities_model.ActionType]string{
 	ActionGrantRoundCancelled:   "grant_round_cancelled",
 	ActionOrderFulfilled:        "order_fulfilled",
 	ActionOrderCancelled:        "order_cancelled",
+	ActionOrgJoinRequest:        "org_join_request",
 	ActionMilestone:             "milestone",
 }
 

@@ -391,6 +391,10 @@ func TeamMembers(ctx *context.Context) {
 	ctx.Data["Invites"] = invites
 	ctx.Data["IsEmailInviteEnabled"] = setting.MailService != nil
 
+	// HackForger: support ?username= query param to pre-fill add-member input
+	// (used by join-request notification links).
+	ctx.Data["QueryUsername"] = ctx.FormString("username")
+
 	ctx.HTML(http.StatusOK, tplTeamMembers)
 }
 
