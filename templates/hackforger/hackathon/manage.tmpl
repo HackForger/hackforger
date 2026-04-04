@@ -126,7 +126,7 @@
 				{{else if eq .Hackathon.Status 2}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judge" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start_judging"}}</button></form>
 				{{else if eq .Hackathon.Status 3}}<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize-preview">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview"}}</a>
 				{{end}}
-				{{if and (ne .Hackathon.Status 4) (ne .Hackathon.Status 5)}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline"><button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button></form>{{end}}
+				{{if and (ne .Hackathon.Status 4) (ne .Hackathon.Status 5)}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.confirm.cancel_activity"}}');"><button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button></form>{{end}}
 				</div>
 			</div>
 		</div>
@@ -220,7 +220,7 @@
 							<td class="tw-flex tw-gap-1">
 									<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.edit"}}</button>
 								</form>
-								<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}/delete" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.delete_confirm"}}');">
+								<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}/delete" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.confirm.delete_activity"}}');">
 									<button class="hf-btn hf-btn-danger" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.delete"}}</button>
 								</form>
 							</td>
