@@ -145,6 +145,11 @@ func DeleteSubmission(ctx context.Context, id int64) error {
 	return err
 }
 
+// SubmissionExistsByUserAndTrack checks if a submission already exists for a given user+track combination.
+func SubmissionExistsByUserAndTrack(ctx context.Context, userID, trackID int64) (bool, error) {
+	return db.GetEngine(ctx).Where("user_id = ? AND track_id = ?", userID, trackID).Exist(&HackathonSubmission{})
+}
+
 // CountSubmissions returns the number of submissions for a given hackathon.
 func CountSubmissions(ctx context.Context, hackathonID int64) (int64, error) {
 	return db.GetEngine(ctx).Where("hackathon_id = ?", hackathonID).Count(new(HackathonSubmission))
