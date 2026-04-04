@@ -96,7 +96,7 @@
 | Error Handling | All err.Error() leaks replaced with i18n | PASS (code review) |
 | base/alert Fix | Flash messages visible on all HackForger pages | PASS (critical fix) |
 
-### Phase 1 (continued): Registration
+### Phase 1 (continued): Registration & Phase Transitions
 
 | Step | Description | Result | Screenshot |
 |------|-------------|--------|------------|
@@ -104,6 +104,17 @@
 | 1.5 | HF-026 verified: no display name field | PASS | (visible in screenshot) |
 | 1.6 | Hacker_eve registers (solo) | PASS | [p1-06-registered.png](../../../tests/screenshots/full-cycle/p1-06-registered.png) |
 | 1.6 | Registration confirmed in admin manage | PASS | (hacker_eve 已通过 in table) |
+| 1.7 | Advance to Hacking phase | PASS | [p1-07-hacking-phase.png](../../../tests/screenshots/full-cycle/p1-07-hacking-phase.png) |
+| 1.7 | Phase Control shows "Hacking" status | PASS | (visible in screenshot) |
+
+### Phase 4: Submission
+
+| Step | Description | Result | Screenshot |
+|------|-------------|--------|------------|
+| 4.1 | Submission form loads | PASS | [p4-01-submit-form.png](../../../tests/screenshots/full-cycle/p4-01-submit-form.png) |
+| 4.2 | Submit project "AI Smart Assistant" | PASS | [p4-04-submission-success.png](../../../tests/screenshots/full-cycle/p4-04-submission-success.png) |
+| 4.2 | Flash: "项目提交成功！" visible | PASS | (visible in screenshot) |
+| 4.2 | Registration status "你已经报名了该黑客松" visible | PASS | (visible in screenshot) |
 
 ### Bugs Discovered During E2E
 
