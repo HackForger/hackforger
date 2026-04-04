@@ -289,6 +289,22 @@ func RegisterPost(ctx *context.Context) {
 	if h == nil {
 		return
 	}
+	// Block organizer self-registration
+	if h.OwnerID == ctx.Doer.ID {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.cannot_register_own"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
+	if h.LinkedOrgID > 0 {
+		if org, err := organization_model.GetOrgByID(ctx, h.LinkedOrgID); err == nil {
+			if isOwner, _ := org.IsOwnedBy(ctx, ctx.Doer.ID); isOwner {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.cannot_register_own"))
+				ctx.Redirect("/hackathon/" + h.Slug)
+				return
+			}
+		}
+	}
+
 	// Check duplicate registration first (more specific error)
 	if _, err := hackforger_model.GetRegistration(ctx, h.ID, ctx.Doer.ID); err == nil {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.already_registered"))
