@@ -36,10 +36,11 @@ func UploadHackforgerAttachment(ctx *context.Context) {
 	})
 	if err != nil {
 		if upload.IsErrFileTypeForbidden(err) {
-			ctx.Error(http.StatusBadRequest, err.Error())
+			ctx.Error(http.StatusBadRequest, "file type not allowed")
 			return
 		}
-		ctx.Error(http.StatusInternalServerError, fmt.Sprintf("UploadAttachment: %v", err))
+		log.Error("UploadAttachment: %v", err)
+		ctx.Error(http.StatusInternalServerError, "upload failed")
 		return
 	}
 

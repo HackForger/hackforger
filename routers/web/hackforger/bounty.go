@@ -13,6 +13,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/context"
 	hackforger_svc "forgejo.org/services/hackforger"
@@ -212,7 +213,8 @@ func BountyAction(ctx *context.Context) {
 	}
 
 	if err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		log.Error("BountyAction: %v", err)
+		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "internal error"})
 		return
 	}
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -235,7 +237,8 @@ func BountyApplicationAction(ctx *context.Context) {
 	}
 
 	if err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		log.Error("BountyAction: %v", err)
+		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "internal error"})
 		return
 	}
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -255,7 +258,7 @@ func BountySelectWinners(ctx *context.Context) {
 	}
 
 	if err := hackforger_svc.SelectWinners(ctx, bountyID, ctx.Doer.ID, form.Winners); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "internal error"})
 		return
 	}
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -268,7 +271,8 @@ func BountyListApplications(ctx *context.Context) {
 		BountyID: bountyID,
 	})
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		log.Error("BountyQuery: %v", err)
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
 		return
 	}
 
@@ -296,7 +300,8 @@ func BountyListWinners(ctx *context.Context) {
 	bountyID := ctx.ParamsInt64("bounty_id")
 	winners, err := hackforger_model.ListBountyWinners(ctx, bountyID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		log.Error("BountyQuery: %v", err)
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
 		return
 	}
 

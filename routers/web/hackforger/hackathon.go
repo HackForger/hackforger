@@ -169,7 +169,8 @@ func NewHackathonPost(ctx *context.Context) {
 	}
 	if err := hackforger_service.CreateHackathon(ctx, ctx.Doer, h); err != nil {
 		ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
-		ctx.RenderWithErr(err.Error(), tplNew, nil)
+		log.Error("CreateHackathon: %v", err)
+		ctx.RenderWithErr(ctx.Tr("hackforger.hackathon.error.internal"), tplNew, nil)
 		return
 	}
 	ctx.Redirect("/hackathon/" + h.Slug)
@@ -335,7 +336,8 @@ func RegisterPost(ctx *context.Context) {
 		if hackforger_model.IsErrDuplicateRegistration(err) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.already_registered"))
 		} else {
-			ctx.Flash.Error(err.Error())
+			log.Error("CreateRegistration: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 		}
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -429,7 +431,8 @@ func SubmitPost(ctx *context.Context) {
 		Status:         hackforger_model.SubmissionStatusSubmitted,
 	}
 	if err := hackforger_service.CreateSubmission(ctx, ctx.Doer, h, s); err != nil {
-		ctx.Flash.Error(err.Error())
+		log.Error("CreateSubmission: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 		ctx.Redirect("/hackathon/" + h.Slug + "/submit")
 		return
 	}
@@ -523,7 +526,8 @@ func UpdateHackathonPost(ctx *context.Context) {
 	}
 
 	if err := hackforger_model.UpdateHackathon(ctx, h); err != nil {
-		ctx.Flash.Error(err.Error())
+		log.Error("UpdateHackathon: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.hackathon.manage.update_success"))
 	}
@@ -617,7 +621,8 @@ func ManageTrackPost(ctx *context.Context) {
 	}
 
 	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
-		ctx.Flash.Error(err.Error())
+		log.Error("CreateTrackWithRepo: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }
@@ -630,7 +635,8 @@ func ManageRegistrationPost(ctx *context.Context) {
 	rid := ctx.ParamsInt64(":rid")
 	status, _ := strconv.Atoi(ctx.FormString("status"))
 	if err := hackforger_model.UpdateRegistrationStatus(ctx, rid, hackforger_model.RegistrationStatus(status)); err != nil {
-		ctx.Flash.Error(err.Error())
+		log.Error("UpdateRegistrationStatus: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }
@@ -781,7 +787,8 @@ func ManageTrackCriteriaPost(ctx *context.Context) {
 	enabled := ctx.FormString("enabled") == "on" || ctx.FormString("enabled") == "true"
 	weight, _ := strconv.ParseFloat(ctx.FormString("weight"), 64)
 	if err := hackforger_service.SetTrackCriteriaOverride(ctx, tid, cid, enabled, weight); err != nil {
-		ctx.Flash.Error(err.Error())
+		log.Error("SetTrackCriteriaOverride: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }
