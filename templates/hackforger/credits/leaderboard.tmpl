@@ -1,0 +1,41 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content explore">
+	{{template "explore/navbar" .}}
+	<div class="ui container">
+		<h2>{{ctx.Locale.Tr "hackforger.credits.leaderboard"}}</h2>
+		{{if .Entries}}
+		<div class="hf-card">
+			<table class="tw-w-full">
+				<thead>
+					<tr>
+						<th class="tw-p-2 tw-text-left">#</th>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.credits.user"}}</th>
+						<th class="tw-p-2 tw-text-left">{{ctx.Locale.Tr "hackforger.credits.amount"}}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Entries}}
+					<tr class="tw-border-t" style="border-color: var(--color-secondary-alpha-40);">
+						<td class="tw-p-2">{{.Rank}}</td>
+						<td class="tw-p-2">
+							<a href="{{AppSubUrl}}/{{.Username}}">{{.Username}}</a>
+						</td>
+						<td class="tw-p-2">{{.Balance}}</td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{template "base/paginate" .}}
+		{{else}}
+		<div class="hf-card">
+			<div class="hf-empty">
+				{{svg "octicon-credit-card" 48}}
+				<br>
+				{{ctx.Locale.Tr "hackforger.credits.no_accounts"}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</div>
+{{template "base/footer" .}}

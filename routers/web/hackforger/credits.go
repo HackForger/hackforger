@@ -22,11 +22,39 @@ const (
 	tplCreditsOverview       base.TplName = "hackforger/credits/overview"
 	tplCreditsRedeem         base.TplName = "hackforger/credits/redeem"
 	tplCreditsOrders         base.TplName = "hackforger/credits/orders"
+	tplCreditsLeaderboard    base.TplName = "hackforger/credits/leaderboard"
 	tplAdminCredits          base.TplName = "hackforger/credits/admin/credits"
 	tplAdminRedeemOptions    base.TplName = "hackforger/credits/admin/options"
 	tplAdminCreditOrders     base.TplName = "hackforger/credits/admin/orders"
 	tplAdminRedeemOptionKeys base.TplName = "hackforger/credits/admin/keys"
 )
+
+// ExploreCredits renders the public credit leaderboard on the Explore page.
+func ExploreCredits(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("hackforger.credits.leaderboard")
+	ctx.Data["PageIsExplore"] = true
+	ctx.Data["PageIsExploreCredits"] = true
+
+	page := ctx.FormInt("page")
+	if page <= 0 {
+		page = 1
+	}
+	const pageSize = 50
+
+	entries, total, err := hackforger_model.GetCreditLeaderboard(ctx, page, pageSize)
+	if err != nil {
+		ctx.ServerError("GetCreditLeaderboard", err)
+		return
+	}
+
+	pager := context.NewPagination(int(total), pageSize, page, 5)
+	pager.SetDefaultParams(ctx)
+
+	ctx.Data["Entries"] = entries
+	ctx.Data["Total"] = total
+	ctx.Data["Page"] = pager
+	ctx.HTML(http.StatusOK, tplCreditsLeaderboard)
+}
 
 // CreditsOverview renders the user's credits overview page.
 func CreditsOverview(ctx *context.Context) {

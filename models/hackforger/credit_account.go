@@ -73,3 +73,66 @@ func (opts ListCreditAccountsOptions) ToConds() builder.Cond {
 func ListCreditAccounts(ctx context.Context, opts ListCreditAccountsOptions) ([]*CreditAccount, int64, error) {
 	return db.FindAndCount[CreditAccount](ctx, opts)
 }
+
+// LeaderboardEntry represents a single row in the credit leaderboard.
+type LeaderboardEntry struct {
+	Rank     int
+	UserID   int64
+	Username string
+	FullName string
+	Balance  int64
+}
+
+// GetCreditLeaderboard returns users ordered by credit balance descending,
+// with pagination. It joins with the user table for display names.
+func GetCreditLeaderboard(ctx context.Context, page, pageSize int) ([]*LeaderboardEntry, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+
+	e := db.GetEngine(ctx)
+
+	total, err := e.Table("credit_account").
+		Join("INNER", "`user`", "`credit_account`.user_id = `user`.id").
+		Where("`user`.type = 0 AND `user`.is_active = ?", true).
+		Where("`credit_account`.balance > 0").
+		Count(new(CreditAccount))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	type row struct {
+		UserID   int64  `xorm:"user_id"`
+		Name     string `xorm:"name"`
+		FullName string `xorm:"full_name"`
+		Balance  int64  `xorm:"balance"`
+	}
+
+	var rows []row
+	err = e.Table("credit_account").
+		Select("`credit_account`.user_id, `user`.name, `user`.full_name, `credit_account`.balance").
+		Join("INNER", "`user`", "`credit_account`.user_id = `user`.id").
+		Where("`user`.type = 0 AND `user`.is_active = ?", true).
+		Where("`credit_account`.balance > 0").
+		OrderBy("`credit_account`.balance DESC").
+		Limit(pageSize, (page-1)*pageSize).
+		Find(&rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	entries := make([]*LeaderboardEntry, 0, len(rows))
+	for i, r := range rows {
+		entries = append(entries, &LeaderboardEntry{
+			Rank:     (page-1)*pageSize + i + 1,
+			UserID:   r.UserID,
+			Username: r.Name,
+			FullName: r.FullName,
+			Balance:  r.Balance,
+		})
+	}
+	return entries, total, nil
+}
