@@ -1010,6 +1010,14 @@ func registerRoutes(m *web.Route) {
 		}, context.OrgAssignment())
 	}, ignSignIn)
 
+	// ***** START: HackForger Org Join Request *****
+	m.Group("/org", func() {
+		m.Group("/{org}", func() {
+			m.Post("/join-request", hackforger_web.JoinOrgRequest)
+		}, context.OrgAssignment())
+	}, reqSignIn)
+	// ***** END: HackForger Org Join Request *****
+
 	m.Group("/org", func() {
 		m.Group("", func() {
 			m.Get("/create", org.Create)

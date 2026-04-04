@@ -16,6 +16,12 @@
 				{{if .IsOrganizationMember}}
 					<a class="secondary button" href="{{.OrgLink}}/dashboard">{{ctx.Locale.Tr "org.open_dashboard"}}</a>
 				{{end}}
+				{{/* HackForger injection: Join Org button */}}
+				{{if and .IsSigned (not .IsOrganizationMember) (not .IsOrganizationOwner)}}
+					<form method="POST" action="{{.OrgLink}}/join-request">
+						<button class="ui primary small button">{{ctx.Locale.Tr "hackforger.org.join_request"}}</button>
+					</form>
+				{{end}}
 				{{$moderationEntryNeeded := and .IsModerationEnabled .IsSigned (not .IsOrganizationOwner)}}
 				{{if or .EnableFeed $moderationEntryNeeded}}
 					<details class="dropdown dir-rtl">
