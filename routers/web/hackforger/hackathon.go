@@ -666,20 +666,34 @@ func ManageJudgePost(ctx *context.Context) {
 	if h == nil {
 		return
 	}
-	username := ctx.FormString("username")
+	username := strings.TrimSpace(ctx.FormString("username"))
 	trackID, _ := strconv.ParseInt(ctx.FormString("track_id"), 10, 64)
+
+	// Validate: username must not be empty
+	if username == "" {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.empty_username"))
+		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+		return
+	}
+
+	// Validate: user must exist
 	u, err := user_model.GetUserByName(ctx, username)
 	if err != nil {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.user_not_found", username))
 		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 		return
 	}
-	// Check: registered participants cannot be judges
+
+	// Validate: registered participants cannot be judges
 	if _, regErr := hackforger_model.GetRegistration(ctx, h.ID, u.ID); regErr == nil {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.participant_cannot_be_judge"))
 		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 		return
 	}
+
+	// Validate: check if user is already a judge for this hackathon
+	isAlreadyJudge, _ := hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, u.ID)
+
 	if trackID == 0 {
 		// Auto-assign judge to all tracks
 		tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
@@ -687,6 +701,22 @@ func ManageJudgePost(ctx *context.Context) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_tracks"))
 			ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 			return
+		}
+		if isAlreadyJudge {
+			// Check if already assigned to ALL tracks
+			allDuplicate := true
+			for _, t := range tracks {
+				exists, _ := hackforger_model.IsJudge(ctx, h.ID, t.ID, u.ID)
+				if !exists {
+					allDuplicate = false
+					break
+				}
+			}
+			if allDuplicate {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.duplicate_judge"))
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
 		}
 		for _, t := range tracks {
 			if err := hackforger_model.AddJudge(ctx, h.ID, t.ID, u.ID); err != nil {
@@ -699,6 +729,13 @@ func ManageJudgePost(ctx *context.Context) {
 			}
 		}
 	} else {
+		// Validate: check if already a judge for this specific track
+		exists, _ := hackforger_model.IsJudge(ctx, h.ID, trackID, u.ID)
+		if exists {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.duplicate_judge"))
+			ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+			return
+		}
 		if err := hackforger_model.AddJudge(ctx, h.ID, trackID, u.ID); err != nil {
 			if hackforger_model.IsErrDuplicateJudge(err) {
 				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.duplicate_judge"))
@@ -706,6 +743,8 @@ func ManageJudgePost(ctx *context.Context) {
 				log.Error("AddJudge: %v", err)
 				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 			}
+			ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+			return
 		}
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
