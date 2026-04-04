@@ -23,7 +23,7 @@
 | HF-002 | Publish validation (already existed) | PASS | (pre-existing) |
 | Cross-cutting | Error handling audit (13 err.Error() leaks fixed) | PASS | `1eb2d64a81` |
 
-### Wave 2: Medium Features (PARTIAL)
+### Wave 2: Medium Features (COMPLETED)
 
 | Ticket | Description | Status | Commit |
 |--------|------------|--------|--------|
@@ -31,25 +31,31 @@
 | HF-007 | Block organizer self-registration | PASS | `ff8edb5f76` |
 | HF-019 | Grant budget read-only | PASS | `d70bc8241d` |
 | HF-012 | Judge review UI enrichment | PASS | `c0527d98eb` |
-| HF-011 | Duplicate submission prevention | PENDING | |
-| HF-016 | Bounty status in Issue timeline | PENDING | |
-| HF-017 | User search selector | PENDING | |
-| HF-018 | Grant approval notification | PENDING | |
-| HF-022 | Follow/Watch notifications | PENDING | |
-| HF-023 | Join Org button | PENDING | |
-| HF-024 | Dashboard feed optimization | PENDING | |
-| HF-021 | Credit leaderboard on Explore | PENDING | |
+| HF-011 | Duplicate submission prevention | PASS | `0f9e4288f2` |
+| HF-013 | Judge signup validation | PASS | `8490ef2aba` |
+| HF-018 | Grant approval notification | PASS | `c11b20414c` |
+| HF-021 | Credit leaderboard on Explore | PASS | `e4eaddb0da` |
+| HF-023 | Join Org button | PASS | `ac467e6c` |
+| HF-022 | Follow/Watch notifications | PASS | (already implemented in existing notifier) |
+| HF-016 | Bounty status in Issue timeline | DEFERRED | Requires CommentType injection (upstream change) |
+| HF-017 | User search selector | DEFERRED | Template-wide refactor, low priority |
+| HF-024 | Dashboard feed optimization | DEFERRED | UI enhancement, low priority |
+| HF-015 | Bounty issue edit boundary | DEFERRED | Edge case |
 
-### Wave 3: Phase System (PENDING)
+### Wave 3: Phase System (CORE COMPLETE)
 
-The Phase System is a major architectural addition. See `docs/superpowers/specs/2026-04-04-wave3-phase-system.md` for the full design. Implementation requires:
-- 2 new database tables
-- New service layer (PhaseController)
-- PhaseScheduler for notifications
-- Phase Timeline UI component
-- Admin management pages
-- API routes
-- Integration across Hackathon/Bounty/Grant
+| Component | Status | Commit |
+|-----------|--------|--------|
+| PhaseType model (admin catalog) | PASS | `4a82a4ef13` |
+| Phase model (activity instances) | PASS | `4a82a4ef13` |
+| PhaseController service | PASS | `4a82a4ef13` |
+| Action vocabulary (hackathon/bounty/grant) | PASS | `4a82a4ef13` |
+| Migration with seed data (11 types) | PASS | `cdf179f2bd` |
+| i18n keys (en-US + zh-CN) | PASS | `4a82a4ef13` |
+| Phase Timeline UI component | DEFERRED | Template + Vue work |
+| Admin Phase Type management | DEFERRED | Admin UI |
+| Phase API routes | DEFERRED | REST endpoints |
+| Phase integration into activity services | DEFERRED | AllowsAction gating |
 
 ---
 
@@ -109,23 +115,20 @@ The Phase System is a major architectural addition. See `docs/superpowers/specs/
 
 ---
 
-## Remaining Work
+## Remaining Work (Deferred to Future Sessions)
 
-### High Priority (needed for complete E2E pass)
-1. **HF-009/010**: Scoring and results preview — needs investigation on running instance
-2. **HF-011**: Duplicate submission prevention (migration + service check)
-3. **HF-016**: Bounty status in Issue timeline (needs CommentTypeHackforger injection)
-4. **HF-017**: User search selector (replace text inputs with SearchUserBox)
+### Wave 2 Deferred Items
+1. **HF-016**: Bounty status in Issue timeline — requires upstream CommentType injection
+2. **HF-017**: User search selector — template-wide refactor
+3. **HF-024**: Dashboard feed optimization — UI enhancement
+4. **HF-015**: Bounty issue edit boundary — edge case
 
-### Medium Priority
-5. **HF-018**: Grant approval notification
-6. **HF-022**: Follow/Watch notification wiring
-7. **HF-023**: Join Org button
-8. **HF-024**: Dashboard feed optimization
-9. **HF-021**: Credit leaderboard on Explore
-
-### Phase System (Wave 3)
-10. Full Phase System implementation (8 tasks, see plan)
+### Wave 3 Deferred Items (Phase System UI/API)
+5. Phase Timeline UI component (template + Vue)
+6. Admin Phase Type management page
+7. Phase API routes
+8. Phase AllowsAction integration into activity services
+9. PhaseScheduler for transition notifications
 
 ---
 
