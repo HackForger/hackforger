@@ -332,3 +332,14 @@
   width: 16px;
   height: 16px;
 }
+
+/* HF-008: Track dropdown should not truncate */
+.hf-track-select .ui.selection.dropdown,
+.hf-track-select .ui.dropdown {
+  min-width: 100%;
+}
+.hf-track-select .ui.dropdown .menu > .item,
+.hf-track-select select option {
+  white-space: normal;
+  word-break: break-word;
+}
