@@ -49,7 +49,22 @@ func IsErrNoSubmissions(err error) bool { _, ok := err.(ErrNoSubmissions); retur
 
 // CreateHackathon creates a Forgejo Organization for the hackathon,
 // then creates the hackathon record and publishes a creation event.
+// ErrDuplicateHackathonName indicates a hackathon with the same name already exists.
+type ErrDuplicateHackathonName struct{ Name string }
+
+func (e ErrDuplicateHackathonName) Error() string {
+	return fmt.Sprintf("hackathon name already exists: %s", e.Name)
+}
+
+func IsErrDuplicateHackathonName(err error) bool { _, ok := err.(ErrDuplicateHackathonName); return ok }
+
 func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon) error {
+	// Check for duplicate hackathon name
+	existing, err := hackforger_model.GetHackathonBySlug(ctx, h.Slug)
+	if err == nil && existing != nil {
+		return ErrDuplicateHackathonName{Name: h.Name}
+	}
+
 	// Create a Forgejo Organization linked to this hackathon
 	org := &organization_model.Organization{
 		Name:       h.Slug,

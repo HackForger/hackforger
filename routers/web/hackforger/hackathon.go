@@ -169,8 +169,12 @@ func NewHackathonPost(ctx *context.Context) {
 	}
 	if err := hackforger_service.CreateHackathon(ctx, ctx.Doer, h); err != nil {
 		ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
-		log.Error("CreateHackathon: %v", err)
-		ctx.RenderWithErr(ctx.Tr("hackforger.hackathon.error.internal"), tplNew, nil)
+		if hackforger_service.IsErrDuplicateHackathonName(err) {
+			ctx.RenderWithErr(ctx.Tr("hackforger.hackathon.error.duplicate_name"), tplNew, nil)
+		} else {
+			log.Error("CreateHackathon: %v", err)
+			ctx.RenderWithErr(ctx.Tr("hackforger.hackathon.error.internal"), tplNew, nil)
+		}
 		return
 	}
 	ctx.Redirect("/hackathon/" + h.Slug)
