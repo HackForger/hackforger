@@ -113,5 +113,17 @@
 			{{ctx.Locale.Tr "admin.moderation.moderation_reports"}}
 		</a>
 		{{end}}
+		{{/* HackForger injection point: admin navigation */}}
+		<details class="item toggleable-item" {{if or .PageIsAdminCredits .PageIsAdminHackforgerReputation}}open{{end}}>
+			<summary>{{ctx.Locale.Tr "hackforger.admin.title"}}</summary>
+			<div class="menu">
+				<a class="{{if .PageIsAdminCredits}}active {{end}}item" href="{{AppSubUrl}}/admin/credits">
+					{{ctx.Locale.Tr "hackforger.admin.credits"}}
+				</a>
+				<a class="{{if .PageIsAdminHackforgerReputation}}active {{end}}item" href="{{AppSubUrl}}/admin/hackforger/reputation">
+					{{ctx.Locale.Tr "hackforger.admin.reputation_nav"}}
+				</a>
+			</div>
+		</details>
 	</div>
 </div>

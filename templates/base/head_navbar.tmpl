@@ -192,6 +192,13 @@
 								</a>
 							</li>
 						{{end}}
+						{{/* HackForger injection point: credits navigation */}}
+						<li>
+							<a href="{{AppSubUrl}}/credits">
+								{{svg "octicon-credit-card"}}
+								{{ctx.Locale.Tr "hackforger.credits.my_credits"}}
+							</a>
+						</li>
 						<li>
 							<a href="{{AppSubUrl}}/notifications/subscriptions">
 								{{svg "octicon-bell"}}
