@@ -31,5 +31,8 @@
 		<a class="{{if .PageIsExploreSubmissions}}active {{end}}item" href="{{AppSubUrl}}/explore/submissions">
 			{{svg "octicon-file-code"}} {{ctx.Locale.Tr "hackforger.explore.submissions"}}
 		</a>
+		<a class="{{if .PageIsExploreCredits}}active {{end}}item" href="{{AppSubUrl}}/explore/credits">
+			{{svg "octicon-credit-card"}} {{ctx.Locale.Tr "hackforger.credits.leaderboard"}}
+		</a>
 	</div>
 </overflow-menu>

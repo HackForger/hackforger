@@ -520,6 +520,7 @@ func registerRoutes(m *web.Route) {
 		m.Get("/grants", hackforger_web.ExploreGrants)
 		m.Get("/submissions", hackforger_web.ExploreSubmissions)
 		m.Get("/reputation", hackforger_web.ExploreReputation)
+		m.Get("/credits", hackforger_web.ExploreCredits)
 	}, ignExploreSignIn)
 
 	// HackForger: public search route (JSON endpoint for web frontend)
