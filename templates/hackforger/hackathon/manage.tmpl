@@ -116,7 +116,7 @@
 		{{/* 1. Phase Control */}}
 		<div class="hf-card">
 			<div class="hf-card-head">
-				<div class="hf-card-head-left">Phase Control</div>
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase"}}</div>
 				{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.Status "Label" .StatusLabel}}
 			</div>
 			<div class="hf-card-body">
@@ -153,7 +153,7 @@
 						<div class="fields">
 							<div class="four wide field">
 								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
-								<input name="name" placeholder="Track name" required>
+								<input name="name" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.name_placeholder"}}" required>
 							</div>
 							<div class="three wide field">
 								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_credits"}}</label>
@@ -203,7 +203,7 @@
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.max_score"}}</th>
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.weight"}}</th>
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.sort_order"}}</th>
-							<th>Actions</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.actions"}}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -242,11 +242,11 @@
 					<div class="fields">
 						<div class="four wide field">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.name"}}</label>
-							<input name="name" placeholder="e.g. Innovation" required>
+							<input name="name" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.name_placeholder"}}" required>
 						</div>
 						<div class="four wide field">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.description"}}</label>
-							<input name="description" placeholder="Optional description">
+							<input name="description" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.description_placeholder"}}">
 						</div>
 						<div class="two wide field">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.max_score"}}</label>
@@ -284,7 +284,7 @@
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.name"}}</th>
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.enabled"}}</th>
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.weight"}}</th>
-							<th>Actions</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.actions"}}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -314,7 +314,7 @@
 									<div class="ui mini input">
 										<input name="weight" type="number" step="0.1" value="{{$weight}}" placeholder="0 = {{ctx.Locale.Tr "hackforger.hackathon.manage.track_criteria.use_default"}}">
 									</div>
-									<button class="hf-btn hf-btn-secondary" type="submit">Save</button>
+									<button class="hf-btn hf-btn-secondary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.save"}}</button>
 								</form>
 							</td>
 						</tr>
@@ -332,8 +332,8 @@
 				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations"}} <span class="hf-count">{{len .Registrations}}</span></div>
 			</div>
 			<div class="hf-card-body">
-				<table class="tw-w-full"><thead><tr><th>Team</th><th>Status</th><th>Action</th></tr></thead><tbody>
-				{{range .Registrations}}<tr><td>{{.TeamName}}</td><td>{{if eq .Status 0}}Pending{{else if eq .Status 1}}Approved{{else}}Rejected{{end}}</td><td>{{if eq .Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="1"><button class="hf-btn hf-btn-primary">Approve</button></form><form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="2"><button class="hf-btn hf-btn-danger">Reject</button></form>{{end}}</td></tr>{{end}}
+				<table class="tw-w-full"><thead><tr><th>{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.team"}}</th><th>{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.status"}}</th><th>{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.action"}}</th></tr></thead><tbody>
+				{{range .Registrations}}<tr><td>{{.TeamName}}</td><td>{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.pending"}}{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.approved"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.rejected"}}{{end}}</td><td>{{if eq .Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="1"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.approve"}}</button></form><form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/registrations/{{.ID}}" class="tw-inline"><input type="hidden" name="status" value="2"><button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.registrations.reject"}}</button></form>{{end}}</td></tr>{{end}}
 				</tbody></table>
 			</div>
 		</div>
@@ -350,7 +350,7 @@
 						<tr>
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.username"}}</th>
 							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.track"}}</th>
-							<th>Actions</th>
+							<th>{{ctx.Locale.Tr "hackforger.hackathon.manage.actions"}}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -363,7 +363,7 @@
 							<td>
 								<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/judges/{{.UserID}}/remove" class="tw-inline">
 									<input type="hidden" name="track_id" value="{{.TrackID}}">
-									<button class="hf-btn hf-btn-danger">Remove</button>
+									<button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.remove"}}</button>
 								</form>
 							</td>
 						</tr>
@@ -371,7 +371,7 @@
 					</tbody>
 				</table>
 				{{else}}
-				<p>No judges assigned yet.</p>
+				<p>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.empty"}}</p>
 				{{end}}
 
 				{{/* Add judge form */}}
