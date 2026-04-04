@@ -28,21 +28,21 @@
 			<div class="hf-timeline-step {{if ge .Hackathon.Status 2}}hf-step-done{{else if eq .Hackathon.Status 1}}hf-step-active{{else}}hf-step-upcoming{{end}}">
 				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.registration_end"}}</div>
 				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.RegistrationEnd}}</div>
-				<div class="hf-step-status">{{if ge .Hackathon.Status 2}}Done{{else if eq .Hackathon.Status 1}}Active{{else}}Upcoming{{end}}</div>
+				<div class="hf-step-status">{{if ge .Hackathon.Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}{{else if eq .Hackathon.Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}{{end}}</div>
 			</div>
 			{{end}}
 			{{if .Hackathon.HackingEnd}}
 			<div class="hf-timeline-step {{if ge .Hackathon.Status 3}}hf-step-done{{else if eq .Hackathon.Status 2}}hf-step-active{{else}}hf-step-upcoming{{end}}">
 				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.hacking_end"}}</div>
 				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.HackingEnd}}</div>
-				<div class="hf-step-status">{{if ge .Hackathon.Status 3}}Done{{else if eq .Hackathon.Status 2}}Active{{else}}Upcoming{{end}}</div>
+				<div class="hf-step-status">{{if ge .Hackathon.Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}{{else if eq .Hackathon.Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}{{end}}</div>
 			</div>
 			{{end}}
 			{{if .Hackathon.JudgingEnd}}
 			<div class="hf-timeline-step {{if ge .Hackathon.Status 4}}hf-step-done{{else if eq .Hackathon.Status 3}}hf-step-active{{else}}hf-step-upcoming{{end}}">
 				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.judging_end"}}</div>
 				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.JudgingEnd}}</div>
-				<div class="hf-step-status">{{if ge .Hackathon.Status 4}}Done{{else if eq .Hackathon.Status 3}}Active{{else}}Upcoming{{end}}</div>
+				<div class="hf-step-status">{{if ge .Hackathon.Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}{{else if eq .Hackathon.Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}{{end}}</div>
 			</div>
 			{{end}}
 		</div>
@@ -163,7 +163,7 @@
 						{{range .Submissions}}
 						<tr {{if eq .Rank 1}}class="positive"{{end}}>
 							<td>{{.Title}}</td>
-							<td>{{if .DemoURL}}<a href="{{.DemoURL}}">Demo</a>{{end}}</td>
+							<td>{{if .DemoURL}}<a href="{{.DemoURL}}">{{ctx.Locale.Tr "hackforger.hackathon.view.demo"}}</a>{{end}}</td>
 							<td>{{if .RepoID}}{{$repo := index $.SubRepos .RepoID}}<a href="{{AppSubUrl}}/{{$repo}}">{{$repo}}</a>{{else}}-{{end}}</td>
 							<td>{{if .PullIndex}}<a href="{{AppSubUrl}}/{{$.LinkedOrg.Name}}/{{index $.TrackRepoNames .TrackID}}/pulls/{{.PullIndex}}">PR #{{.PullIndex}}</a>{{else}}-{{end}}</td>
 							<td>{{if gt .TotalScore 0.0}}{{printf "%.1f" .TotalScore}}{{else}}-{{end}}</td>
