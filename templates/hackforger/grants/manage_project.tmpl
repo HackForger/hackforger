@@ -64,25 +64,39 @@
 		{{end}}
 
 		{{if eq .Project.Status 1}}
-			{{/* Approved - can set award and distribute */}}
+			{{/* Approved - can set award (only before finalization) and distribute */}}
 			<div class="hf-card">
 				<div class="hf-card-head">
 					<span>{{ctx.Locale.Tr "hackforger.grant.project.set_award"}}</span>
 				</div>
 				<div class="hf-card-body">
-					<form class="ui form" action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/award" method="post">
+					{{if ge .Round.Status 3}}
+						{{/* Round is finalized or distributed - award amounts are read-only */}}
 						<div class="two fields">
 							<div class="field">
 								<label>{{ctx.Locale.Tr "hackforger.grant.project.award_amount"}}</label>
-								<input type="number" name="award_amount" step="0.01" min="0" value="{{.Project.AwardAmount}}">
+								<span class="tw-text-lg">{{.Project.AwardAmount}}</span>
 							</div>
 							<div class="field">
 								<label>{{ctx.Locale.Tr "hackforger.grant.project.award_credits"}}</label>
-								<input type="number" name="award_credits" min="0" value="{{.Project.AwardCredits}}">
+								<span class="tw-text-lg">{{.Project.AwardCredits}}</span>
 							</div>
 						</div>
-						<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.project.save_award"}}</button>
-					</form>
+					{{else}}
+						<form class="ui form" action="/grants/{{.Round.Slug}}/manage/projects/{{.Project.ID}}/award" method="post">
+							<div class="two fields">
+								<div class="field">
+									<label>{{ctx.Locale.Tr "hackforger.grant.project.award_amount"}}</label>
+									<input type="number" name="award_amount" step="0.01" min="0" value="{{.Project.AwardAmount}}">
+								</div>
+								<div class="field">
+									<label>{{ctx.Locale.Tr "hackforger.grant.project.award_credits"}}</label>
+									<input type="number" name="award_credits" min="0" value="{{.Project.AwardCredits}}">
+								</div>
+							</div>
+							<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.project.save_award"}}</button>
+						</form>
+					{{end}}
 				</div>
 			</div>
 
@@ -98,6 +112,27 @@
 					</div>
 				</div>
 			{{end}}
+		{{end}}
+
+		{{if eq .Project.Status 3}}
+			{{/* Funded - show award amounts as read-only */}}
+			<div class="hf-card">
+				<div class="hf-card-head">
+					<span>{{ctx.Locale.Tr "hackforger.grant.project.award"}}</span>
+				</div>
+				<div class="hf-card-body">
+					<div class="two fields">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.grant.project.award_amount"}}</label>
+							<span class="tw-text-lg">{{.Project.AwardAmount}}</span>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.grant.project.award_credits"}}</label>
+							<span class="tw-text-lg">{{.Project.AwardCredits}}</span>
+						</div>
+					</div>
+				</div>
+			</div>
 		{{end}}
 
 		<div class="tw-mt-4">

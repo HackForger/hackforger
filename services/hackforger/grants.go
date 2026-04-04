@@ -445,6 +445,12 @@ func AllocateAward(ctx context.Context, doerID, projectID int64, amount float64,
 		return err
 	}
 
+	// Award amounts are locked once the round is finalized or beyond
+	if round.Status >= hackforger_model.GrantRoundStatusFinalized {
+		return fmt.Errorf("cannot modify award: round is %s [id: %d]: %w",
+			hackforger_model.GrantRoundStatusNames[round.Status], round.ID, util.ErrInvalidArgument)
+	}
+
 	// Get current budget usage
 	usedAmount, usedCredits, err := hackforger_model.GetGrantRoundBudgetUsage(ctx, round.ID)
 	if err != nil {
