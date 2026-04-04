@@ -401,7 +401,24 @@ func ApproveProject(ctx context.Context, doerID, projectID int64) error {
 	}
 
 	project.Status = hackforger_model.GrantProjectStatusApproved
-	return hackforger_model.UpdateGrantProject(ctx, project)
+	if err := hackforger_model.UpdateGrantProject(ctx, project); err != nil {
+		return err
+	}
+
+	// Notify the applicant about approval (HF-018)
+	doer, _ := user_model.GetUserByID(ctx, doerID)
+	if doer != nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionGrantAwarded,
+			EntityType:   "grant_project",
+			EntityID:     project.ID,
+			EntityName:   project.Title,
+			OrgID:        round.OrgID,
+			AudienceType: notify_service.AudienceDirectUser | notify_service.AudienceOrgMembers,
+			TargetUserID: project.UserID,
+		})
+	}
+	return nil
 }
 
 // RejectProject transitions a project from Pending to Rejected.
