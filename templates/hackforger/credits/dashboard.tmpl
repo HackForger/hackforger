@@ -1,6 +1,7 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content user">
 	<div class="ui container">
+		{{template "base/alert" .}}
 		<h2 class="ui header">
 			{{svg "octicon-credit-card" 24}} {{ctx.Locale.Tr "hackforger.credits.title"}}
 		</h2>

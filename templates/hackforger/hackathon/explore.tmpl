@@ -2,6 +2,7 @@
 <div role="main" aria-label="{{.Title}}" class="page-content explore">
 	{{template "explore/navbar" .}}
 	<div class="ui container">
+		{{template "base/alert" .}}
 		{{template "hackforger/explore_search" .}}
 
 		{{if .Hackathons}}

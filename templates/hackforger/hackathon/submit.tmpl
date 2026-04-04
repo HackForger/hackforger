@@ -1,6 +1,7 @@
 {{template "base/head" .}}
 <div role="main" aria-label="{{.Title}}" class="page-content hackathon">
 	<div class="ui container">
+		{{template "base/alert" .}}
 		<h2>{{ctx.Locale.Tr "hackforger.hackathon.submit"}} — {{.Hackathon.Name}}</h2>
 		<div class="hf-card">
 			<div class="hf-card-body">
