@@ -90,13 +90,22 @@ The Phase System is a major architectural addition. See `docs/superpowers/specs/
 | Error Handling | All err.Error() leaks replaced with i18n | PASS (code review) |
 | base/alert Fix | Flash messages visible on all HackForger pages | PASS (critical fix) |
 
+### Phase 1 (continued): Registration
+
+| Step | Description | Result | Screenshot |
+|------|-------------|--------|------------|
+| 1.5 | Hacker_eve views hackathon | PASS | [p1-05-hacker-view.png](../../../tests/screenshots/full-cycle/p1-05-hacker-view.png) |
+| 1.5 | HF-026 verified: no display name field | PASS | (visible in screenshot) |
+| 1.6 | Hacker_eve registers (solo) | PASS | [p1-06-registered.png](../../../tests/screenshots/full-cycle/p1-06-registered.png) |
+| 1.6 | Registration confirmed in admin manage | PASS | (hacker_eve 已通过 in table) |
+
 ### Bugs Discovered During E2E
 
 | ID | Description | Severity | Status |
 |----|-------------|----------|--------|
 | NEW-1 | Markdown `\n` not rendered as newlines in description | Low | Known (raw text, not markdown rendering) |
 | NEW-2 | Phase Control status "Open (Registration)" not fully i18n'd | Low | Partially fixed by HF-001 |
-| FIXED | Flash messages invisible on all HackForger pages | Critical | FIXED — missing `{{template "base/alert" .}}` |
+| FIXED | Flash messages invisible on all HackForger pages | Critical | FIXED — missing `{{template "base/alert" .}}` in `b2d3cbcc32` |
 
 ---
 
