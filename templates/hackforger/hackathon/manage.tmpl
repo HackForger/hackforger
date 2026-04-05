@@ -114,20 +114,39 @@
 			</div>
 		</div>
 
-		{{/* 1. Phase Control */}}
+		{{/* 1. Phase Timeline */}}
 		<div class="hf-card">
 			<div class="hf-card-head">
 				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase"}}</div>
-				{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.Status "Label" .StatusLabel}}
+				{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.StatusCache "Label" .StatusLabel}}
 			</div>
 			<div class="hf-card-body">
-				<div class="tw-flex tw-gap-2">
-				{{if eq .Hackathon.Status 0}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/publish" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.publish"}}</button></form>
-				{{else if eq .Hackathon.Status 1}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/start" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start"}}</button></form>
-				{{else if eq .Hackathon.Status 2}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/judge" class="tw-inline"><button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.start_judging"}}</button></form>
-				{{else if eq .Hackathon.Status 3}}<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize-preview">{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview"}}</a>
-				{{end}}
-				{{if and (ne .Hackathon.Status 4) (ne .Hackathon.Status 5)}}<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.confirm.cancel_activity"}}');"><button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button></form>{{end}}
+				<div id="hackforger-phase-timeline"
+					data-hackathon-slug="{{.Hackathon.Slug}}"
+					data-phases="{{.PhasesJSON}}"
+					data-phase-types="{{.PhaseTypesJSON}}"
+					data-is-published="{{if .Hackathon.IsPublished}}true{{else}}false{{end}}">
+				</div>
+				<noscript>
+					<div class="ui warning message">JavaScript is required for the phase timeline.</div>
+				</noscript>
+
+				<div class="tw-flex tw-gap-2 tw-mt-3">
+					{{if not .Hackathon.IsPublished}}
+					<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/publish" class="tw-inline">
+						<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.publish"}}</button>
+					</form>
+					{{end}}
+					{{if and (ne .Hackathon.StatusCache 4) (ne .Hackathon.StatusCache 5)}}
+					<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/cancel" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.confirm.cancel_activity"}}');">
+						<button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.cancel"}}</button>
+					</form>
+					{{end}}
+					{{if eq .Hackathon.StatusCache 3}}
+					<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/finalize-preview">
+						{{ctx.Locale.Tr "hackforger.hackathon.manage.finalize_preview"}}
+					</a>
+					{{end}}
 				</div>
 			</div>
 		</div>
@@ -149,7 +168,7 @@
 						{{end}}
 					</div>
 				{{end}}
-				{{if eq .Hackathon.Status 0}}
+				{{if eq .Hackathon.StatusCache 0}}
 					<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/tracks">
 						<div class="fields">
 							<div class="four wide field">
@@ -189,7 +208,7 @@
 		</div>
 
 		{{/* 3. Scoring Criteria */}}
-		{{if le .Hackathon.Status 1}}
+		{{if le .Hackathon.StatusCache 1}}
 		<div class="hf-card">
 			<div class="hf-card-head">
 				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria"}}</div>
@@ -233,7 +252,7 @@
 				<div class="ui info message">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.empty"}}</div>
 				{{end}}
 
-				{{if and (not .Criteria) (le .Hackathon.Status 1)}}
+				{{if and (not .Criteria) (le .Hackathon.StatusCache 1)}}
 				<div class="ui warning message">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.warning_no_criteria"}}</div>
 				{{end}}
 
@@ -380,11 +399,13 @@
 					<div class="inline fields">
 						<div class="field">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.username"}}</label>
-							<input name="username" placeholder="Username" required>
+							<div id="search-user-box" class="ui search input">
+								<input class="prompt" name="username" placeholder="{{ctx.Locale.Tr "search.user_kind"}}" autocomplete="off" required>
+							</div>
 						</div>
 						<div class="field hf-track-select">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.track"}}</label>
-							<select name="track_id" class="ui dropdown" required>
+							<select name="track_id" class="ui selection dropdown" required>
 								<option value="">{{ctx.Locale.Tr "hackforger.hackathon.manage.judges.select_track"}}</option>
 								{{range .Tracks}}
 								<option value="{{.ID}}" title="{{.Name}}">{{.Name}}</option>

@@ -186,6 +186,7 @@ func NewBountyPost(ctx *context.Context) {
 }
 
 // BountyAction handles POST actions on a bounty (apply, accept, reject, complete, etc.).
+// The Vue BountyPanel sends JSON bodies, so we read JSON instead of form values.
 func BountyAction(ctx *context.Context) {
 	bountyID := ctx.ParamsInt64("bounty_id")
 	action := ctx.Params("action")
@@ -193,8 +194,11 @@ func BountyAction(ctx *context.Context) {
 	var err error
 	switch action {
 	case "apply":
-		message := ctx.FormString("message")
-		_, err = hackforger_svc.ApplyForBounty(ctx, bountyID, ctx.Doer.ID, message)
+		var req struct {
+			Message string `json:"message"`
+		}
+		_ = json.NewDecoder(ctx.Req.Body).Decode(&req)
+		_, err = hackforger_svc.ApplyForBounty(ctx, bountyID, ctx.Doer.ID, req.Message)
 	case "complete":
 		err = hackforger_svc.CompleteBounty(ctx, bountyID, ctx.Doer.ID)
 	case "reject":
@@ -221,9 +225,15 @@ func BountyAction(ctx *context.Context) {
 }
 
 // BountyApplicationAction handles accept/reject of an application.
+// The Vue BountyPanel sends JSON bodies.
 func BountyApplicationAction(ctx *context.Context) {
 	applicationID := ctx.ParamsInt64("application_id")
-	action := ctx.FormString("action")
+
+	var req struct {
+		Action string `json:"action"`
+	}
+	_ = json.NewDecoder(ctx.Req.Body).Decode(&req)
+	action := req.Action
 
 	var err error
 	switch action {

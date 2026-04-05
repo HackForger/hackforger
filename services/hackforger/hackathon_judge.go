@@ -28,15 +28,16 @@ func SubmitScores(ctx context.Context, judgeID, submissionID int64, scores []Cri
 		return err
 	}
 
-	// 2. Load hackathon, verify status == Judging
+	// 2. Load hackathon, verify scoring is allowed
 	h, err := hackforger_model.GetHackathonByID(ctx, sub.HackathonID)
 	if err != nil {
 		return err
 	}
-	if h.Status != hackforger_model.HackathonStatusJudging {
+	canScore, _ := AllowsAction(ctx, "hackathon", h.ID, "score")
+	if !canScore {
 		return hackforger_model.ErrInvalidHackathonPhase{
 			HackathonID: h.ID,
-			Current:     h.Status,
+			Current:     h.StatusCache,
 			Expected:    hackforger_model.HackathonStatusJudging,
 		}
 	}

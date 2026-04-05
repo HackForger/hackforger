@@ -10,12 +10,30 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	issue_service "forgejo.org/services/issue"
 	notify_service "forgejo.org/services/notify"
 )
+
+// postBountyIssueComment adds a timeline comment to the bounty's linked Issue
+// when a bounty event occurs (created, applied, accepted, completed, etc.).
+func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64, message string) {
+	doer, err := user_model.GetUserByID(ctx, doerID)
+	if err != nil {
+		return
+	}
+	issue, err := issues_model.GetIssueByID(ctx, bounty.IssueID)
+	if err != nil {
+		return
+	}
+	if err := issue.LoadRepo(ctx); err != nil {
+		return
+	}
+	_, _ = issue_service.CreateIssueComment(ctx, doer, issue.Repo, issue, message, nil)
+}
 
 // closeBountyIssue closes the Issue linked to a bounty when it completes.
 func closeBountyIssue(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64) {
@@ -114,6 +132,11 @@ func ApplyForBounty(ctx context.Context, bountyID, userID int64, message string)
 		return nil, err
 	}
 
+	// Phase gating: check if apply action is allowed in current phase (no-op if no phases configured)
+	if allowed, _ := AllowsAction(ctx, "bounty", bountyID, "apply"); !allowed {
+		return nil, ErrInvalidBountyStatus{BountyID: bountyID, Current: bounty.Status, Expected: "Open (phase)"}
+	}
+
 	if bounty.Status != hackforger_model.BountyStatusOpen {
 		return nil, ErrInvalidBountyStatus{
 			BountyID: bountyID,
@@ -131,6 +154,9 @@ func ApplyForBounty(ctx context.Context, bountyID, userID int64, message string)
 	if err := hackforger_model.CreateBountyApplication(ctx, app); err != nil {
 		return nil, err
 	}
+	// Auto-watch: applicant receives milestone events for this bounty's repo
+	_ = repo_model.WatchRepo(ctx, userID, bounty.RepoID, true)
+	postBountyIssueComment(ctx, bounty, userID, fmt.Sprintf("📋 **Bounty Application** — user #%d applied", userID))
 	return app, nil
 }
 
@@ -193,6 +219,8 @@ func AcceptApplication(ctx context.Context, applicationID, doerID int64) error {
 			if err := hackforger_model.UpdateBounty(ctx, bounty); err != nil {
 				return err
 			}
+			// Auto-watch: claimer receives milestone events for this bounty's repo
+			_ = repo_model.WatchRepo(ctx, app.UserID, bounty.RepoID, true)
 
 			// Publish feed event.
 			if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
@@ -215,6 +243,7 @@ func AcceptApplication(ctx context.Context, applicationID, doerID int64) error {
 				})
 			}
 		}
+		postBountyIssueComment(ctx, bounty, doerID, fmt.Sprintf("🏷 **Bounty Accepted** — claimed by user #%d", app.UserID))
 
 		return nil
 	})
@@ -363,6 +392,7 @@ func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {
 			})
 		}
 
+		postBountyIssueComment(ctx, bounty, doerID, "✅ **Bounty Completed** — delivery accepted and bounty fulfilled.")
 		// Close the linked Issue — bounty completion means task is done.
 		closeBountyIssue(ctx, bounty, doerID)
 
@@ -519,7 +549,6 @@ func MarkPaid(ctx context.Context, bountyID, doerID int64) error {
 		return err
 	}
 
-	// AudienceType=0: no broadcast -- only the actor's own feed record is written.
 	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
 		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
 			OpType:       hackforger_model.ActionBountyPaid,
@@ -527,7 +556,8 @@ func MarkPaid(ctx context.Context, bountyID, doerID int64) error {
 			EntityID:     bounty.ID,
 			EntityName:   bounty.Title,
 			RepoID:       bounty.RepoID,
-			AudienceType: 0,
+			AudienceType: notify_service.AudienceDirectUser | notify_service.AudienceRepoWatchers,
+			TargetUserID: bounty.ClaimerID,
 			Content: &hackforger_model.HackforgerPhaseContent{
 				HackforgerActionContent: hackforger_model.HackforgerActionContent{
 					EntityType: "bounty",
@@ -586,6 +616,7 @@ func CancelBounty(ctx context.Context, bountyID, doerID int64) error {
 			},
 		})
 	}
+	postBountyIssueComment(ctx, bounty, doerID, "❌ **Bounty Cancelled**")
 
 	return nil
 }

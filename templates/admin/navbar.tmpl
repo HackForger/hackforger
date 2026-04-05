@@ -114,7 +114,7 @@
 		</a>
 		{{end}}
 		{{/* HackForger injection point: admin navigation */}}
-		<details class="item toggleable-item" {{if or .PageIsAdminCredits .PageIsAdminHackforgerReputation}}open{{end}}>
+		<details class="item toggleable-item" {{if or .PageIsAdminCredits .PageIsAdminHackforgerReputation .PageIsAdminHackforgerPhaseTypes}}open{{end}}>
 			<summary>{{ctx.Locale.Tr "hackforger.admin.title"}}</summary>
 			<div class="menu">
 				<a class="{{if .PageIsAdminCredits}}active {{end}}item" href="{{AppSubUrl}}/admin/credits">
@@ -122,6 +122,9 @@
 				</a>
 				<a class="{{if .PageIsAdminHackforgerReputation}}active {{end}}item" href="{{AppSubUrl}}/admin/hackforger/reputation">
 					{{ctx.Locale.Tr "hackforger.admin.reputation_nav"}}
+				</a>
+				<a class="{{if .PageIsAdminHackforgerPhaseTypes}}active {{end}}item" href="{{AppSubUrl}}/admin/hackforger/phase-types">
+					{{ctx.Locale.Tr "hackforger.admin.phase_types"}}
 				</a>
 			</div>
 		</details>

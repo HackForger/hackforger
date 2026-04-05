@@ -116,9 +116,28 @@ func Dashboard(ctx *context.Context) {
 
 	feedType := ctx.FormString("feed")
 	if feedType == "" {
-		feedType = "code"
+		feedType = "community" // HackForger: default to community feed
 	}
 	ctx.Data["FeedType"] = feedType
+
+	// Always load participation lists for sidebar (visible on all tabs)
+	if ctx.Doer != nil {
+		if hackathons, err := hackforger_model.GetUserHackathons(ctx, ctx.Doer.ID, 10); err != nil {
+			log.Error("GetUserHackathons: %v", err)
+		} else {
+			ctx.Data["UserHackathons"] = hackathons
+		}
+		if bounties, err := hackforger_model.GetUserBounties(ctx, ctx.Doer.ID, 10); err != nil {
+			log.Error("GetUserBounties: %v", err)
+		} else {
+			ctx.Data["UserBounties"] = bounties
+		}
+		if rounds, err := hackforger_model.GetUserGrantRounds(ctx, ctx.Doer.ID, 10); err != nil {
+			log.Error("GetUserGrantRounds: %v", err)
+		} else {
+			ctx.Data["UserGrantRounds"] = rounds
+		}
+	}
 
 	if feedType == "community" {
 		feeds, count, err := hackforger_model.GetHackforgerFeeds(ctx, hackforger_model.GetHackforgerFeedsOptions{

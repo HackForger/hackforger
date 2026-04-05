@@ -14,18 +14,19 @@ import (
 // Phase represents an instance of a phase for a specific activity.
 // Lock state is computed (not stored): a phase is locked when EndTime < now().
 type Phase struct {
-	ID           int64              `xorm:"pk autoincr"`
-	PhaseTypeID  int64              `xorm:"NOT NULL INDEX"`
-	ActivityKind string             `xorm:"VARCHAR(20) NOT NULL"`
-	ActivityID   int64              `xorm:"NOT NULL"`
-	SortOrder    int                `xorm:"NOT NULL"`
-	StartTime    int64              `xorm:"NOT NULL"`
-	EndTime      int64              `xorm:"NOT NULL"`
-	CreatedUnix  timeutil.TimeStamp `xorm:"created"`
-	UpdatedUnix  timeutil.TimeStamp `xorm:"updated"`
+	ID           int64              `xorm:"pk autoincr" json:"id"`
+	PhaseTypeID  int64              `xorm:"NOT NULL INDEX" json:"phase_type_id"`
+	ActivityKind string             `xorm:"VARCHAR(20) NOT NULL" json:"activity_kind"`
+	ActivityID   int64              `xorm:"NOT NULL" json:"activity_id"`
+	SortOrder    int                `xorm:"NOT NULL" json:"sort_order"`
+	CustomName   string             `xorm:"VARCHAR(100) NOT NULL DEFAULT ''" json:"custom_name"`
+	StartTime    int64              `xorm:"NOT NULL" json:"start_time"`
+	EndTime      int64              `xorm:"NOT NULL" json:"end_time"`
+	CreatedUnix  timeutil.TimeStamp `xorm:"created" json:"created_unix"`
+	UpdatedUnix  timeutil.TimeStamp `xorm:"updated" json:"updated_unix"`
 
 	// Loaded via join, not stored
-	PhaseType *PhaseType `xorm:"-"`
+	PhaseType *PhaseType `xorm:"-" json:"phase_type,omitempty"`
 }
 
 func init() {
@@ -98,7 +99,7 @@ func CreatePhase(ctx context.Context, p *Phase) error {
 
 // UpdatePhase updates an existing phase.
 func UpdatePhase(ctx context.Context, p *Phase) error {
-	_, err := db.GetEngine(ctx).ID(p.ID).Cols("start_time", "end_time", "sort_order", "updated_unix").Update(p)
+	_, err := db.GetEngine(ctx).ID(p.ID).Cols("start_time", "end_time", "sort_order", "custom_name", "updated_unix").Update(p)
 	return err
 }
 
@@ -106,6 +107,34 @@ func UpdatePhase(ctx context.Context, p *Phase) error {
 func DeletePhase(ctx context.Context, id int64) error {
 	_, err := db.GetEngine(ctx).ID(id).Delete(&Phase{})
 	return err
+}
+
+// PhaseSortOrder holds an ID and its new sort order for batch updates.
+type PhaseSortOrder struct {
+	ID        int64 `json:"id"`
+	SortOrder int   `json:"sort_order"`
+}
+
+// BatchUpdatePhaseSortOrder updates sort_order for multiple phases.
+func BatchUpdatePhaseSortOrder(ctx context.Context, orders []PhaseSortOrder) error {
+	sess := db.GetEngine(ctx)
+	for _, o := range orders {
+		if _, err := sess.ID(o.ID).Cols("sort_order").Update(&Phase{SortOrder: o.SortOrder}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CountPhasesByActivity returns the count of phases for an activity.
+func CountPhasesByActivity(ctx context.Context, activityKind string, activityID int64) (int64, error) {
+	return db.GetEngine(ctx).Where("activity_kind = ? AND activity_id = ?", activityKind, activityID).Count(&Phase{})
+}
+
+// GetFuturePhases returns all phases where end_time > the given timestamp.
+func GetFuturePhases(ctx context.Context, afterUnix int64) ([]*Phase, error) {
+	phases := make([]*Phase, 0)
+	return phases, db.GetEngine(ctx).Where("end_time > ?", afterUnix).Find(&phases)
 }
 
 // GetPhaseByID returns a phase by ID with its PhaseType loaded.

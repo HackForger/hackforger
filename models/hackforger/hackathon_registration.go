@@ -161,3 +161,14 @@ func UpdateRegistrationStatus(ctx context.Context, id int64, status Registration
 func CountRegistrations(ctx context.Context, hackathonID int64) (int64, error) {
 	return db.GetEngine(ctx).Where("hackathon_id = ?", hackathonID).Count(new(HackathonRegistration))
 }
+
+// GetUserHackathons returns hackathons the user is registered for, most recent first.
+func GetUserHackathons(ctx context.Context, userID int64, limit int) ([]*Hackathon, error) {
+	hackathons := make([]*Hackathon, 0, limit)
+	return hackathons, db.GetEngine(ctx).
+		Join("INNER", "hackathon_registration", "hackathon_registration.hackathon_id = hackathon.id").
+		Where("hackathon_registration.user_id = ?", userID).
+		OrderBy("hackathon_registration.created_unix DESC").
+		Limit(limit).
+		Find(&hackathons)
+}

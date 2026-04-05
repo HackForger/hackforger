@@ -1,0 +1,47 @@
+<div class="ui segment">
+		<h4 class="ui header">{{svg "octicon-rocket" 16}} {{ctx.Locale.Tr "hackforger.feed.sidebar.my_hackathons"}}</h4>
+		{{if .UserHackathons}}
+		<div class="ui relaxed list">
+			{{range .UserHackathons}}
+			<div class="item">
+				<a href="{{AppSubUrl}}/hackathon/{{.Slug | PathEscape}}">{{.Name}}</a>
+				<span class="ui mini label {{if eq .StatusCache 5}}red{{else if eq .StatusCache 0}}grey{{else if eq .StatusCache 4}}green{{else}}blue{{end}}">{{ctx.Locale.Tr (printf "hackforger.hackathon.status.%s" (.StatusCacheName))}}</span>
+			</div>
+			{{end}}
+		</div>
+		{{else}}
+		<p class="text grey">{{ctx.Locale.Tr "hackforger.feed.sidebar.empty"}}</p>
+		{{end}}
+	</div>
+
+	<div class="ui segment">
+		<h4 class="ui header">{{svg "octicon-gift" 16}} {{ctx.Locale.Tr "hackforger.feed.sidebar.my_bounties"}}</h4>
+		{{if .UserBounties}}
+		<div class="ui relaxed list">
+			{{range .UserBounties}}
+			<div class="item">
+				<a href="{{AppSubUrl}}/bounty/{{.ID}}">{{.Title}}</a>
+				<span class="ui mini label {{if or (eq .Status 5) (eq .Status 6)}}red{{else if or (eq .Status 3) (eq .Status 4)}}green{{else}}blue{{end}}">{{ctx.Locale.Tr (printf "hackforger.bounty.status.%s" (.StatusName))}}</span>
+			</div>
+			{{end}}
+		</div>
+		{{else}}
+		<p class="text grey">{{ctx.Locale.Tr "hackforger.feed.sidebar.empty"}}</p>
+		{{end}}
+	</div>
+
+	<div class="ui segment">
+		<h4 class="ui header">{{svg "octicon-milestone" 16}} {{ctx.Locale.Tr "hackforger.feed.sidebar.my_grants"}}</h4>
+		{{if .UserGrantRounds}}
+		<div class="ui relaxed list">
+			{{range .UserGrantRounds}}
+			<div class="item">
+				<a href="{{AppSubUrl}}/grants/{{.Slug | PathEscape}}">{{.Name}}</a>
+				<span class="ui mini label {{if eq .Status 5}}red{{else if or (eq .Status 3) (eq .Status 4)}}green{{else}}blue{{end}}">{{ctx.Locale.Tr (printf "hackforger.grant.status.%s" (.StatusName))}}</span>
+			</div>
+			{{end}}
+		</div>
+		{{else}}
+		<p class="text grey">{{ctx.Locale.Tr "hackforger.feed.sidebar.empty"}}</p>
+		{{end}}
+	</div>

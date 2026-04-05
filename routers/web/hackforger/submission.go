@@ -116,7 +116,7 @@ func ExploreSubmissions(ctx *context.Context) {
 		if h, ok := hackathonMap[s.HackathonID]; ok {
 			v.HackathonName = h.Name
 			v.HackathonSlug = h.Slug
-			v.HackathonStatus = h.Status
+			v.HackathonStatus = h.StatusCache
 		}
 		if t, ok := trackMap[s.TrackID]; ok {
 			v.TrackName = t.Name

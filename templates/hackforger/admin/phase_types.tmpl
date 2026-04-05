@@ -1,0 +1,135 @@
+{{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin hackforger phase-types")}}
+	<div class="admin-setting-content">
+		<h2>{{ctx.Locale.Tr "hackforger.admin.phase_types.title"}}</h2>
+
+		{{/* Phase types grouped by activity kind */}}
+		{{range $kind := .ActivityKinds}}
+			{{$types := index $.GroupedPhaseTypes $kind}}
+			<div class="hf-card tw-mb-4">
+				<div class="hf-card-head">
+					<div class="hf-card-head-left">{{$kind}}</div>
+				</div>
+				<div class="hf-card-body">
+					<table class="tw-w-full">
+						<thead>
+							<tr>
+								<th class="tw-p-2">ID</th>
+								<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.key"}}</th>
+								<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.display_name"}}</th>
+								<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.is_unique"}}</th>
+								<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.allowed_actions"}}</th>
+								<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.default_order"}}</th>
+								<th class="tw-p-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.actions"}}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{{range $types}}
+								<tr>
+									<td class="tw-p-2">{{.ID}}</td>
+									<td class="tw-p-2"><code>{{.Key}}</code></td>
+									<td class="tw-p-2">{{.DisplayNameI18n}}</td>
+									<td class="tw-p-2">{{if .IsUnique}}{{svg "octicon-check" 16}}{{else}}{{svg "octicon-x" 16}}{{end}}</td>
+									<td class="tw-p-2"><code>{{.AllowedActions}}</code></td>
+									<td class="tw-p-2">{{.DefaultOrder}}</td>
+									<td class="tw-p-2">
+										<div class="tw-flex tw-gap-1">
+											{{/* Edit form - inline toggle */}}
+											<details class="tw-inline">
+												<summary class="hf-btn hf-btn-secondary">{{ctx.Locale.Tr "hackforger.admin.phase_types.edit"}}</summary>
+												<form class="ui form tw-mt-2 tw-p-2 tw-border tw-rounded" action="{{AppSubUrl}}/admin/hackforger/phase-types/{{.ID}}/edit" method="post">
+													<div class="tw-grid tw-grid-cols-2 tw-gap-2">
+														<div class="field">
+															<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.activity_kind"}}</label>
+															<select name="activity_kind">
+																<option value="hackathon" {{if eq .ActivityKind "hackathon"}}selected{{end}}>hackathon</option>
+																<option value="bounty" {{if eq .ActivityKind "bounty"}}selected{{end}}>bounty</option>
+																<option value="grant" {{if eq .ActivityKind "grant"}}selected{{end}}>grant</option>
+															</select>
+														</div>
+														<div class="field">
+															<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.key"}}</label>
+															<input type="text" name="key" value="{{.Key}}" required>
+														</div>
+														<div class="field">
+															<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.display_name"}}</label>
+															<input type="text" name="display_name_i18n" value="{{.DisplayNameI18n}}" required>
+														</div>
+														<div class="field">
+															<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.default_order"}}</label>
+															<input type="number" name="default_order" value="{{.DefaultOrder}}">
+														</div>
+														<div class="field tw-col-span-2">
+															<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.allowed_actions"}}</label>
+															<input type="text" name="allowed_actions" value="{{.AllowedActions}}">
+														</div>
+														<div class="field">
+															<label>
+																<input type="checkbox" name="is_unique" {{if .IsUnique}}checked{{end}}>
+																{{ctx.Locale.Tr "hackforger.admin.phase_types.is_unique"}}
+															</label>
+														</div>
+													</div>
+													<button class="hf-btn hf-btn-primary tw-mt-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.save"}}</button>
+												</form>
+											</details>
+											{{/* Delete form */}}
+											<form class="ui form tw-inline" action="{{AppSubUrl}}/admin/hackforger/phase-types/{{.ID}}/delete" method="post" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.admin.phase_types.confirm_delete"}}');">
+												<button class="hf-btn hf-btn-danger">{{ctx.Locale.Tr "hackforger.admin.phase_types.delete"}}</button>
+											</form>
+										</div>
+									</td>
+								</tr>
+							{{else}}
+								<tr><td class="tw-text-center tw-p-2" colspan="7">{{ctx.Locale.Tr "hackforger.admin.phase_types.none"}}</td></tr>
+							{{end}}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		{{end}}
+
+		{{/* Create new phase type form */}}
+		<div class="hf-card tw-mb-4">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.admin.phase_types.create"}}</div>
+			</div>
+			<div class="hf-card-body">
+				<form class="ui form" action="{{AppSubUrl}}/admin/hackforger/phase-types" method="post">
+					<div class="tw-grid tw-grid-cols-3 tw-gap-2">
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.activity_kind"}}</label>
+							<select name="activity_kind" required>
+								<option value="hackathon">hackathon</option>
+								<option value="bounty">bounty</option>
+								<option value="grant">grant</option>
+							</select>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.key"}}</label>
+							<input type="text" name="key" placeholder="e.g. registration" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.display_name"}}</label>
+							<input type="text" name="display_name_i18n" placeholder="e.g. hackforger.phase.registration" required>
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.default_order"}}</label>
+							<input type="number" name="default_order" value="0">
+						</div>
+						<div class="field">
+							<label>{{ctx.Locale.Tr "hackforger.admin.phase_types.allowed_actions"}}</label>
+							<input type="text" name="allowed_actions" value="[]" placeholder='["submit","review"]'>
+						</div>
+						<div class="field tw-flex tw-items-end">
+							<label>
+								<input type="checkbox" name="is_unique" checked>
+								{{ctx.Locale.Tr "hackforger.admin.phase_types.is_unique"}}
+							</label>
+						</div>
+					</div>
+					<button class="hf-btn hf-btn-primary tw-mt-2">{{ctx.Locale.Tr "hackforger.admin.phase_types.create"}}</button>
+				</form>
+			</div>
+		</div>
+	</div>
+{{template "admin/layout_footer" .}}

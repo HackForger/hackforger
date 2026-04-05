@@ -15,12 +15,12 @@
 						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1 markup">{{.Description}}</div>{{end}}
 					</div>
 				</div>
-				<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">
-					{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
-					{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
-					{{else if eq .Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
-					{{else if eq .Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
-					{{else if eq .Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
+				<span class="hf-badge {{if eq .StatusCache 0}}hf-badge-neutral{{else if eq .StatusCache 1}}hf-badge-green{{else if eq .StatusCache 2}}hf-badge-blue{{else if eq .StatusCache 3}}hf-badge-yellow{{else if eq .StatusCache 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">
+					{{if eq .StatusCache 0}}{{ctx.Locale.Tr "hackforger.hackathon.status.draft"}}
+					{{else if eq .StatusCache 1}}{{ctx.Locale.Tr "hackforger.hackathon.status.registration"}}
+					{{else if eq .StatusCache 2}}{{ctx.Locale.Tr "hackforger.hackathon.status.hacking"}}
+					{{else if eq .StatusCache 3}}{{ctx.Locale.Tr "hackforger.hackathon.status.judging"}}
+					{{else if eq .StatusCache 4}}{{ctx.Locale.Tr "hackforger.hackathon.status.finished"}}
 					{{else}}{{ctx.Locale.Tr "hackforger.hackathon.status.cancelled"}}
 					{{end}}
 				</span>

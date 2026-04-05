@@ -49,6 +49,15 @@ data.canCreateOrganization = {{.SignedUser.CanCreateOrganization}};
 data.organizationId = {{.ContextUser.ID}};
 {{end}}
 
+// HackForger: participation data for sidebar tabs
+data.textMyHackathons = {{ctx.Locale.Tr "hackforger.feed.sidebar.my_hackathons"}};
+data.textMyBounties = {{ctx.Locale.Tr "hackforger.feed.sidebar.my_bounties"}};
+data.textMyGrants = {{ctx.Locale.Tr "hackforger.feed.sidebar.my_grants"}};
+data.textNoParticipation = {{ctx.Locale.Tr "hackforger.feed.sidebar.empty"}};
+data.userHackathons = [{{range .UserHackathons}}{name: {{.Name}}, slug: {{.Slug}}, status: {{.StatusCacheName}}},{{end}}];
+data.userBounties = [{{range .UserBounties}}{id: {{.ID}}, title: {{.Title}}, status: {{.StatusName}}},{{end}}];
+data.userGrantRounds = [{{range .UserGrantRounds}}{name: {{.Name}}, slug: {{.Slug}}, status: {{.StatusName}}},{{end}}];
+
 window.config.pageData.dashboardRepoList = data;
 </script>
 

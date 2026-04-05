@@ -57,6 +57,14 @@ func init() {
 	db.RegisterModel(new(GrantRound))
 }
 
+// StatusName returns the human-readable name for the grant round's status.
+func (r *GrantRound) StatusName() string {
+	if name, ok := GrantRoundStatusNames[r.Status]; ok {
+		return name
+	}
+	return "unknown"
+}
+
 // ErrGrantRoundNotExist represents a "GrantRoundNotExist" kind of error.
 type ErrGrantRoundNotExist struct {
 	ID int64

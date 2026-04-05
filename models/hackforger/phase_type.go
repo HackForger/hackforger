@@ -49,6 +49,12 @@ func (pt *PhaseType) HasAction(action string) bool {
 	return false
 }
 
+// GetAllPhaseTypes returns all phase types, ordered by activity kind and default order.
+func GetAllPhaseTypes(ctx context.Context) ([]*PhaseType, error) {
+	types := make([]*PhaseType, 0)
+	return types, db.GetEngine(ctx).OrderBy("activity_kind ASC, default_order ASC").Find(&types)
+}
+
 // GetPhaseTypesByActivityKind returns all phase types for a given activity kind.
 func GetPhaseTypesByActivityKind(ctx context.Context, activityKind string) ([]*PhaseType, error) {
 	types := make([]*PhaseType, 0)

@@ -198,9 +198,18 @@ func ViewHackathon(ctx *context.Context) {
 	if h == nil {
 		return
 	}
+	hackforger_service.EnsureStatusCacheFresh(ctx, h)
 	ctx.Data["Title"] = h.Name
 	ctx.Data["Hackathon"] = h
-	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.Status)
+	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.StatusCache)
+
+	// Phase data for dynamic timeline
+	phases, _ := hackforger_service.GetPhases(ctx, "hackathon", h.ID)
+	ctx.Data["Phases"] = phases
+	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
+	ctx.Data["CanRegister"] = canRegister
+	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
+	ctx.Data["CanSubmit"] = canSubmit
 
 	// Owner
 	if h.OwnerID > 0 {
@@ -312,7 +321,8 @@ func RegisterPost(ctx *context.Context) {
 		return
 	}
 
-	if h.Status != hackforger_model.HackathonStatusOpen {
+	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
+	if !canRegister {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -393,7 +403,8 @@ func SubmitForm(ctx *context.Context) {
 	if h == nil {
 		return
 	}
-	if h.Status != hackforger_model.HackathonStatusHacking {
+	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
+	if !canSubmit {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -426,7 +437,8 @@ func SubmitPost(ctx *context.Context) {
 	if h == nil {
 		return
 	}
-	if h.Status != hackforger_model.HackathonStatusHacking {
+	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
+	if !canSubmit {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -469,6 +481,7 @@ func ManageHackathon(ctx *context.Context) {
 	if h == nil {
 		return
 	}
+	hackforger_service.EnsureStatusCacheFresh(ctx, h)
 	if ctx.Doer == nil || (ctx.Doer.ID != h.OwnerID && !ctx.Doer.IsAdmin) {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_permission"))
 		ctx.Redirect("/hackathon/" + h.Slug)
@@ -486,7 +499,7 @@ func ManageHackathon(ctx *context.Context) {
 	ctx.Data["UploadAccepts"] = strings.ReplaceAll(setting.Attachment.AllowedTypes, "|", ",")
 	ctx.Data["UploadMaxFiles"] = setting.Attachment.MaxFiles
 	ctx.Data["UploadMaxSize"] = setting.Attachment.MaxSize
-	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.Status)
+	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.StatusCache)
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 	ctx.Data["Tracks"] = tracks
 	regs, _, _ := hackforger_model.ListRegistrations(ctx, hackforger_model.ListRegistrationsOptions{HackathonID: h.ID})
@@ -508,6 +521,28 @@ func ManageHackathon(ctx *context.Context) {
 		trackCriteria[t.ID] = tc
 	}
 	ctx.Data["TrackCriteria"] = trackCriteria
+
+	// Phase Timeline data for Vue component
+	phases, _ := hackforger_service.GetPhases(ctx, "hackathon", h.ID)
+	phasesJSON, _ := json.Marshal(phases)
+	phaseTypes, _ := hackforger_model.GetPhaseTypesByActivityKind(ctx, "hackathon")
+	// Resolve i18n keys for Vue
+	type ptJSON struct {
+		ID              int64  `json:"id"`
+		Key             string `json:"key"`
+		DisplayName     string `json:"display_name"`
+		IsUnique        bool   `json:"is_unique"`
+		DefaultOrder    int    `json:"default_order"`
+		AlreadyAddedTip string `json:"already_added_tip"`
+	}
+	alreadyAddedTip := ctx.Locale.TrString("hackforger.phase.already_added")
+	ptList := make([]ptJSON, len(phaseTypes))
+	for i, pt := range phaseTypes {
+		ptList[i] = ptJSON{ID: pt.ID, Key: pt.Key, DisplayName: ctx.Locale.TrString(pt.DisplayNameI18n), IsUnique: pt.IsUnique, DefaultOrder: pt.DefaultOrder, AlreadyAddedTip: alreadyAddedTip}
+	}
+	phaseTypesJSON, _ := json.Marshal(ptList)
+	ctx.Data["PhasesJSON"] = string(phasesJSON)
+	ctx.Data["PhaseTypesJSON"] = string(phaseTypesJSON)
 
 	// Render Markdown for description preview
 	if h.Description != "" {
@@ -574,10 +609,6 @@ func ManagePhasePost(ctx *context.Context) {
 	switch action {
 	case "publish":
 		err = hackforger_service.PublishHackathon(ctx, ctx.Doer.ID, h)
-	case "start":
-		err = hackforger_service.StartHacking(ctx, ctx.Doer.ID, h)
-	case "judge":
-		err = hackforger_service.StartJudging(ctx, ctx.Doer.ID, h)
 	case "cancel":
 		err = hackforger_service.CancelHackathon(ctx, ctx.Doer.ID, h)
 	default:
@@ -903,7 +934,7 @@ func FinalizePreview(ctx *context.Context) {
 	ctx.Data["JudgeNames"] = judgeNames
 	ctx.Data["TrackCriteria"] = trackCriteria
 	ctx.Data["Registrations"] = regs
-	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.Status)
+	ctx.Data["StatusLabel"] = hackforger_service.HackathonStatusLabel(h.StatusCache)
 	ctx.Data["ShowPreview"] = true
 	ctx.HTML(http.StatusOK, tplManage)
 }
@@ -932,7 +963,8 @@ func JudgePage(ctx *context.Context) {
 	if h == nil {
 		return
 	}
-	if h.Status != hackforger_model.HackathonStatusJudging {
+	canScore, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "score")
+	if !canScore {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -1101,7 +1133,7 @@ func Leaderboard(ctx *context.Context) {
 	}
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 
-	showBreakdown := h.Status == hackforger_model.HackathonStatusFinished
+	showBreakdown := h.StatusCache == hackforger_model.HackathonStatusFinished
 
 	// Use CalculateRanks to get per-criteria scores for the breakdown view.
 	rankings, _ := hackforger_service.CalculateRanks(ctx, h.ID)

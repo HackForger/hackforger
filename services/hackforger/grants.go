@@ -272,7 +272,7 @@ func CloseRound(ctx context.Context, doerID, roundID int64) error {
 	if err != nil {
 		return err
 	}
-	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundClosed, round, notify_service.AudienceGlobal)
+	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundClosed, round, notify_service.AudienceOrgMembers)
 }
 
 // FinalizeRound transitions a round from Review to Finalized.
@@ -326,7 +326,7 @@ func CancelRound(ctx context.Context, doerID, roundID int64) error {
 	if err != nil {
 		return err
 	}
-	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundCancelled, round, notify_service.AudienceGlobal)
+	return publishGrantEvent(ctx, doerID, hackforger_model.ActionGrantRoundCancelled, round, notify_service.AudienceOrgMembers|notify_service.AudienceGlobal)
 }
 
 // SubmitProject submits a project to an open grant round.
@@ -334,6 +334,11 @@ func SubmitProject(ctx context.Context, doerID, roundID int64, opts SubmitProjec
 	round, err := hackforger_model.GetGrantRoundByID(ctx, roundID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Phase gating (no-op if no phases configured for this grant round)
+	if allowed, _ := AllowsAction(ctx, "grant", roundID, "apply"); !allowed {
+		return nil, hackforger_model.ErrGrantRoundNotOpen{RoundID: roundID, Status: round.Status}
 	}
 
 	if round.Status != hackforger_model.GrantRoundStatusOpen {
@@ -360,6 +365,11 @@ func SubmitProject(ctx context.Context, doerID, roundID int64, opts SubmitProjec
 
 	if err := hackforger_model.CreateGrantProject(ctx, project); err != nil {
 		return nil, err
+	}
+
+	// Auto-subscribe: applicant joins the grant round's org for lifecycle updates
+	if round.OrgID > 0 {
+		_ = org_model.AddOrgUser(ctx, round.OrgID, doerID)
 	}
 
 	if doer, err := user_model.GetUserByID(ctx, doerID); err == nil {
@@ -670,4 +680,10 @@ func ExportRoundCSV(ctx context.Context, roundID int64) ([]byte, error) {
 
 	w.Flush()
 	return buf.Bytes(), w.Error()
+}
+
+// CheckGrantDeadlines is a cron sweep that checks for grant rounds past their deadline.
+func CheckGrantDeadlines(ctx context.Context) error {
+	// Stub: future implementation will auto-close rounds past application deadline
+	return nil
 }

@@ -245,3 +245,14 @@ func CountGrantProjectsByRound(ctx context.Context, roundID int64, status *Grant
 		Status:  status,
 	})
 }
+
+// GetUserGrantRounds returns grant rounds the user has submitted projects to, most recent first.
+func GetUserGrantRounds(ctx context.Context, userID int64, limit int) ([]*GrantRound, error) {
+	rounds := make([]*GrantRound, 0, limit)
+	return rounds, db.GetEngine(ctx).
+		Join("INNER", "grant_project", "grant_project.round_id = grant_round.id").
+		Where("grant_project.user_id = ?", userID).
+		OrderBy("grant_project.created_unix DESC").
+		Limit(limit).
+		Find(&rounds)
+}

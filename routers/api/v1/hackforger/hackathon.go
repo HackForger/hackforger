@@ -307,66 +307,6 @@ func PublishHackathon(ctx *context.APIContext) {
 
 // StartHackathon transitions a hackathon from Open to Hacking.
 //
-// swagger:operation POST /hackforger/hackathons/{id}/start hackforger hackforgerStartHackathon
-// ---
-// summary: Start hacking phase (open to hacking)
-// parameters:
-// - name: id
-//   in: path
-//   description: ID of the hackathon
-//   type: integer
-//   format: int64
-//   required: true
-// responses:
-//   "200":
-//     description: Hacking phase started
-//   "400":
-//     description: Invalid state transition
-//   "404":
-//     "$ref": "#/responses/notFound"
-func StartHackathon(ctx *context.APIContext) {
-	h := getHackathonFromPath(ctx)
-	if h == nil {
-		return
-	}
-	if err := hackforger_service.StartHacking(ctx, ctx.Doer.ID, h); err != nil {
-		ctx.Error(http.StatusBadRequest, "StartHacking", err)
-		return
-	}
-	ctx.JSON(http.StatusOK, map[string]string{"status": "hacking"})
-}
-
-// StartJudgingHackathon transitions a hackathon from Hacking to Judging.
-//
-// swagger:operation POST /hackforger/hackathons/{id}/judging hackforger hackforgerStartJudging
-// ---
-// summary: Start judging phase (hacking to judging)
-// parameters:
-// - name: id
-//   in: path
-//   description: ID of the hackathon
-//   type: integer
-//   format: int64
-//   required: true
-// responses:
-//   "200":
-//     description: Judging phase started
-//   "400":
-//     description: Invalid state transition
-//   "404":
-//     "$ref": "#/responses/notFound"
-func StartJudgingHackathon(ctx *context.APIContext) {
-	h := getHackathonFromPath(ctx)
-	if h == nil {
-		return
-	}
-	if err := hackforger_service.StartJudging(ctx, ctx.Doer.ID, h); err != nil {
-		ctx.Error(http.StatusBadRequest, "StartJudging", err)
-		return
-	}
-	ctx.JSON(http.StatusOK, map[string]string{"status": "judging"})
-}
-
 // FinalizeHackathon transitions a hackathon from Judging to Finished and computes ranks.
 //
 // swagger:operation POST /hackforger/hackathons/{id}/finalize hackforger hackforgerFinalizeHackathon

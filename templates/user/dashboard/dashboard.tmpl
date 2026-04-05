@@ -6,11 +6,11 @@
 			{{template "base/alert" .}}
 			{{template "user/heatmap" .}}
 			<div class="ui secondary pointing menu">
-				<a class="{{if ne .FeedType "community"}}active {{end}}item" href="?feed=code">
-					{{svg "octicon-code"}} {{ctx.Locale.Tr "hackforger.feed.code"}}
-				</a>
 				<a class="{{if eq .FeedType "community"}}active {{end}}item" href="?feed=community">
 					{{svg "octicon-people"}} {{ctx.Locale.Tr "hackforger.feed.community"}}
+				</a>
+				<a class="{{if eq .FeedType "code"}}active {{end}}item" href="?feed=code">
+					{{svg "octicon-code"}} {{ctx.Locale.Tr "hackforger.feed.code"}}
 				</a>
 			</div>
 			{{if eq .FeedType "community"}}

@@ -66,7 +66,8 @@ func CreateSubmission(ctx *context.APIContext) {
 		ctx.InternalServerError(err)
 		return
 	}
-	if h.Status != hackforger_model.HackathonStatusHacking {
+	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
+	if !canSubmit {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting submissions")
 		return
 	}

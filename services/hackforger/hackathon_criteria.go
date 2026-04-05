@@ -70,10 +70,10 @@ func checkCriteriaModifiable(ctx context.Context, hackathonID int64) error {
 	if err != nil {
 		return err
 	}
-	if h.Status > hackforger_model.HackathonStatusOpen {
+	if h.StatusCache > hackforger_model.HackathonStatusOpen {
 		return hackforger_model.ErrInvalidHackathonPhase{
 			HackathonID: h.ID,
-			Current:     h.Status,
+			Current:     h.StatusCache,
 			Expected:    hackforger_model.HackathonStatusOpen,
 		}
 	}

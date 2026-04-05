@@ -29,7 +29,7 @@
 			</div>
 			<div class="required field">
 				<label>{{ctx.Locale.Tr "hackforger.grant.project.repo"}}</label>
-				<select name="repo_id" class="ui search dropdown" required>
+				<select name="repo_id" class="ui search selection dropdown" required>
 					<option value="">{{ctx.Locale.Tr "hackforger.grant.project.select_repo"}}</option>
 					{{range .Repos}}
 					<option value="{{.ID}}">{{.FullName}}</option>

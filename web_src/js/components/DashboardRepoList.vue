@@ -18,7 +18,9 @@ export default {
   components: {SvgIcon},
   data() {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get('repo-search-tab') || 'repos';
+    const feedType = params.get('feed') || 'community';
+    const defaultTab = feedType === 'community' ? 'hackathons' : 'repos';
+    const tab = params.get('repo-search-tab') || defaultTab;
     const reposFilter = params.get('repo-search-filter') || 'all';
     const privateFilter = params.get('repo-search-private') || 'both';
     const archivedFilter = params.get('repo-search-archived') || 'unarchived';
@@ -64,9 +66,15 @@ export default {
       organizationsTotalCount: 0,
       organizationId: 0,
 
+      feedType,
       subUrl: appSubUrl,
       ...pageData.dashboardRepoList,
       activeIndex: -1, // don't select anything at load, first cursor down will select
+
+      // HackForger participation data (injected from Go template)
+      userHackathons: pageData.dashboardRepoList?.userHackathons || [],
+      userBounties: pageData.dashboardRepoList?.userBounties || [],
+      userGrantRounds: pageData.dashboardRepoList?.userGrantRounds || [],
     };
   },
 
@@ -326,8 +334,15 @@ export default {
 <template>
   <div>
     <div v-if="!isOrganization" class="ui secondary stackable menu tabs-with-labels">
-      <a :class="{item: true, active: tab === 'repos'}" @click="changeTab('repos')">{{ textMyRepos }} <span class="ui grey label tw-ml-2">{{ reposTotalCount }}</span></a>
-      <a :class="{item: true, active: tab === 'organizations'}" @click="changeTab('organizations')">{{ textMyOrgs }} <span class="ui grey label tw-ml-2">{{ organizationsTotalCount }}</span></a>
+      <template v-if="feedType === 'code'">
+        <a :class="{item: true, active: tab === 'repos'}" @click="changeTab('repos')">{{ textMyRepos }} <span class="ui grey label tw-ml-2">{{ reposTotalCount }}</span></a>
+        <a :class="{item: true, active: tab === 'organizations'}" @click="changeTab('organizations')">{{ textMyOrgs }} <span class="ui grey label tw-ml-2">{{ organizationsTotalCount }}</span></a>
+      </template>
+      <template v-else>
+        <a :class="{item: true, active: tab === 'hackathons'}" @click="changeTab('hackathons')">{{ textMyHackathons }} <span class="ui grey label tw-ml-2">{{ userHackathons.length }}</span></a>
+        <a :class="{item: true, active: tab === 'bounties'}" @click="changeTab('bounties')">{{ textMyBounties }} <span class="ui grey label tw-ml-2">{{ userBounties.length }}</span></a>
+        <a :class="{item: true, active: tab === 'grants'}" @click="changeTab('grants')">{{ textMyGrants }} <span class="ui grey label tw-ml-2">{{ userGrantRounds.length }}</span></a>
+      </template>
     </div>
     <div v-show="tab === 'repos'" class="ui tab active list dashboard-repos">
       <h4 v-if="isOrganization" class="tw-mt-4 tw-flex tw-items-center">
@@ -458,6 +473,55 @@ export default {
             </div>
           </li>
         </ul>
+      </div>
+    </div>
+    <!-- HackForger participation tabs -->
+    <div v-show="tab === 'hackathons'" class="ui tab active list">
+      <div class="ui attached table segment tw-rounded">
+        <ul v-if="userHackathons.length" class="repo-owner-name-list">
+          <li class="tw-flex tw-items-center tw-py-2" v-for="h in userHackathons" :key="h.slug">
+            <a class="repo-list-link muted" :href="subUrl + '/hackathon/' + encodeURIComponent(h.slug)">
+              <svg-icon name="octicon-rocket" :size="16" class="repo-list-icon"/>
+              <div class="text truncate">{{ h.name }}</div>
+            </a>
+            <div class="text light grey tw-flex tw-items-center tw-ml-2">
+              {{ h.status }}
+            </div>
+          </li>
+        </ul>
+        <p v-else class="tw-text-center tw-py-4 text light grey">{{ textNoParticipation }}</p>
+      </div>
+    </div>
+    <div v-show="tab === 'bounties'" class="ui tab active list">
+      <div class="ui attached table segment tw-rounded">
+        <ul v-if="userBounties.length" class="repo-owner-name-list">
+          <li class="tw-flex tw-items-center tw-py-2" v-for="b in userBounties" :key="b.id">
+            <a class="repo-list-link muted" :href="subUrl + '/bounty/' + b.id">
+              <svg-icon name="octicon-gift" :size="16" class="repo-list-icon"/>
+              <div class="text truncate">{{ b.title }}</div>
+            </a>
+            <div class="text light grey tw-flex tw-items-center tw-ml-2">
+              {{ b.status }}
+            </div>
+          </li>
+        </ul>
+        <p v-else class="tw-text-center tw-py-4 text light grey">{{ textNoParticipation }}</p>
+      </div>
+    </div>
+    <div v-show="tab === 'grants'" class="ui tab active list">
+      <div class="ui attached table segment tw-rounded">
+        <ul v-if="userGrantRounds.length" class="repo-owner-name-list">
+          <li class="tw-flex tw-items-center tw-py-2" v-for="g in userGrantRounds" :key="g.slug">
+            <a class="repo-list-link muted" :href="subUrl + '/grants/' + encodeURIComponent(g.slug)">
+              <svg-icon name="octicon-milestone" :size="16" class="repo-list-icon"/>
+              <div class="text truncate">{{ g.name }}</div>
+            </a>
+            <div class="text light grey tw-flex tw-items-center tw-ml-2">
+              {{ g.status }}
+            </div>
+          </li>
+        </ul>
+        <p v-else class="tw-text-center tw-py-4 text light grey">{{ textNoParticipation }}</p>
       </div>
     </div>
   </div>
