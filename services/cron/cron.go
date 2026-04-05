@@ -19,6 +19,11 @@ import (
 
 var scheduler = gocron.NewScheduler(time.Local)
 
+// GetScheduler returns the global gocron scheduler for external job registration.
+func GetScheduler() *gocron.Scheduler {
+	return scheduler
+}
+
 // Prevent duplicate running tasks.
 var taskStatusTable = sync.NewStatusTable()
 

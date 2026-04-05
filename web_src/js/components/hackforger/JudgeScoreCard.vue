@@ -56,20 +56,21 @@ export default {
   },
   methods: {
     getScore(subId, cId) {
-      return this.scores[subId]?.[cId]?.score ?? '';
+      return this.scores[subId]?.[cId]?.score ?? 0;
     },
-    setScore(subId, cId, val) {
+    setScore(subId, cId, event) {
       if (!this.scores[subId]) this.scores[subId] = {};
       if (!this.scores[subId][cId]) this.scores[subId][cId] = {score: 0, comment: ''};
-      this.scores[subId][cId].score = val;
+      const val = parseFloat(event.target.value);
+      this.scores[subId][cId].score = Number.isNaN(val) ? 0 : val;
     },
     getComment(subId, cId) {
       return this.scores[subId]?.[cId]?.comment ?? '';
     },
-    setComment(subId, cId, val) {
+    setComment(subId, cId, event) {
       if (!this.scores[subId]) this.scores[subId] = {};
       if (!this.scores[subId][cId]) this.scores[subId][cId] = {score: 0, comment: ''};
-      this.scores[subId][cId].comment = val;
+      this.scores[subId][cId].comment = event.target.value;
     },
     async submitScores(submissionId) {
       this.saving[submissionId] = true;
@@ -151,13 +152,15 @@ export default {
           <div class="field">
             <input type="number" :min="0" :max="c.max_score" step="0.5"
                    :value="getScore(sub.id, c.criteria_id)"
-                   @input="setScore(sub.id, c.criteria_id, $event.target.valueAsNumber)"
+                   @input="setScore(sub.id, c.criteria_id, $event)"
+                   @change="setScore(sub.id, c.criteria_id, $event)"
                    placeholder="Score">
           </div>
           <div class="field">
             <input type="text"
                    :value="getComment(sub.id, c.criteria_id)"
-                   @input="setComment(sub.id, c.criteria_id, $event.target.value)"
+                   @input="setComment(sub.id, c.criteria_id, $event)"
+                   @change="setComment(sub.id, c.criteria_id, $event)"
                    placeholder="Comment (optional)">
           </div>
         </div>

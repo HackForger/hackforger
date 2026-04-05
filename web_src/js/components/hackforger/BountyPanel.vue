@@ -206,7 +206,7 @@ export default {
       </button>
       <div v-else class="ui form tw-mt-2">
         <div v-for="(entry, idx) in winnerEntries" :key="idx" class="tw-flex tw-gap-2 tw-items-center tw-mb-1">
-          <input v-model="entry.user_id" type="number" placeholder="User ID" class="ui mini input" style="width: 100px;">
+          <input v-model="entry.user_id" type="number" placeholder="User ID" class="ui mini input tw-w-24">
           <span class="tw-text-sm">Rank #{{ entry.rank }}</span>
           <button v-if="winnerEntries.length > 1" class="hf-btn hf-btn-secondary" @click="removeWinnerEntry(idx)">
             &times;

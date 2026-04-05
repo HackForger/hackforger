@@ -10,6 +10,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
+	hackforger_service "forgejo.org/services/hackforger"
 	notify_service "forgejo.org/services/notify"
 )
 
@@ -64,7 +65,8 @@ func Register(ctx *context.APIContext) {
 		ctx.InternalServerError(err)
 		return
 	}
-	if h.Status != hackforger_model.HackathonStatusOpen {
+	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
+	if !canRegister {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")
 		return
 	}

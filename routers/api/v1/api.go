@@ -1770,8 +1770,6 @@ func Routes() *web.Route {
 				m.Put("", reqToken(), bind(hackforger_api.UpdateHackathonForm{}), hackforger_api.UpdateHackathon)
 				m.Delete("", reqToken(), hackforger_api.DeleteHackathon)
 				m.Post("/publish", reqToken(), hackforger_api.PublishHackathon)
-				m.Post("/start", reqToken(), hackforger_api.StartHackathon)
-				m.Post("/judge", reqToken(), hackforger_api.StartJudgingHackathon)
 				m.Post("/cancel", reqToken(), hackforger_api.CancelHackathon)
 				m.Get("/tracks", hackforger_api.ListTracks)
 				m.Post("/tracks", reqToken(), bind(hackforger_api.CreateTrackForm{}), hackforger_api.CreateTrack)
@@ -1799,6 +1797,12 @@ func Routes() *web.Route {
 				m.Put("/tracks/{tid}/criteria/{cid}", reqToken(), bind(hackforger_api.TrackCriteriaOverrideForm{}), hackforger_api.SetTrackCriteriaOverrideAPI)
 				m.Get("/finalize-preview", reqToken(), hackforger_api.FinalizePreviewAPI)
 				m.Post("/finalize", reqToken(), hackforger_api.FinalizeConfirmAPI)
+				m.Get("/phases", hackforger_api.ListPhases)
+				m.Post("/phases", reqToken(), bind(hackforger_api.AddPhaseForm{}), hackforger_api.AddPhaseAPI)
+				m.Post("/phases/reorder", reqToken(), bind(hackforger_api.ReorderPhasesForm{}), hackforger_api.ReorderPhasesAPI)
+				m.Put("/phases/{phase_id}", reqToken(), bind(hackforger_api.UpdatePhaseForm{}), hackforger_api.UpdatePhaseAPI)
+				m.Delete("/phases/{phase_id}", reqToken(), hackforger_api.DeletePhaseAPI)
+				m.Get("/current-phase", hackforger_api.GetCurrentPhaseAPI)
 			})
 
 			// Bounty global routes

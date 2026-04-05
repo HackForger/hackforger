@@ -65,6 +65,14 @@ func init() {
 	db.RegisterModel(new(Bounty))
 }
 
+// StatusName returns the human-readable name for the bounty's status.
+func (b *Bounty) StatusName() string {
+	if name, ok := BountyStatusNames[b.Status]; ok {
+		return name
+	}
+	return "unknown"
+}
+
 // ErrBountyNotExist represents a "BountyNotExist" kind of error.
 type ErrBountyNotExist struct {
 	ID      int64

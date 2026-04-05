@@ -13,11 +13,10 @@ import (
 func registerHackforgerHackathonStatus() {
 	RegisterTaskFatal("hackforger_hackathon_status", &BaseConfig{
 		Enabled:    true,
-		RunAtStart: false,
+		RunAtStart: true,
 		Schedule:   "@every 5m",
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
-		// Phase 1: call hackforger_service.CheckHackathonTransitions(ctx)
-		return nil
+		return hackforger_service.CheckHackathonTransitions(ctx)
 	})
 }
 
@@ -27,8 +26,7 @@ func registerHackforgerBountyExpiry() {
 		RunAtStart: false,
 		Schedule:   "@every 5m",
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
-		// Phase 1: call hackforger_service.ExpireOldBounties(ctx)
-		return nil
+		return hackforger_service.CheckExpiredBounties(ctx)
 	})
 }
 
@@ -48,12 +46,14 @@ func registerHackforgerGrantDeadline() {
 		RunAtStart: false,
 		Schedule:   "@every 1h",
 	}, func(ctx context.Context, _ *user_model.User, _ Config) error {
-		// Phase 1: call hackforger_service.CheckGrantDeadlines(ctx)
-		return nil
+		return hackforger_service.CheckGrantDeadlines(ctx)
 	})
 }
 
 func initHackforgerTasks() {
+	// Inject gocron scheduler into hackforger service for phase notifications
+	hackforger_service.SetPhaseScheduler(GetScheduler())
+
 	registerHackforgerHackathonStatus()
 	registerHackforgerBountyExpiry()
 	registerHackforgerReputationRecalc()

@@ -25,7 +25,7 @@
 					{{if .UserRepos}}
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo"}}</label>
-						<select name="repo_id" class="ui search dropdown">
+						<select name="repo_id" class="ui search selection dropdown">
 							<option value="0">— {{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo_none"}} —</option>
 							{{range .UserRepos}}
 							<option value="{{.ID}}">{{.FullName}}</option>
@@ -33,7 +33,7 @@
 						</select>
 					</div>
 					{{end}}
-					{{if .Tracks}}<div class="field hf-track-select"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.track"}}</label><select name="track_id" class="ui dropdown"><option value="0">— None —</option>{{range .Tracks}}<option value="{{.ID}}" title="{{.Name}}">{{.Name}}</option>{{end}}</select></div>{{end}}
+					{{if .Tracks}}<div class="field hf-track-select"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.track"}}</label><select name="track_id" class="ui selection dropdown"><option value="0">— None —</option>{{range .Tracks}}<option value="{{.ID}}" title="{{.Name}}">{{.Name}}</option>{{end}}</select></div>{{end}}
 					<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.submit"}}</button>
 				</form>
 			</div>

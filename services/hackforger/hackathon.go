@@ -288,11 +288,14 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 	return nil
 }
 
-// PublishHackathon transitions Draft → Open. Requires >= 1 track.
+// PublishHackathon sets IsPublished=true after validating phases and tracks.
+// StatusCache will be updated by SyncStatusCache when the first phase's StartTime arrives.
 func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status != hackforger_model.HackathonStatusDraft {
-		return fmt.Errorf("hackathon must be in Draft status to publish [id: %d, status: %d]", h.ID, h.Status)
+	if h.IsPublished {
+		return fmt.Errorf("hackathon is already published [id: %d]", h.ID)
 	}
+
+	// Validate tracks
 	trackCount, err := hackforger_model.CountTracksByHackathon(ctx, h.ID)
 	if err != nil {
 		return err
@@ -300,51 +303,40 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 	if trackCount == 0 {
 		return ErrNoTracks{HackathonID: h.ID}
 	}
-	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusOpen); err != nil {
-		return err
-	}
-	publishPhaseChange(ctx, doerID, h, hackforger_model.HackathonStatusDraft, hackforger_model.HackathonStatusOpen)
-	return nil
-}
 
-// StartHacking transitions Open → Hacking.
-func StartHacking(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status != hackforger_model.HackathonStatusOpen {
-		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusOpen}
-	}
-	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusHacking); err != nil {
-		return err
-	}
-	// Tag track repos with v0-kickoff baseline
-	tagTrackRepos(ctx, doerID, h.ID, "v0-kickoff", "Hackathon kickoff baseline")
-	publishPhaseChange(ctx, doerID, h, hackforger_model.HackathonStatusOpen, hackforger_model.HackathonStatusHacking)
-	return nil
-}
-
-// StartJudging transitions Hacking → Judging. Requires >= 1 submission.
-func StartJudging(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status != hackforger_model.HackathonStatusHacking {
-		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusHacking}
-	}
-	criteriaCount, err := hackforger_model.CountCriteriaByHackathon(ctx, h.ID)
+	// Validate phases
+	phases, err := hackforger_model.GetPhasesByActivity(ctx, "hackathon", h.ID)
 	if err != nil {
 		return err
 	}
-	if criteriaCount == 0 {
-		return hackforger_model.ErrNoCriteria{HackathonID: h.ID}
+	hasRegistration := false
+	hasDevelopment := false
+	for _, p := range phases {
+		if p.PhaseType == nil {
+			continue
+		}
+		switch p.PhaseType.Key {
+		case "registration":
+			hasRegistration = true
+		case "development":
+			hasDevelopment = true
+		}
 	}
-	subCount, err := hackforger_model.CountSubmissions(ctx, h.ID)
-	if err != nil {
+	if !hasRegistration {
+		return fmt.Errorf("at least one registration phase is required")
+	}
+	if !hasDevelopment {
+		return fmt.Errorf("at least one development phase is required")
+	}
+
+	// Set published
+	if err := hackforger_model.SetIsPublished(ctx, h.ID, true); err != nil {
 		return err
 	}
-	if subCount == 0 {
-		return ErrNoSubmissions{HackathonID: h.ID}
-	}
-	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusJudging); err != nil {
-		return err
-	}
-	publishPhaseChange(ctx, doerID, h, hackforger_model.HackathonStatusHacking, hackforger_model.HackathonStatusJudging)
-	return nil
+	h.IsPublished = true
+
+	// Sync status (may transition if first phase already started)
+	return SyncStatusCache(ctx, h.ID, doerID)
 }
 
 // PreviewFinalize calculates rankings for all tracks without changing status.
@@ -354,9 +346,9 @@ func PreviewFinalize(ctx context.Context, hackathonID int64) (map[int64][]Ranked
 	if err != nil {
 		return nil, err
 	}
-	if h.Status != hackforger_model.HackathonStatusJudging {
+	if h.StatusCache != hackforger_model.HackathonStatusJudging {
 		return nil, hackforger_model.ErrInvalidHackathonPhase{
-			HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusJudging,
+			HackathonID: h.ID, Current: h.StatusCache, Expected: hackforger_model.HackathonStatusJudging,
 		}
 	}
 	return CalculateRanks(ctx, hackathonID)
@@ -364,9 +356,9 @@ func PreviewFinalize(ctx context.Context, hackathonID int64) (map[int64][]Ranked
 
 // ConfirmFinalize locks status to Finished, persists ranks, creates releases.
 func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status != hackforger_model.HackathonStatusJudging {
+	if h.StatusCache != hackforger_model.HackathonStatusJudging {
 		return hackforger_model.ErrInvalidHackathonPhase{
-			HackathonID: h.ID, Current: h.Status, Expected: hackforger_model.HackathonStatusJudging,
+			HackathonID: h.ID, Current: h.StatusCache, Expected: hackforger_model.HackathonStatusJudging,
 		}
 	}
 	// Tag track repos (preserves existing behavior)
@@ -385,7 +377,7 @@ func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hack
 	}
 
 	// Update status
-	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusFinished); err != nil {
+	if err := hackforger_model.UpdateHackathonStatusCache(ctx, h.ID, hackforger_model.HackathonStatusFinished); err != nil {
 		return err
 	}
 
@@ -425,15 +417,22 @@ func ConfirmFinalize(ctx context.Context, doerID int64, h *hackforger_model.Hack
 
 // CancelHackathon transitions to Cancelled. Any non-Finished status.
 func CancelHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hackathon) error {
-	if h.Status == hackforger_model.HackathonStatusFinished {
-		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: 0}
+	if h.StatusCache == hackforger_model.HackathonStatusFinished {
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.StatusCache, Expected: 0}
 	}
-	if h.Status == hackforger_model.HackathonStatusCancelled {
-		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.Status, Expected: 0}
+	if h.StatusCache == hackforger_model.HackathonStatusCancelled {
+		return hackforger_model.ErrInvalidHackathonPhase{HackathonID: h.ID, Current: h.StatusCache, Expected: 0}
 	}
-	oldStatus := h.Status
-	if err := hackforger_model.UpdateHackathonStatus(ctx, h.ID, hackforger_model.HackathonStatusCancelled); err != nil {
+	oldStatus := h.StatusCache
+	if err := hackforger_model.UpdateHackathonStatusCache(ctx, h.ID, hackforger_model.HackathonStatusCancelled); err != nil {
 		return err
+	}
+	// Delete all future phases
+	phases, _ := hackforger_model.GetPhasesByActivity(ctx, "hackathon", h.ID)
+	for _, p := range phases {
+		if p.IsFuture() {
+			_ = hackforger_model.DeletePhase(ctx, p.ID)
+		}
 	}
 	publishPhaseChange(ctx, doerID, h, oldStatus, hackforger_model.HackathonStatusCancelled)
 	return nil
@@ -491,10 +490,11 @@ func CreateSubmission(ctx context.Context, doer *user_model.User, h *hackforger_
 		return err
 	}
 
-	// 3. If track has a repo, trigger workflow to update submission index
+	// 3. If track has a repo, auto-watch and trigger workflow
 	if sub.TrackID > 0 {
 		track, err := hackforger_model.GetTrackByID(ctx, sub.TrackID)
 		if err == nil && track.RepoID > 0 {
+			_ = repo_model.WatchRepo(ctx, doer.ID, track.RepoID, true)
 			triggerSubmissionIndexUpdate(ctx, doer, h, track)
 		}
 	}

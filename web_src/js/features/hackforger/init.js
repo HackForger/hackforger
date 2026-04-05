@@ -45,4 +45,22 @@ export function initHackforger() {
       }).mount(judgeEl);
     })();
   }
+
+  // PhaseTimeline
+  const phaseEl = document.getElementById('hackforger-phase-timeline');
+  if (phaseEl) {
+    (async () => {
+      const {default: PhaseTimeline} = await import(
+        /* webpackChunkName: "hackforger-phase" */
+        '../../components/hackforger/PhaseTimeline.vue'
+      );
+      const {createApp} = await import('vue');
+      createApp(PhaseTimeline, {
+        hackathonSlug: phaseEl.dataset.hackathonSlug,
+        initialPhases: JSON.parse(phaseEl.dataset.phases || '[]'),
+        phaseTypes: JSON.parse(phaseEl.dataset.phaseTypes || '[]'),
+        isPublished: phaseEl.dataset.isPublished === 'true',
+      }).mount(phaseEl);
+    })();
+  }
 }

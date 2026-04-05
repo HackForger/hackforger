@@ -30,7 +30,7 @@ export function initSearchModal() {
     input.focus();
     input.value = '';
     resultsContainer.innerHTML = `<div class="hf-search-empty">${escapeHtml(emptyText)}</div>`;
-    assistantPanel.style.display = 'none';
+    if (assistantPanel) assistantPanel.style.display = 'none';
   }
 
   function closeModal() {
@@ -87,7 +87,7 @@ export function initSearchModal() {
   async function doSearch(query) {
     if (!query.trim()) {
       resultsContainer.innerHTML = `<div class="hf-search-empty">${escapeHtml(emptyText)}</div>`;
-      assistantPanel.style.display = 'none';
+      if (assistantPanel) assistantPanel.style.display = 'none';
       return;
     }
 

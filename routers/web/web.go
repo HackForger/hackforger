@@ -556,6 +556,12 @@ func registerRoutes(m *web.Route) {
 			m.Post("/criteria/{cid}/update", hackforger_web.ManageCriteriaUpdatePost)
 			m.Post("/criteria/{cid}/delete", hackforger_web.ManageCriteriaDeletePost)
 			m.Post("/tracks/{tid}/criteria", hackforger_web.ManageTrackCriteriaPost)
+			// Phase Timeline CRUD (JSON endpoints for Vue component)
+			m.Get("/phases", hackforger_web.ManagePhases)
+			m.Post("/phases", hackforger_web.ManagePhasesAdd)
+			m.Post("/phases/reorder", hackforger_web.ManagePhasesReorder)
+			m.Put("/phases/{phase_id}", hackforger_web.ManagePhasesUpdate)
+			m.Delete("/phases/{phase_id}", hackforger_web.ManagePhasesDelete)
 		})
 		m.Group("/hackathon/{slug}/judge", func() {
 			m.Get("", hackforger_web.JudgePage)
@@ -950,6 +956,15 @@ func registerRoutes(m *web.Route) {
 			m.Post("/recalc", hackforger_web.AdminReputationRecalc)
 		})
 		// ***** END: HackForger Admin Reputation *****
+
+		// ***** START: HackForger Admin Phase Types *****
+		m.Group("/hackforger/phase-types", func() {
+			m.Get("", hackforger_web.AdminPhaseTypes)
+			m.Post("", hackforger_web.AdminPhaseTypeCreate)
+			m.Post("/{id}/edit", hackforger_web.AdminPhaseTypeUpdate)
+			m.Post("/{id}/delete", hackforger_web.AdminPhaseTypeDelete)
+		})
+		// ***** END: HackForger Admin Phase Types *****
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 

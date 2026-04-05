@@ -118,3 +118,14 @@ func UpdateBountyApplication(ctx context.Context, app *BountyApplication) error 
 	_, err := db.GetEngine(ctx).ID(app.ID).AllCols().Update(app)
 	return err
 }
+
+// GetUserBounties returns bounties the user has been accepted for, most recent first.
+func GetUserBounties(ctx context.Context, userID int64, limit int) ([]*Bounty, error) {
+	bounties := make([]*Bounty, 0, limit)
+	return bounties, db.GetEngine(ctx).
+		Join("INNER", "bounty_application", "bounty_application.bounty_id = bounty.id").
+		Where("bounty_application.user_id = ? AND bounty_application.status = ?", userID, ApplicationStatusAccepted).
+		OrderBy("bounty_application.created_unix DESC").
+		Limit(limit).
+		Find(&bounties)
+}

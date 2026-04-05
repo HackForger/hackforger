@@ -44,7 +44,10 @@ type Hackathon struct {
 	Name              string             `xorm:"NOT NULL"`
 	Slug              string             `xorm:"UNIQUE NOT NULL"`
 	Description       string             `xorm:"TEXT"`
-	Status            HackathonStatus    `xorm:"NOT NULL DEFAULT 0"`
+	// StatusCache is computed from the Phase system. Do NOT set directly.
+	// Use SyncStatusCache() to update. Source of truth is the phase table.
+	StatusCache       HackathonStatus    `xorm:"'status_cache' NOT NULL DEFAULT 0"`
+	IsPublished       bool               `xorm:"NOT NULL DEFAULT false"`
 	MaxTeamSize       int                `xorm:"NOT NULL DEFAULT 5"`
 	RegistrationStart timeutil.TimeStamp `xorm:""`
 	RegistrationEnd   timeutil.TimeStamp `xorm:""`
@@ -60,6 +63,14 @@ type Hackathon struct {
 
 func init() {
 	db.RegisterModel(new(Hackathon))
+}
+
+// StatusCacheName returns the human-readable name for the hackathon's cached status.
+func (h *Hackathon) StatusCacheName() string {
+	if name, ok := HackathonStatusNames[h.StatusCache]; ok {
+		return name
+	}
+	return "unknown"
 }
 
 // ErrHackathonNotExist represents a "HackathonNotExist" kind of error.
@@ -205,7 +216,7 @@ func (opts ListHackathonsOptions) ToConds() builder.Cond {
 		cond = cond.And(builder.Eq{"hackathon.org_id": opts.OrgID})
 	}
 	if opts.Status != nil {
-		cond = cond.And(builder.Eq{"hackathon.status": *opts.Status})
+		cond = cond.And(builder.Eq{"hackathon.status_cache": *opts.Status})
 	}
 	if opts.Keyword != "" {
 		cond = cond.And(builder.Or(
@@ -228,13 +239,26 @@ func (opts ListHackathonsOptions) ToOrders() string {
 }
 
 // ListHackathons returns a list of hackathons matching the given options.
+// ListPublishedHackathons returns all hackathons where is_published = true.
+func ListPublishedHackathons(ctx context.Context) ([]*Hackathon, error) {
+	hackathons := make([]*Hackathon, 0)
+	return hackathons, db.GetEngine(ctx).Where("is_published = ?", true).Find(&hackathons)
+}
+
 func ListHackathons(ctx context.Context, opts ListHackathonsOptions) ([]*Hackathon, int64, error) {
 	return db.FindAndCount[Hackathon](ctx, opts)
 }
 
-// UpdateHackathonStatus updates only the status field of a hackathon.
-func UpdateHackathonStatus(ctx context.Context, id int64, status HackathonStatus) error {
-	_, err := db.GetEngine(ctx).ID(id).Cols("status").Update(&Hackathon{Status: status})
+// UpdateHackathonStatusCache updates the status_cache field. Internal use only.
+// External callers should use services/hackforger.SyncStatusCache() instead.
+func UpdateHackathonStatusCache(ctx context.Context, id int64, status HackathonStatus) error {
+	_, err := db.GetEngine(ctx).ID(id).Cols("status_cache").Update(&Hackathon{StatusCache: status})
+	return err
+}
+
+// SetIsPublished updates the is_published flag.
+func SetIsPublished(ctx context.Context, id int64, published bool) error {
+	_, err := db.GetEngine(ctx).ID(id).Cols("is_published").Update(&Hackathon{IsPublished: published})
 	return err
 }
 
@@ -250,8 +274,8 @@ func DeleteHackathon(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	if h.Status != HackathonStatusDraft {
-		return fmt.Errorf("hackathon can only be deleted in draft status [id: %d, status: %d]", id, h.Status)
+	if h.StatusCache != HackathonStatusDraft {
+		return fmt.Errorf("hackathon can only be deleted in draft status [id: %d, status: %d]", id, h.StatusCache)
 	}
 	_, err = db.GetEngine(ctx).ID(id).Delete(new(Hackathon))
 	return err

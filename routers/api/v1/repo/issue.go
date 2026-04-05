@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
+	hackforger_model "forgejo.org/models/hackforger"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	access_model "forgejo.org/models/perm/access"
@@ -833,6 +834,14 @@ func EditIssue(ctx *context.APIContext) {
 	if !issue.IsPoster(ctx.Doer.ID) && !canWrite {
 		ctx.Status(http.StatusForbidden)
 		return
+	}
+
+	// HackForger: block title/body edit if issue has an attached bounty
+	if (len(form.Title) > 0 || form.Body != nil) {
+		if _, bountyErr := hackforger_model.GetBountyByIssueID(ctx, issue.ID); bountyErr == nil {
+			ctx.Error(http.StatusForbidden, "BountyLocked", fmt.Errorf("issue is locked by an attached bounty"))
+			return
+		}
 	}
 
 	err = issue_service.SetIssueUpdateDate(ctx, issue, form.Updated, ctx.Doer)

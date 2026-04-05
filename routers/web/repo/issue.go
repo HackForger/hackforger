@@ -2298,6 +2298,12 @@ func UpdateIssueTitle(ctx *context.Context) {
 		return
 	}
 
+	// HackForger: block title edit if issue has an attached bounty
+	if _, err := hackforger_model.GetBountyByIssueID(ctx, issue.ID); err == nil {
+		ctx.JSONError(ctx.Tr("hackforger.bounty.error.issue_locked"))
+		return
+	}
+
 	if !ctx.IsSigned || (!issue.IsPoster(ctx.Doer.ID) && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull)) {
 		ctx.Error(http.StatusForbidden)
 		return
@@ -2357,6 +2363,12 @@ func UpdateIssueRef(ctx *context.Context) {
 func UpdateIssueContent(ctx *context.Context) {
 	issue := GetActionIssue(ctx)
 	if ctx.Written() {
+		return
+	}
+
+	// HackForger: block content edit if issue has an attached bounty
+	if _, err := hackforger_model.GetBountyByIssueID(ctx, issue.ID); err == nil {
+		ctx.JSONError(ctx.Tr("hackforger.bounty.error.issue_locked"))
 		return
 	}
 

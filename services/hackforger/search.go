@@ -180,7 +180,7 @@ func loadHackforgerEntity(ctx context.Context, entityType string, id int64) *Sea
 			ID:     h.ID,
 			Title:  h.Name,
 			Desc:   truncateDesc(h.Description),
-			Status: hackforger_model.HackathonStatusNames[h.Status],
+			Status: hackforger_model.HackathonStatusNames[h.StatusCache],
 			URL:    fmt.Sprintf("/hackathons/%s", h.Slug),
 			Icon:   "octicon-rocket",
 		}
