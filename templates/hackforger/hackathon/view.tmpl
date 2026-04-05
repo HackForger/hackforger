@@ -7,7 +7,7 @@
 			<div>
 				<h1 class="tw-mb-1">{{.Hackathon.Name}}</h1>
 				<div class="tw-flex tw-items-center tw-gap-2">
-					{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.Status "Label" .StatusLabel}}
+					{{template "hackforger/helpers/status_badge" dict "Type" "hackathon" "Status" .Hackathon.StatusCache "Label" .StatusLabel}}
 					{{if .Owner}}
 					<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.hackathon.view.organizer"}}: <a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a></span>
 					{{end}}
@@ -22,28 +22,19 @@
 			</div>
 		</div>
 
-		{{/* Timeline */}}
-		{{if or .Hackathon.RegistrationEnd .Hackathon.HackingEnd .Hackathon.JudgingEnd}}
+		{{/* Dynamic Phase Timeline */}}
+		{{if .Phases}}
 		<div class="hf-timeline">
-			{{if .Hackathon.RegistrationEnd}}
-			<div class="hf-timeline-step {{if ge .Hackathon.Status 2}}hf-step-done{{else if eq .Hackathon.Status 1}}hf-step-active{{else}}hf-step-upcoming{{end}}">
-				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.registration_end"}}</div>
-				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.RegistrationEnd}}</div>
-				<div class="hf-step-status">{{if ge .Hackathon.Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}{{else if eq .Hackathon.Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}{{end}}</div>
-			</div>
-			{{end}}
-			{{if .Hackathon.HackingEnd}}
-			<div class="hf-timeline-step {{if ge .Hackathon.Status 3}}hf-step-done{{else if eq .Hackathon.Status 2}}hf-step-active{{else}}hf-step-upcoming{{end}}">
-				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.hacking_end"}}</div>
-				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.HackingEnd}}</div>
-				<div class="hf-step-status">{{if ge .Hackathon.Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}{{else if eq .Hackathon.Status 2}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}{{end}}</div>
-			</div>
-			{{end}}
-			{{if .Hackathon.JudgingEnd}}
-			<div class="hf-timeline-step {{if ge .Hackathon.Status 4}}hf-step-done{{else if eq .Hackathon.Status 3}}hf-step-active{{else}}hf-step-upcoming{{end}}">
-				<div class="hf-step-name">{{ctx.Locale.Tr "hackforger.hackathon.view.judging_end"}}</div>
-				<div class="hf-step-date">{{DateUtils.AbsoluteShort .Hackathon.JudgingEnd}}</div>
-				<div class="hf-step-status">{{if ge .Hackathon.Status 4}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}{{else if eq .Hackathon.Status 3}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}{{end}}</div>
+			{{range .Phases}}
+			<div class="hf-timeline-step {{if .IsLocked}}hf-step-done{{else if .IsActive}}hf-step-active{{else}}hf-step-upcoming{{end}}">
+				<div class="hf-step-name">{{if .PhaseType}}{{ctx.Locale.Tr .PhaseType.DisplayNameI18n}}{{end}}</div>
+				<div class="hf-step-date">{{DateUtils.AbsoluteShort .StartTime}} — {{DateUtils.AbsoluteShort .EndTime}}</div>
+				<div class="hf-step-status">
+					{{if .IsLocked}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}
+					{{else if .IsActive}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.active"}}
+					{{else}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.upcoming"}}
+					{{end}}
+				</div>
 			</div>
 			{{end}}
 		</div>
@@ -87,7 +78,7 @@
 		{{end}}
 
 		{{/* Registration CTA */}}
-		{{if and (eq .Hackathon.Status 1) .SignedUserID (not .IsRegistered)}}
+		{{if and (eq .Hackathon.StatusCache 1) .SignedUserID (not .IsRegistered)}}
 		<div class="hf-card">
 			<div class="hf-card-head">
 				<div class="hf-card-head-left">{{svg "octicon-person-add" 16}} {{ctx.Locale.Tr "hackforger.hackathon.register"}}</div>
@@ -96,7 +87,7 @@
 				<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/register" class="ui form">
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.register.mode"}}</label>
-						<select name="org_id" class="ui dropdown">
+						<select name="org_id" class="ui selection dropdown">
 							<option value="0">{{ctx.Locale.Tr "hackforger.hackathon.register.solo"}}</option>
 							{{range .UserOrgs}}
 							<option value="{{.ID}}">{{.Name}} ({{ctx.Locale.Tr "hackforger.hackathon.register.team"}})</option>
@@ -134,7 +125,7 @@
 		{{end}}
 
 		{{/* Submit button */}}
-		{{if and (eq .Hackathon.Status 2) .IsRegistered}}
+		{{if and (eq .Hackathon.StatusCache 2) .IsRegistered}}
 		<div class="tw-text-center tw-my-4">
 			<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/submit">{{svg "octicon-upload" 16}} {{ctx.Locale.Tr "hackforger.hackathon.submit"}}</a>
 		</div>
@@ -174,7 +165,7 @@
 		{{end}}
 
 		{{/* Leaderboard link */}}
-		{{if eq .Hackathon.Status 4}}
+		{{if eq .Hackathon.StatusCache 4}}
 		<div class="tw-text-center tw-my-4">
 			<a class="hf-btn hf-btn-secondary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/leaderboard">{{svg "octicon-trophy" 16}} {{ctx.Locale.Tr "hackforger.hackathon.leaderboard"}}</a>
 		</div>
