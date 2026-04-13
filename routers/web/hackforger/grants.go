@@ -15,6 +15,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/markup/markdown"
 	"forgejo.org/modules/setting"
@@ -493,7 +494,7 @@ func ManageGrantRoundOpen(ctx *context.Context) {
 		return
 	}
 	if err := hackforger_service.OpenRound(ctx, ctx.Doer.ID, round.ID); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to open round: %v", err))
+		handleGrantRoundError(ctx, "OpenRound", err)
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.round.opened"))
 	}
@@ -509,7 +510,7 @@ func ManageGrantRoundClose(ctx *context.Context) {
 		return
 	}
 	if err := hackforger_service.CloseRound(ctx, ctx.Doer.ID, round.ID); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to close round: %v", err))
+		handleGrantRoundError(ctx, "CloseRound", err)
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.round.closed"))
 	}
@@ -525,7 +526,7 @@ func ManageGrantRoundFinalize(ctx *context.Context) {
 		return
 	}
 	if err := hackforger_service.FinalizeRound(ctx, ctx.Doer.ID, round.ID); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to finalize round: %v", err))
+		handleGrantRoundError(ctx, "FinalizeRound", err)
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.round.finalized"))
 	}
@@ -541,7 +542,7 @@ func ManageGrantRoundDistribute(ctx *context.Context) {
 		return
 	}
 	if err := hackforger_service.DistributeRound(ctx, ctx.Doer.ID, round.ID); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to distribute: %v", err))
+		handleGrantRoundError(ctx, "DistributeRound", err)
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.round.distributed"))
 	}
@@ -557,7 +558,7 @@ func ManageGrantRoundCancel(ctx *context.Context) {
 		return
 	}
 	if err := hackforger_service.CancelRound(ctx, ctx.Doer.ID, round.ID); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to cancel round: %v", err))
+		handleGrantRoundError(ctx, "CancelRound", err)
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.round.cancelled"))
 	}
@@ -610,7 +611,7 @@ func ManageGrantProjectApprove(ctx *context.Context) {
 	pid := ctx.ParamsInt64(":pid")
 
 	if err := hackforger_service.ApproveProject(ctx, ctx.Doer.ID, pid); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to approve project: %v", err))
+		handleGrantProjectError(ctx, "ApproveProject", err, "hackforger.grant.error.approve_failed")
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.project.approved"))
 	}
@@ -623,7 +624,7 @@ func ManageGrantProjectReject(ctx *context.Context) {
 	pid := ctx.ParamsInt64(":pid")
 
 	if err := hackforger_service.RejectProject(ctx, ctx.Doer.ID, pid); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to reject project: %v", err))
+		handleGrantProjectError(ctx, "RejectProject", err, "hackforger.grant.error.reject_failed")
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.project.rejected"))
 	}
@@ -639,7 +640,11 @@ func ManageGrantProjectAward(ctx *context.Context) {
 	credits, _ := strconv.ParseInt(ctx.Req.FormValue("award_credits"), 10, 64)
 
 	if err := hackforger_service.AllocateAward(ctx, ctx.Doer.ID, pid, amount, credits); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to allocate award: %v", err))
+		if hackforger_model.IsErrExceedsBudget(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.grant.error.exceeds_budget"))
+		} else {
+			handleGrantProjectError(ctx, "AllocateAward", err, "hackforger.grant.error.award_failed")
+		}
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.project.award_set"))
 	}
@@ -652,7 +657,7 @@ func ManageGrantProjectDistribute(ctx *context.Context) {
 	pid := ctx.ParamsInt64(":pid")
 
 	if err := hackforger_service.DistributeProject(ctx, ctx.Doer.ID, pid); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to distribute: %v", err))
+		handleGrantProjectError(ctx, "DistributeProject", err, "hackforger.grant.error.distribute_failed")
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.grant.project.distributed"))
 	}
@@ -682,4 +687,36 @@ func ExportGrantRoundCSV(ctx *context.Context) {
 	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-projects.csv", round.Slug))
 	ctx.Resp.WriteHeader(http.StatusOK)
 	ctx.Resp.Write(data) //nolint:errcheck
+}
+
+// handleGrantRoundError maps typed grant round errors to i18n flash messages.
+func handleGrantRoundError(ctx *context.Context, caller string, err error) {
+	switch {
+	case hackforger_service.IsErrInvalidTransition(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.invalid_transition"))
+	case hackforger_service.IsErrAccessDenied(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.access_denied"))
+	case hackforger_service.IsErrRoundNotFinalized(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.not_finalized"))
+	case hackforger_model.IsErrUnallocatedProjects(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.unallocated"))
+	default:
+		log.Error("%s: %v", caller, err)
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.operation_failed"))
+	}
+}
+
+// handleGrantProjectError maps typed grant project errors to i18n flash messages.
+func handleGrantProjectError(ctx *context.Context, caller string, err error, fallbackKey string) {
+	switch {
+	case hackforger_service.IsErrAccessDenied(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.access_denied"))
+	case hackforger_service.IsErrInvalidTransition(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.invalid_transition"))
+	case hackforger_model.IsErrExceedsBudget(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.exceeds_budget"))
+	default:
+		log.Error("%s: %v", caller, err)
+		ctx.Flash.Error(ctx.Tr(fallbackKey))
+	}
 }

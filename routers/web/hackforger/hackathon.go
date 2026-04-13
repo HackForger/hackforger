@@ -602,7 +602,7 @@ func ManagePhasePost(ctx *context.Context) {
 	case "cancel":
 		err = hackforger_service.CancelHackathon(ctx, ctx.Doer.ID, h)
 	default:
-		ctx.Flash.Error("Unknown action")
+		ctx.Flash.Error(ctx.Tr("hackforger.bounty.error.unknown_action"))
 		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 		return
 	}

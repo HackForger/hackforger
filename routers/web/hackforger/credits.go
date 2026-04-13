@@ -12,6 +12,7 @@ import (
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	hackforger_service "forgejo.org/services/hackforger"
 
@@ -197,7 +198,12 @@ func AdminCreditsDeposit(ctx *context.Context) {
 	}
 
 	if err := hackforger_service.AdminDeposit(ctx, ctx.Doer, userID, amount, ref, note); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to deposit: %v", err))
+		if hackforger_service.IsErrNotAdmin(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.not_admin"))
+		} else {
+			log.Error("AdminCreditsDeposit: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.deposit_failed"))
+		}
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.deposited"))
 	}
@@ -220,8 +226,11 @@ func AdminCreditsDeduct(ctx *context.Context) {
 	if err := hackforger_service.AdminDeduct(ctx, ctx.Doer, userID, amount, ref, note); err != nil {
 		if hackforger_model.IsErrInsufficientCredits(err) {
 			ctx.Flash.Error(ctx.Tr("hackforger.credits.insufficient"))
+		} else if hackforger_service.IsErrNotAdmin(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.not_admin"))
 		} else {
-			ctx.Flash.Error(fmt.Sprintf("Failed to deduct: %v", err))
+			log.Error("AdminCreditsDeduct: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.deduct_failed"))
 		}
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.deducted"))
@@ -272,7 +281,8 @@ func AdminRedeemOptionsCreate(ctx *context.Context) {
 	}
 
 	if err := hackforger_service.CreateRedeemOptionAsAdmin(ctx, ctx.Doer, opt); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to create option: %v", err))
+		log.Error("AdminRedeemOptionsCreate: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.option_create_failed"))
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.option_created"))
 	}
@@ -284,7 +294,12 @@ func AdminRedeemOptionsUpdate(ctx *context.Context) {
 	optionID := ctx.ParamsInt64(":id")
 	option, err := hackforger_model.GetRedeemOptionByID(ctx, optionID)
 	if err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Option not found: %v", err))
+		if hackforger_model.IsErrRedeemOptionNotExist(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.option_not_found"))
+		} else {
+			log.Error("AdminRedeemOptionsUpdate: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.option_update_failed"))
+		}
 		ctx.Redirect(setting.AppSubURL + "/admin/credits/options")
 		return
 	}
@@ -299,7 +314,8 @@ func AdminRedeemOptionsUpdate(ctx *context.Context) {
 	}
 
 	if err := hackforger_service.UpdateRedeemOptionAsAdmin(ctx, ctx.Doer, option); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to update option: %v", err))
+		log.Error("AdminRedeemOptionsUpdate: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.option_update_failed"))
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.option_updated"))
 	}
@@ -336,7 +352,12 @@ func AdminCreditOrdersFulfill(ctx *context.Context) {
 	deliveryValue := ctx.Req.FormValue("delivery_value")
 
 	if err := hackforger_service.FulfillOrder(ctx, ctx.Doer, orderID, note, deliveryType, deliveryValue); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to fulfill order: %v", err))
+		if hackforger_service.IsErrOrderNotPending(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.order_not_pending"))
+		} else {
+			log.Error("AdminCreditOrdersFulfill: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.order_fulfill_failed"))
+		}
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.order_fulfilled"))
 	}
@@ -348,7 +369,12 @@ func AdminCreditOrdersCancel(ctx *context.Context) {
 	orderID := ctx.ParamsInt64(":oid")
 
 	if err := hackforger_service.CancelOrder(ctx, ctx.Doer, orderID); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to cancel order: %v", err))
+		if hackforger_service.IsErrOrderNotPending(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.order_not_pending"))
+		} else {
+			log.Error("AdminCreditOrdersCancel: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.order_cancel_failed"))
+		}
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.order_cancelled"))
 	}
@@ -409,7 +435,8 @@ func AdminRedeemOptionKeysAdd(ctx *context.Context) {
 	}
 
 	if err := hackforger_service.AddKeysToOption(ctx, ctx.Doer, optionID, keys); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Failed to add keys: %v", err))
+		log.Error("AdminRedeemOptionKeysAdd: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.keys_add_failed"))
 	} else {
 		ctx.Flash.Success(ctx.Tr("hackforger.credits.admin.keys.added", len(keys)))
 	}
@@ -445,7 +472,8 @@ func AdminCreditOrdersBatchFulfill(ctx *context.Context) {
 
 	success, failed, err := hackforger_service.BatchFulfillOrders(ctx, ctx.Doer, orderIDs, note, deliveryType, deliveryValue)
 	if err != nil {
-		ctx.Flash.Error(fmt.Sprintf("Batch fulfill error: %v", err))
+		log.Error("AdminCreditOrdersBatchFulfill: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.credits.admin.error.batch_failed"))
 	} else if len(failed) > 0 {
 		ctx.Flash.Warning(ctx.Tr("hackforger.credits.admin.batch.partial", success, len(failed)))
 	} else {
