@@ -16,6 +16,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/markup"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/markup/markdown"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
@@ -167,7 +168,7 @@ func NewGrantRoundPost(ctx *context.Context) {
 	}
 
 	if name == "" || slug == "" {
-		ctx.Flash.Error(ctx.Tr("hackforger.grant.round.name_required"))
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.round.name_required"), true)
 		ctx.HTML(http.StatusOK, tplGrantNew)
 		return
 	}
@@ -188,7 +189,7 @@ func NewGrantRoundPost(ctx *context.Context) {
 	})
 	if err != nil {
 		if hackforger_model.IsErrGrantRoundSlugExists(err) {
-			ctx.Flash.Error(ctx.Tr("hackforger.grant.round.slug_exists"))
+			ctx.Flash.Error(ctx.Tr("hackforger.grant.round.slug_exists"), true)
 			ctx.HTML(http.StatusOK, tplGrantNew)
 			return
 		}
@@ -333,11 +334,18 @@ func SubmitGrantProject(ctx *context.Context) {
 		return
 	}
 
-	// Load the current user's repos for the dropdown
+	if round.Status != hackforger_model.GrantRoundStatusOpen {
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.round.not_open"))
+		ctx.Redirect(fmt.Sprintf("/grants/%s", slug))
+		return
+	}
+
+	// Load the current user's own repos for the dropdown (exclude collaborations)
 	repos, _, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
 		Actor:       ctx.Doer,
 		OwnerID:     ctx.Doer.ID,
 		Private:     true,
+		Collaborate: optional.Some(false),
 		ListOptions: db.ListOptions{PageSize: 100},
 	})
 	if err != nil {
@@ -365,6 +373,7 @@ func loadUserRepos(ctx *context.Context) (repo_model.RepositoryList, error) {
 		Actor:       ctx.Doer,
 		OwnerID:     ctx.Doer.ID,
 		Private:     true,
+		Collaborate: optional.Some(false),
 		ListOptions: db.ListOptions{PageSize: 100},
 	})
 	return repos, err
@@ -400,14 +409,14 @@ func SubmitGrantProjectPost(ctx *context.Context) {
 	}
 
 	if title == "" {
-		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.title_required"))
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.title_required"), true)
 		reloadRepos()
 		ctx.HTML(http.StatusOK, tplGrantSubmit)
 		return
 	}
 
 	if repoID <= 0 {
-		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.repo_required"))
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.repo_required"), true)
 		reloadRepos()
 		ctx.HTML(http.StatusOK, tplGrantSubmit)
 		return
@@ -416,7 +425,7 @@ func SubmitGrantProjectPost(ctx *context.Context) {
 	// Verify the repo exists and belongs to the current user
 	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
 	if err != nil || repo.OwnerID != ctx.Doer.ID {
-		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.invalid_repo"))
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.project.invalid_repo"), true)
 		reloadRepos()
 		ctx.HTML(http.StatusOK, tplGrantSubmit)
 		return
@@ -446,16 +455,31 @@ func SubmitGrantProjectPost(ctx *context.Context) {
 	ctx.Redirect(fmt.Sprintf("/grants/%s/projects", round.Slug))
 }
 
-// ManageGrantRound renders the management panel for a grant round.
-func ManageGrantRound(ctx *context.Context) {
+// loadGrantRoundForManage loads a grant round and checks owner/admin permission.
+// Returns nil if the user is not authorized (response already written).
+func loadGrantRoundForManage(ctx *context.Context) *hackforger_model.GrantRound {
 	slug := ctx.Params(":slug")
 	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
 	if err != nil {
 		if hackforger_model.IsErrGrantRoundNotExist(err) {
-			ctx.NotFound("ManageGrantRound", err)
-			return
+			ctx.NotFound("loadGrantRoundForManage", err)
+			return nil
 		}
 		ctx.ServerError("GetGrantRoundBySlug", err)
+		return nil
+	}
+	if ctx.Doer == nil || (ctx.Doer.ID != round.OwnerID && !ctx.Doer.IsAdmin) {
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.no_permission"))
+		ctx.Redirect(fmt.Sprintf("/grants/%s", slug))
+		return nil
+	}
+	return round
+}
+
+// ManageGrantRound renders the management panel for a grant round.
+func ManageGrantRound(ctx *context.Context) {
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
 
@@ -486,12 +510,11 @@ func ManageGrantRound(ctx *context.Context) {
 
 // ManageGrantRoundOpen transitions a round to Open status.
 func ManageGrantRoundOpen(ctx *context.Context) {
-	slug := ctx.Params(":slug")
-	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
-	if err != nil {
-		ctx.ServerError("GetGrantRoundBySlug", err)
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
+	slug := round.Slug
 	if err := hackforger_service.OpenRound(ctx, ctx.Doer.ID, round.ID); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to open round: %v", err))
 	} else {
@@ -502,12 +525,11 @@ func ManageGrantRoundOpen(ctx *context.Context) {
 
 // ManageGrantRoundClose transitions a round to Review status.
 func ManageGrantRoundClose(ctx *context.Context) {
-	slug := ctx.Params(":slug")
-	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
-	if err != nil {
-		ctx.ServerError("GetGrantRoundBySlug", err)
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
+	slug := round.Slug
 	if err := hackforger_service.CloseRound(ctx, ctx.Doer.ID, round.ID); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to close round: %v", err))
 	} else {
@@ -518,12 +540,11 @@ func ManageGrantRoundClose(ctx *context.Context) {
 
 // ManageGrantRoundFinalize transitions a round to Finalized status.
 func ManageGrantRoundFinalize(ctx *context.Context) {
-	slug := ctx.Params(":slug")
-	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
-	if err != nil {
-		ctx.ServerError("GetGrantRoundBySlug", err)
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
+	slug := round.Slug
 	if err := hackforger_service.FinalizeRound(ctx, ctx.Doer.ID, round.ID); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to finalize round: %v", err))
 	} else {
@@ -534,12 +555,11 @@ func ManageGrantRoundFinalize(ctx *context.Context) {
 
 // ManageGrantRoundDistribute distributes all approved projects in the round.
 func ManageGrantRoundDistribute(ctx *context.Context) {
-	slug := ctx.Params(":slug")
-	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
-	if err != nil {
-		ctx.ServerError("GetGrantRoundBySlug", err)
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
+	slug := round.Slug
 	if err := hackforger_service.DistributeRound(ctx, ctx.Doer.ID, round.ID); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to distribute: %v", err))
 	} else {
@@ -550,12 +570,11 @@ func ManageGrantRoundDistribute(ctx *context.Context) {
 
 // ManageGrantRoundCancel transitions a round to Cancelled status.
 func ManageGrantRoundCancel(ctx *context.Context) {
-	slug := ctx.Params(":slug")
-	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
-	if err != nil {
-		ctx.ServerError("GetGrantRoundBySlug", err)
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
+	slug := round.Slug
 	if err := hackforger_service.CancelRound(ctx, ctx.Doer.ID, round.ID); err != nil {
 		ctx.Flash.Error(fmt.Sprintf("Failed to cancel round: %v", err))
 	} else {
@@ -566,14 +585,8 @@ func ManageGrantRoundCancel(ctx *context.Context) {
 
 // ManageGrantProject renders the management page for a single project.
 func ManageGrantProject(ctx *context.Context) {
-	slug := ctx.Params(":slug")
-	round, err := hackforger_model.GetGrantRoundBySlug(ctx, slug)
-	if err != nil {
-		if hackforger_model.IsErrGrantRoundNotExist(err) {
-			ctx.NotFound("ManageGrantProject", err)
-			return
-		}
-		ctx.ServerError("GetGrantRoundBySlug", err)
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
 		return
 	}
 
@@ -606,7 +619,11 @@ func ManageGrantProject(ctx *context.Context) {
 
 // ManageGrantProjectApprove approves a pending project.
 func ManageGrantProjectApprove(ctx *context.Context) {
-	slug := ctx.Params(":slug")
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
+		return
+	}
+	slug := round.Slug
 	pid := ctx.ParamsInt64(":pid")
 
 	if err := hackforger_service.ApproveProject(ctx, ctx.Doer.ID, pid); err != nil {
@@ -619,7 +636,11 @@ func ManageGrantProjectApprove(ctx *context.Context) {
 
 // ManageGrantProjectReject rejects a pending project.
 func ManageGrantProjectReject(ctx *context.Context) {
-	slug := ctx.Params(":slug")
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
+		return
+	}
+	slug := round.Slug
 	pid := ctx.ParamsInt64(":pid")
 
 	if err := hackforger_service.RejectProject(ctx, ctx.Doer.ID, pid); err != nil {
@@ -632,7 +653,11 @@ func ManageGrantProjectReject(ctx *context.Context) {
 
 // ManageGrantProjectAward sets the award allocation for a project.
 func ManageGrantProjectAward(ctx *context.Context) {
-	slug := ctx.Params(":slug")
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
+		return
+	}
+	slug := round.Slug
 	pid := ctx.ParamsInt64(":pid")
 
 	amount, _ := strconv.ParseFloat(ctx.Req.FormValue("award_amount"), 64)
@@ -648,7 +673,11 @@ func ManageGrantProjectAward(ctx *context.Context) {
 
 // ManageGrantProjectDistribute distributes the award for a single project.
 func ManageGrantProjectDistribute(ctx *context.Context) {
-	slug := ctx.Params(":slug")
+	round := loadGrantRoundForManage(ctx)
+	if round == nil {
+		return
+	}
+	slug := round.Slug
 	pid := ctx.ParamsInt64(":pid")
 
 	if err := hackforger_service.DistributeProject(ctx, ctx.Doer.ID, pid); err != nil {

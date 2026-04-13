@@ -16,7 +16,7 @@
 					<div class="tw-flex tw-gap-2">
 						{{if eq .Round.Status 0}}
 							<form action="/grants/{{.Round.Slug}}/manage/open" method="post" class="tw-inline">
-								<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.action.open"}}</button>
+								<button class="hf-btn hf-btn-primary">{{ctx.Locale.Tr "hackforger.grant.action.publish"}}</button>
 							</form>
 						{{end}}
 						{{if eq .Round.Status 1}}
