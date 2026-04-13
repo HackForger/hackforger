@@ -47,6 +47,26 @@ func (e ErrNoSubmissions) Error() string {
 // IsErrNoSubmissions checks if err is ErrNoSubmissions.
 func IsErrNoSubmissions(err error) bool { _, ok := err.(ErrNoSubmissions); return ok }
 
+// ErrNoRegistrationPhase means hackathon has no registration phase (cannot publish).
+type ErrNoRegistrationPhase struct{ HackathonID int64 }
+
+func (e ErrNoRegistrationPhase) Error() string {
+	return fmt.Sprintf("hackathon has no registration phase [id: %d]", e.HackathonID)
+}
+
+// IsErrNoRegistrationPhase checks if err is ErrNoRegistrationPhase.
+func IsErrNoRegistrationPhase(err error) bool { _, ok := err.(ErrNoRegistrationPhase); return ok }
+
+// ErrNoDevelopmentPhase means hackathon has no development phase (cannot publish).
+type ErrNoDevelopmentPhase struct{ HackathonID int64 }
+
+func (e ErrNoDevelopmentPhase) Error() string {
+	return fmt.Sprintf("hackathon has no development phase [id: %d]", e.HackathonID)
+}
+
+// IsErrNoDevelopmentPhase checks if err is ErrNoDevelopmentPhase.
+func IsErrNoDevelopmentPhase(err error) bool { _, ok := err.(ErrNoDevelopmentPhase); return ok }
+
 // ErrDuplicateSubmission means a user has already submitted to this track.
 type ErrDuplicateSubmission struct {
 	UserID  int64
@@ -326,10 +346,10 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 		}
 	}
 	if !hasRegistration {
-		return fmt.Errorf("at least one registration phase is required")
+		return ErrNoRegistrationPhase{HackathonID: h.ID}
 	}
 	if !hasDevelopment {
-		return fmt.Errorf("at least one development phase is required")
+		return ErrNoDevelopmentPhase{HackathonID: h.ID}
 	}
 
 	// Set published

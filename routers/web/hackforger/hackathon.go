@@ -615,6 +615,10 @@ func ManagePhasePost(ctx *context.Context) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_criteria"))
 		} else if hackforger_model.IsErrInvalidHackathonPhase(err) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase_action"))
+		} else if hackforger_service.IsErrNoRegistrationPhase(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_registration_phase"))
+		} else if hackforger_service.IsErrNoDevelopmentPhase(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_development_phase"))
 		} else {
 			log.Error("PhaseAction: %v", err)
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))

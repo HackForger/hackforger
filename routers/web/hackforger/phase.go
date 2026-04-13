@@ -202,6 +202,12 @@ func handlePhaseError(ctx *context.Context, err error) {
 	case hackforger_service.IsErrActivePhaseStartLocked(err):
 		status = http.StatusForbidden
 		msg = ctx.Locale.TrString("hackforger.phase.error.active_start_locked")
+	case hackforger_service.IsErrPhaseEndBeforeStart(err):
+		status = http.StatusBadRequest
+		msg = ctx.Locale.TrString("hackforger.phase.error.end_before_start")
+	case hackforger_service.IsErrPhaseNotFound(err):
+		status = http.StatusNotFound
+		msg = ctx.Locale.TrString("hackforger.phase.error.not_found")
 	default:
 		log.Error("Phase operation error: %v", err)
 	}
