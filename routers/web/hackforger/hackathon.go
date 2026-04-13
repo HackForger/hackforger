@@ -161,11 +161,6 @@ func NewHackathonPost(ctx *context.Context) {
 		Description:       ctx.FormString("description"),
 		PrizeSummary:      ctx.FormString("prize_summary"),
 		MaxTeamSize:       maxTeamSize,
-		RegistrationStart: parseDatetimeLocal(ctx.FormString("registration_start")),
-		RegistrationEnd:   parseDatetimeLocal(ctx.FormString("registration_end")),
-		HackingStart:      parseDatetimeLocal(ctx.FormString("hacking_start")),
-		HackingEnd:        parseDatetimeLocal(ctx.FormString("hacking_end")),
-		JudgingEnd:        parseDatetimeLocal(ctx.FormString("judging_end")),
 	}
 	if err := hackforger_service.CreateHackathon(ctx, ctx.Doer, h); err != nil {
 		ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
@@ -574,11 +569,6 @@ func UpdateHackathonPost(ctx *context.Context) {
 	h.Name = ctx.FormString("name")
 	h.Description = ctx.FormString("description")
 	h.PrizeSummary = ctx.FormString("prize_summary")
-	h.RegistrationStart = parseDatetimeLocal(ctx.FormString("registration_start"))
-	h.RegistrationEnd = parseDatetimeLocal(ctx.FormString("registration_end"))
-	h.HackingStart = parseDatetimeLocal(ctx.FormString("hacking_start"))
-	h.HackingEnd = parseDatetimeLocal(ctx.FormString("hacking_end"))
-	h.JudgingEnd = parseDatetimeLocal(ctx.FormString("judging_end"))
 	maxTeamSize, _ := strconv.Atoi(ctx.FormString("max_team_size"))
 	if maxTeamSize > 0 {
 		h.MaxTeamSize = maxTeamSize

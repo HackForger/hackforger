@@ -49,11 +49,6 @@ type Hackathon struct {
 	StatusCache       HackathonStatus    `xorm:"'status_cache' NOT NULL DEFAULT 0"`
 	IsPublished       bool               `xorm:"NOT NULL DEFAULT false"`
 	MaxTeamSize       int                `xorm:"NOT NULL DEFAULT 5"`
-	RegistrationStart timeutil.TimeStamp `xorm:""`
-	RegistrationEnd   timeutil.TimeStamp `xorm:""`
-	HackingStart      timeutil.TimeStamp `xorm:""`
-	HackingEnd        timeutil.TimeStamp `xorm:""`
-	JudgingEnd        timeutil.TimeStamp `xorm:""`
 	PrizeSummary      string             `xorm:"TEXT"`
 	TemplateRepoID    int64              `xorm:"INDEX"`
 	LinkedOrgID       int64              `xorm:"INDEX"` // auto-created Forgejo Organization for this hackathon
