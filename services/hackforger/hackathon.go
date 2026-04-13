@@ -268,22 +268,25 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 		_ = hackforger_model.SeedTrackCriteria(ctx, track.ID, criteria)
 	}
 
-	// Auto-create phase milestones on the track repo
-	milestones := []struct {
-		Name     string
-		Deadline timeutil.TimeStamp
-	}{
-		{"Registration", h.RegistrationEnd},
-		{"Hacking", h.HackingEnd},
-		{"Judging", h.JudgingEnd},
-		{"Results", 0}, // closed when finalized
-	}
-	for _, ms := range milestones {
-		_ = issues_model.NewMilestone(ctx, &issues_model.Milestone{
-			RepoID:       repo.ID,
-			Name:         ms.Name,
-			DeadlineUnix: ms.Deadline,
-		})
+	// Auto-create phase milestones on the track repo from Phase records.
+	// Each phase becomes a milestone; deadline = phase EndTime.
+	phases, phaseErr := hackforger_model.GetPhasesByActivity(ctx, "hackathon", h.ID)
+	if phaseErr == nil {
+		for _, p := range phases {
+			name := p.CustomName
+			if name == "" && p.PhaseType != nil {
+				name = p.PhaseType.Key // "registration", "development", "judging", "results"
+			}
+			var deadline timeutil.TimeStamp
+			if p.EndTime > 0 {
+				deadline = timeutil.TimeStamp(p.EndTime)
+			}
+			_ = issues_model.NewMilestone(ctx, &issues_model.Milestone{
+				RepoID:       repo.ID,
+				Name:         name,
+				DeadlineUnix: deadline,
+			})
+		}
 	}
 	return nil
 }

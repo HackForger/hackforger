@@ -1,4 +1,4 @@
-# Hackathon id=1 MUST remain status=3 (Judging) — credits distribution tests depend on it.
+# Hackathon id=1 MUST remain status_cache=3 (Judging) — credits distribution tests depend on it.
 # See services/hackforger/hackathon_credits_test.go
 -
   id: 1
@@ -7,9 +7,8 @@
   name: "Judging Hackathon"
   slug: "judging-hackathon"
   description: "A hackathon being judged (credits test depends on this)"
-  status: 3
+  status_cache: 3
   max_team_size: 5
-  judging_end: 1735689600
   created_unix: 1672578000
   updated_unix: 1672578000
 
@@ -20,7 +19,7 @@
   name: "Draft Hackathon"
   slug: "draft-hackathon"
   description: "A hackathon in draft status for testing"
-  status: 0
+  status_cache: 0
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -32,10 +31,8 @@
   name: "Open Hackathon"
   slug: "open-hackathon"
   description: "A hackathon accepting registrations"
-  status: 1
+  status_cache: 1
   max_team_size: 4
-  registration_start: 1672578000
-  registration_end: 1735689600
   created_unix: 1672578000
   updated_unix: 1672578000
 
@@ -46,10 +43,8 @@
   name: "Hacking Hackathon"
   slug: "hacking-hackathon"
   description: "A hackathon in the hacking phase"
-  status: 2
+  status_cache: 2
   max_team_size: 5
-  hacking_start: 1672578000
-  hacking_end: 1735689600
   created_unix: 1672578000
   updated_unix: 1672578000
 
@@ -60,7 +55,7 @@
   name: "Finished Hackathon"
   slug: "finished-hackathon"
   description: "A completed hackathon with results"
-  status: 4
+  status_cache: 4
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -72,7 +67,7 @@
   name: "Cancelled Hackathon"
   slug: "cancelled-hackathon"
   description: "A cancelled hackathon"
-  status: 5
+  status_cache: 5
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
