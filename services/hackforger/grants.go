@@ -99,6 +99,51 @@ func IsErrRoundNotFinalized(err error) bool {
 	return ok
 }
 
+// ErrProjectNotPending is returned when approving/rejecting a non-pending project.
+type ErrProjectNotPending struct {
+	ProjectID int64
+	Status    hackforger_model.GrantProjectStatus
+}
+
+func (err ErrProjectNotPending) Error() string {
+	return fmt.Sprintf("project is not pending [id: %d, status: %d]", err.ProjectID, err.Status)
+}
+
+func (err ErrProjectNotPending) Unwrap() error { return util.ErrInvalidArgument }
+
+// IsErrProjectNotPending checks if an error is ErrProjectNotPending.
+func IsErrProjectNotPending(err error) bool { _, ok := err.(ErrProjectNotPending); return ok }
+
+// ErrProjectNotApproved is returned when distributing a non-approved project.
+type ErrProjectNotApproved struct {
+	ProjectID int64
+	Status    hackforger_model.GrantProjectStatus
+}
+
+func (err ErrProjectNotApproved) Error() string {
+	return fmt.Sprintf("project is not approved [id: %d, status: %d]", err.ProjectID, err.Status)
+}
+
+func (err ErrProjectNotApproved) Unwrap() error { return util.ErrInvalidArgument }
+
+// IsErrProjectNotApproved checks if an error is ErrProjectNotApproved.
+func IsErrProjectNotApproved(err error) bool { _, ok := err.(ErrProjectNotApproved); return ok }
+
+// ErrRoundAwardLocked is returned when modifying awards on a finalized/distributed round.
+type ErrRoundAwardLocked struct {
+	RoundID int64
+	Status  hackforger_model.GrantRoundStatus
+}
+
+func (err ErrRoundAwardLocked) Error() string {
+	return fmt.Sprintf("cannot modify award: round is %s [id: %d]", hackforger_model.GrantRoundStatusNames[err.Status], err.RoundID)
+}
+
+func (err ErrRoundAwardLocked) Unwrap() error { return util.ErrInvalidArgument }
+
+// IsErrRoundAwardLocked checks if an error is ErrRoundAwardLocked.
+func IsErrRoundAwardLocked(err error) bool { _, ok := err.(ErrRoundAwardLocked); return ok }
+
 // validTransitions defines the allowed state transitions for grant rounds.
 var validTransitions = map[hackforger_model.GrantRoundStatus][]hackforger_model.GrantRoundStatus{
 	hackforger_model.GrantRoundStatusDraft:     {hackforger_model.GrantRoundStatusOpen, hackforger_model.GrantRoundStatusCancelled},
@@ -407,7 +452,7 @@ func ApproveProject(ctx context.Context, doerID, projectID int64) error {
 	}
 
 	if project.Status != hackforger_model.GrantProjectStatusPending {
-		return fmt.Errorf("project is not pending [id: %d, status: %d]: %w", projectID, project.Status, util.ErrInvalidArgument)
+		return ErrProjectNotPending{ProjectID: projectID, Status: project.Status}
 	}
 
 	project.Status = hackforger_model.GrantProjectStatusApproved
@@ -448,7 +493,7 @@ func RejectProject(ctx context.Context, doerID, projectID int64) error {
 	}
 
 	if project.Status != hackforger_model.GrantProjectStatusPending {
-		return fmt.Errorf("project is not pending [id: %d, status: %d]: %w", projectID, project.Status, util.ErrInvalidArgument)
+		return ErrProjectNotPending{ProjectID: projectID, Status: project.Status}
 	}
 
 	project.Status = hackforger_model.GrantProjectStatusRejected
@@ -474,8 +519,7 @@ func AllocateAward(ctx context.Context, doerID, projectID int64, amount float64,
 
 	// Award amounts are locked once the round is finalized or beyond
 	if round.Status >= hackforger_model.GrantRoundStatusFinalized {
-		return fmt.Errorf("cannot modify award: round is %s [id: %d]: %w",
-			hackforger_model.GrantRoundStatusNames[round.Status], round.ID, util.ErrInvalidArgument)
+		return ErrRoundAwardLocked{RoundID: round.ID, Status: round.Status}
 	}
 
 	// Get current budget usage
@@ -535,7 +579,7 @@ func DistributeProject(ctx context.Context, doerID, projectID int64) error {
 		}
 
 		if project.Status != hackforger_model.GrantProjectStatusApproved {
-			return fmt.Errorf("project is not approved [id: %d, status: %d]: %w", projectID, project.Status, util.ErrInvalidArgument)
+			return ErrProjectNotApproved{ProjectID: projectID, Status: project.Status}
 		}
 
 		// Deposit credits

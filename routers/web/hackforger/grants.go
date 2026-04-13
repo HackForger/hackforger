@@ -715,6 +715,12 @@ func handleGrantProjectError(ctx *context.Context, caller string, err error, fal
 		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.invalid_transition"))
 	case hackforger_model.IsErrExceedsBudget(err):
 		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.exceeds_budget"))
+	case hackforger_service.IsErrProjectNotPending(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.project_not_pending"))
+	case hackforger_service.IsErrProjectNotApproved(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.project_not_approved"))
+	case hackforger_service.IsErrRoundAwardLocked(err):
+		ctx.Flash.Error(ctx.Tr("hackforger.grant.error.award_locked"))
 	default:
 		log.Error("%s: %v", caller, err)
 		ctx.Flash.Error(ctx.Tr(fallbackKey))
