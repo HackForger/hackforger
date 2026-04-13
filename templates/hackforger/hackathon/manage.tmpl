@@ -34,16 +34,6 @@
 						{{end}}
 						<div>{{svg "octicon-people" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.max_team_size"}}: {{.Hackathon.MaxTeamSize}}</div>
 					</div>
-
-					{{if or .Hackathon.RegistrationStart .Hackathon.RegistrationEnd .Hackathon.HackingStart .Hackathon.HackingEnd .Hackathon.JudgingEnd}}
-					<div class="tw-flex tw-flex-wrap tw-gap-x-6 tw-gap-y-1 tw-text-sm tw-mt-2 tw-text-gray">
-						{{if .Hackathon.RegistrationStart}}<div>{{svg "octicon-calendar" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.registration_start"}}: {{DateUtils.AbsoluteShort .Hackathon.RegistrationStart}}</div>{{end}}
-						{{if .Hackathon.RegistrationEnd}}<div>→ {{ctx.Locale.Tr "hackforger.hackathon.field.registration_end"}}: {{DateUtils.AbsoluteShort .Hackathon.RegistrationEnd}}</div>{{end}}
-						{{if .Hackathon.HackingStart}}<div>{{svg "octicon-code" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.hacking_start"}}: {{DateUtils.AbsoluteShort .Hackathon.HackingStart}}</div>{{end}}
-						{{if .Hackathon.HackingEnd}}<div>→ {{ctx.Locale.Tr "hackforger.hackathon.field.hacking_end"}}: {{DateUtils.AbsoluteShort .Hackathon.HackingEnd}}</div>{{end}}
-						{{if .Hackathon.JudgingEnd}}<div>{{svg "octicon-law" 14}} {{ctx.Locale.Tr "hackforger.hackathon.field.judging_end"}}: {{DateUtils.AbsoluteShort .Hackathon.JudgingEnd}}</div>{{end}}
-					</div>
-					{{end}}
 				</div>
 			</div>
 
@@ -78,31 +68,6 @@
 						<div class="field">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.prize_summary"}}</label>
 							<textarea name="prize_summary" rows="3">{{.Hackathon.PrizeSummary}}</textarea>
-						</div>
-						<h4 class="tw-mt-2 tw-mb-2">{{ctx.Locale.Tr "hackforger.hackathon.field.schedule"}}</h4>
-						<div class="two fields">
-							<div class="field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.registration_start"}}</label>
-								<input name="registration_start" type="datetime-local" {{if .Hackathon.RegistrationStart}}value="{{.Hackathon.RegistrationStart.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
-							</div>
-							<div class="field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.registration_end"}}</label>
-								<input name="registration_end" type="datetime-local" {{if .Hackathon.RegistrationEnd}}value="{{.Hackathon.RegistrationEnd.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
-							</div>
-						</div>
-						<div class="two fields">
-							<div class="field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.hacking_start"}}</label>
-								<input name="hacking_start" type="datetime-local" {{if .Hackathon.HackingStart}}value="{{.Hackathon.HackingStart.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
-							</div>
-							<div class="field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.hacking_end"}}</label>
-								<input name="hacking_end" type="datetime-local" {{if .Hackathon.HackingEnd}}value="{{.Hackathon.HackingEnd.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
-							</div>
-						</div>
-						<div class="field">
-							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.judging_end"}}</label>
-							<input name="judging_end" type="datetime-local" {{if .Hackathon.JudgingEnd}}value="{{.Hackathon.JudgingEnd.AsLocalTime.Format "2006-01-02T15:04"}}"{{end}}>
 						</div>
 						<div class="field">
 							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.max_team_size"}}</label>
