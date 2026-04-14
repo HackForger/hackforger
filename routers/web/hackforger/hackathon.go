@@ -642,6 +642,7 @@ func ManageTrackPost(ctx *context.Context) {
 	t := &hackforger_model.HackathonTrack{
 		HackathonID:   h.ID,
 		Name:          ctx.FormString("name"),
+		Description:   ctx.FormString("description"),
 		PrizeCredits:  prizeCredits,
 		PrizeDistMode: prizeDistMode,
 	}
@@ -672,6 +673,53 @@ func ManageTrackPost(ctx *context.Context) {
 	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
 		log.Error("CreateTrackWithRepo: %v", err)
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+	}
+	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+}
+
+func ManageTrackUpdatePost(ctx *context.Context) {
+	h := loadHackathon(ctx)
+	if h == nil {
+		return
+	}
+	tid := ctx.ParamsInt64(":tid")
+	track, err := hackforger_model.GetTrackByID(ctx, tid)
+	if err != nil || track.HackathonID != h.ID {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.track_not_found"))
+		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+		return
+	}
+
+	track.Name = ctx.FormString("name")
+	track.Description = ctx.FormString("description")
+	track.PrizeCredits, _ = strconv.ParseInt(ctx.FormString("prize_credits"), 10, 64)
+	track.PrizeDistMode = ctx.FormString("prize_dist_mode")
+	if track.PrizeDistMode == "" {
+		track.PrizeDistMode = "winner_takes_all"
+	}
+
+	// Validate tiered ratios
+	if track.PrizeDistMode == "tiered" {
+		ratiosJSON := strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
+		if ratiosJSON != "" {
+			ratios, err := hackforger_model.ParsePrizeDistRatios(ratiosJSON)
+			if err != nil {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
+			if err := hackforger_model.ValidatePrizeDistRatios(ratios); err != nil {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+				return
+			}
+			track.PrizeDistRatios = ratiosJSON
+		}
+	}
+
+	if err := hackforger_model.UpdateTrack(ctx, track); err != nil {
+		log.Error("UpdateTrack: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.track_update_failed"))
 	}
 	ctx.Redirect("/hackathon/" + h.Slug + "/manage")
 }

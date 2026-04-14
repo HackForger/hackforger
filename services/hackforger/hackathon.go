@@ -223,18 +223,26 @@ jobs:
 
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
 // Organization for the track, then inserts the track record.
+// The repo is named "track-{ID}" to avoid issues with Unicode/Chinese track names.
 func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack) error {
 	if h.LinkedOrgID == 0 {
 		// No linked org — just create track record without repo
 		return hackforger_model.CreateTrack(ctx, track)
 	}
 
+	// Insert track first to get auto-increment ID for a safe repo name
+	if err := hackforger_model.CreateTrack(ctx, track); err != nil {
+		return err
+	}
+
 	orgUser, err := user_model.GetUserByID(ctx, h.LinkedOrgID)
 	if err != nil {
+		// Clean up: delete the track record we just created
+		_ = hackforger_model.DeleteTrack(ctx, track.ID)
 		return fmt.Errorf("get hackathon org user: %w", err)
 	}
 
-	repoName := strings.ToLower(strings.ReplaceAll(track.Name, " ", "-"))
+	repoName := fmt.Sprintf("track-%d", track.ID)
 	repo, err := repo_service.CreateRepository(ctx, doer, orgUser, repo_service.CreateRepoOptions{
 		Name:          repoName,
 		Description:   track.Description,
@@ -243,11 +251,13 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 		DefaultBranch: "main",
 	})
 	if err != nil {
+		// Clean up: delete the track record we just created
+		_ = hackforger_model.DeleteTrack(ctx, track.ID)
 		return fmt.Errorf("create track repo: %w", err)
 	}
 
 	track.RepoID = repo.ID
-	if err := hackforger_model.CreateTrack(ctx, track); err != nil {
+	if err := hackforger_model.UpdateTrack(ctx, track); err != nil {
 		return err
 	}
 
