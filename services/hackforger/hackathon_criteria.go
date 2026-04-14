@@ -70,11 +70,13 @@ func checkCriteriaModifiable(ctx context.Context, hackathonID int64) error {
 	if err != nil {
 		return err
 	}
-	if h.StatusCache > hackforger_model.HackathonStatusOpen {
+	// Allow criteria changes during Draft, Registration, and Hacking phases.
+	// Lock once judging starts (StatusCache >= Judging).
+	if h.StatusCache >= hackforger_model.HackathonStatusJudging {
 		return hackforger_model.ErrInvalidHackathonPhase{
 			HackathonID: h.ID,
 			Current:     h.StatusCache,
-			Expected:    hackforger_model.HackathonStatusOpen,
+			Expected:    hackforger_model.HackathonStatusHacking,
 		}
 	}
 	return nil

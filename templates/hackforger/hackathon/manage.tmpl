@@ -210,8 +210,8 @@
 			</div>
 		</div>
 
-		{{/* 3. Scoring Criteria */}}
-		{{if le .Hackathon.StatusCache 1}}
+		{{/* 3. Scoring Criteria (editable until judging starts) */}}
+		{{if lt .Hackathon.StatusCache 3}}
 		<div class="hf-card">
 			<div class="hf-card-head">
 				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria"}}</div>
