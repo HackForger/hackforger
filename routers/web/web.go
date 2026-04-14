@@ -549,6 +549,7 @@ func registerRoutes(m *web.Route) {
 			m.Post("/finalize", hackforger_web.FinalizeConfirm)
 			m.Post("/cancel", hackforger_web.ManagePhasePost)
 			m.Post("/tracks", hackforger_web.ManageTrackPost)
+			m.Post("/tracks/{tid}/update", hackforger_web.ManageTrackUpdatePost)
 			m.Post("/registrations/{rid}", hackforger_web.ManageRegistrationPost)
 			m.Post("/judges", hackforger_web.ManageJudgePost)
 			m.Post("/judges/{uid}/remove", hackforger_web.ManageJudgeRemovePost)

@@ -123,52 +123,90 @@
 			</div>
 			<div class="hf-card-body">
 				{{range .Tracks}}
-					<div class="tw-mb-2">
+					<div class="tw-mb-2" id="track-view-{{.ID}}">
 						<strong>{{.Name}}</strong>
+						{{if .Description}}<p class="tw-text-sm tw-text-gray-600 tw-mt-1">{{.Description}}</p>{{end}}
 						{{if .PrizeCredits}}
 							<span class="hf-badge hf-badge-neutral">{{.PrizeCredits}} {{ctx.Locale.Tr "hackforger.credits.title"}}</span>
 						{{end}}
 						{{if .PrizeDistMode}}
 							<span class="hf-badge hf-badge-blue">{{.PrizeDistMode}}</span>
 						{{end}}
+						<button class="hf-btn hf-btn-sm hf-btn-outline tw-ml-2" type="button" onclick="document.getElementById('track-view-{{.ID}}').style.display='none'; document.getElementById('track-edit-{{.ID}}').style.display='';">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.edit"}}</button>
+					</div>
+					<div class="tw-mb-2" id="track-edit-{{.ID}}" style="display:none">
+						<form class="ui form" method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/tracks/{{.ID}}/update">
+							<div class="fields">
+								<div class="four wide field">
+									<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
+									<input name="name" value="{{.Name}}" required>
+								</div>
+								<div class="four wide field">
+									<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.description"}}</label>
+									<textarea name="description" rows="3">{{.Description}}</textarea>
+								</div>
+								<div class="three wide field">
+									<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_credits"}}</label>
+									<input name="prize_credits" type="number" min="0" value="{{.PrizeCredits}}">
+								</div>
+								<div class="three wide field">
+									<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_mode"}}</label>
+									<select name="prize_dist_mode">
+										<option value="winner_takes_all" {{if eq .PrizeDistMode "winner_takes_all"}}selected{{end}}>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.winner_takes_all"}}</option>
+										<option value="tiered" {{if eq .PrizeDistMode "tiered"}}selected{{end}}>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.tiered"}}</option>
+										<option value="equal" {{if eq .PrizeDistMode "equal"}}selected{{end}}>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.equal"}}</option>
+									</select>
+								</div>
+								{{if eq .PrizeDistMode "tiered"}}
+								<div class="four wide field">
+									<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_ratios"}}</label>
+									<textarea name="prize_dist_ratios" rows="3">{{.PrizeDistRatios}}</textarea>
+								</div>
+								{{end}}
+							</div>
+							<button class="hf-btn hf-btn-secondary" type="submit">{{ctx.Locale.Tr "save"}}</button>
+							<button class="hf-btn hf-btn-outline tw-ml-2" type="button" onclick="document.getElementById('track-edit-{{.ID}}').style.display='none'; document.getElementById('track-view-{{.ID}}').style.display='';">{{ctx.Locale.Tr "cancel"}}</button>
+						</form>
 					</div>
 				{{end}}
-				{{if eq .Hackathon.StatusCache 0}}
-					<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/tracks">
-						<div class="fields">
-							<div class="four wide field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
-								<input name="name" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.name_placeholder"}}" required>
-							</div>
-							<div class="three wide field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_credits"}}</label>
-								<input name="prize_credits" type="number" min="0" value="0">
-							</div>
-							<div class="three wide field">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_mode"}}</label>
-								<select name="prize_dist_mode" id="prizeDistMode" onchange="toggleRatiosField()">
-									<option value="winner_takes_all">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.winner_takes_all"}}</option>
-									<option value="tiered">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.tiered"}}</option>
-									<option value="equal">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.equal"}}</option>
-								</select>
-							</div>
-							<div class="four wide field" id="ratiosField" style="display:none">
-								<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_ratios"}}</label>
-								<textarea name="prize_dist_ratios" rows="3" placeholder='[{"rank":1,"pct":60},{"rank":2,"pct":40}]'></textarea>
-							</div>
+				<form class="ui form tw-mt-2" method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/manage/tracks">
+					<div class="fields">
+						<div class="four wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.field.name"}}</label>
+							<input name="name" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.name_placeholder"}}" required>
 						</div>
-						<button class="hf-btn hf-btn-secondary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.add"}}</button>
-					</form>
-					<script>
-						function toggleRatiosField() {
-							var mode = document.getElementById('prizeDistMode');
-							var field = document.getElementById('ratiosField');
-							if (mode && field) {
-								field.style.display = mode.value === 'tiered' ? '' : 'none';
-							}
+						<div class="four wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.description"}}</label>
+							<textarea name="description" rows="3" placeholder="{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.description_placeholder"}}"></textarea>
+						</div>
+						<div class="three wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_credits"}}</label>
+							<input name="prize_credits" type="number" min="0" value="0">
+						</div>
+						<div class="three wide field">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_mode"}}</label>
+							<select name="prize_dist_mode" id="prizeDistMode" onchange="toggleRatiosField()">
+								<option value="winner_takes_all">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.winner_takes_all"}}</option>
+								<option value="tiered">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.tiered"}}</option>
+								<option value="equal">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.mode.equal"}}</option>
+							</select>
+						</div>
+						<div class="four wide field" id="ratiosField" style="display:none">
+							<label>{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.prize_dist_ratios"}}</label>
+							<textarea name="prize_dist_ratios" rows="3" placeholder='[{"rank":1,"pct":60},{"rank":2,"pct":40}]'></textarea>
+						</div>
+					</div>
+					<button class="hf-btn hf-btn-secondary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.tracks.add"}}</button>
+				</form>
+				<script>
+					function toggleRatiosField() {
+						var mode = document.getElementById('prizeDistMode');
+						var field = document.getElementById('ratiosField');
+						if (mode && field) {
+							field.style.display = mode.value === 'tiered' ? '' : 'none';
 						}
-					</script>
-				{{end}}
+					}
+				</script>
 			</div>
 		</div>
 
