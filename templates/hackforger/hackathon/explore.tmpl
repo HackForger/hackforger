@@ -12,7 +12,7 @@
 				<div class="hf-row-left">
 					<div>
 						<a class="tw-text-lg tw-font-semibold" href="{{AppSubUrl}}/hackathon/{{.Slug}}">{{.Name}}</a>
-						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1 markup">{{.Description}}</div>{{end}}
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{StringUtils.PlainTextPreview .Description 200}}</div>{{end}}
 					</div>
 				</div>
 				<span class="hf-badge {{if eq .StatusCache 0}}hf-badge-neutral{{else if eq .StatusCache 1}}hf-badge-green{{else if eq .StatusCache 2}}hf-badge-blue{{else if eq .StatusCache 3}}hf-badge-yellow{{else if eq .StatusCache 4}}hf-badge-neutral{{else}}hf-badge-red{{end}}">

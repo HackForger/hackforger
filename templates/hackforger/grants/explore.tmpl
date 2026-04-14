@@ -11,7 +11,7 @@
 				<div class="hf-row-left">
 					<div>
 						<a class="tw-text-lg tw-font-medium" href="{{AppSubUrl}}/grants/{{.Slug}}">{{.Name}}</a>
-						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1 markup">{{.Description}}</div>{{end}}
+						{{if .Description}}<div class="tw-text-sm tw-text-gray tw-mb-1">{{StringUtils.PlainTextPreview .Description 200}}</div>{{end}}
 						<div class="tw-mt-1 tw-flex tw-items-center tw-gap-2">
 							<span class="hf-badge {{if eq .Status 0}}hf-badge-neutral{{else if eq .Status 1}}hf-badge-green{{else if eq .Status 2}}hf-badge-blue{{else if eq .Status 3}}hf-badge-yellow{{else if eq .Status 4}}hf-badge-purple{{else}}hf-badge-red{{end}}">
 								{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.grant.round.status.draft"}}
