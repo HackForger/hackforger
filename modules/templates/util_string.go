@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/markup/mdstripper"
 	"forgejo.org/modules/util"
 )
 
@@ -78,4 +79,13 @@ func (su *StringUtils) RemoveAll(s string, all ...string) string {
 
 func (su *StringUtils) RemoveAllPrefix(s string, all ...string) string {
 	return util.RemoveAllStr(s, true, all...)
+}
+
+func (su *StringUtils) PlainTextPreview(s string, max int) string {
+	if s == "" {
+		return ""
+	}
+	plain, _ := mdstripper.StripMarkdown([]byte(s))
+	result := strings.Join(strings.Fields(string(plain)), " ")
+	return base.EllipsisString(result, max)
 }
