@@ -36,6 +36,14 @@ type ErrActivePhaseStartLocked struct{ PhaseID int64 }
 func (e ErrActivePhaseStartLocked) Error() string { return fmt.Sprintf("cannot change start time of active phase [id: %d]", e.PhaseID) }
 func IsErrActivePhaseStartLocked(err error) bool { _, ok := err.(ErrActivePhaseStartLocked); return ok }
 
+type ErrPhaseEndBeforeStart struct{}
+func (e ErrPhaseEndBeforeStart) Error() string { return "end_time must be after start_time" }
+func IsErrPhaseEndBeforeStart(err error) bool { _, ok := err.(ErrPhaseEndBeforeStart); return ok }
+
+type ErrPhaseNotFound struct{ PhaseID int64 }
+func (e ErrPhaseNotFound) Error() string { return fmt.Sprintf("phase not found [id: %d]", e.PhaseID) }
+func IsErrPhaseNotFound(err error) bool { _, ok := err.(ErrPhaseNotFound); return ok }
+
 // CurrentPhase returns the currently active phase for an activity.
 func CurrentPhase(ctx context.Context, activityKind string, activityID int64) (*hackforger_model.Phase, error) {
 	return hackforger_model.GetCurrentPhase(ctx, activityKind, activityID)
@@ -68,7 +76,7 @@ func UpdatePhaseTime(ctx context.Context, phaseID int64, startTime, endTime int6
 		return err
 	}
 	if phase == nil {
-		return fmt.Errorf("phase not found: %d", phaseID)
+		return ErrPhaseNotFound{PhaseID: phaseID}
 	}
 	if phase.IsLocked() {
 		return ErrPhaseLocked{PhaseID: phaseID}
@@ -77,7 +85,7 @@ func UpdatePhaseTime(ctx context.Context, phaseID int64, startTime, endTime int6
 		return ErrActivePhaseStartLocked{PhaseID: phaseID}
 	}
 	if endTime <= startTime {
-		return fmt.Errorf("end_time must be after start_time")
+		return ErrPhaseEndBeforeStart{}
 	}
 	if err := checkOverlap(ctx, phase.ActivityKind, phase.ActivityID, phaseID, startTime, endTime); err != nil {
 		return err
@@ -146,7 +154,7 @@ func RemovePhase(ctx context.Context, phaseID int64) error {
 		return err
 	}
 	if phase == nil {
-		return fmt.Errorf("phase not found: %d", phaseID)
+		return ErrPhaseNotFound{PhaseID: phaseID}
 	}
 	if !phase.IsFuture() {
 		return ErrPhaseNotFuture{PhaseID: phaseID}

@@ -135,7 +135,7 @@ func NewBounty(ctx *context.Context) {
 func NewBountyPost(ctx *context.Context) {
 	issueIndex := ctx.FormInt64("issue_id")
 	if issueIndex <= 0 {
-		ctx.Flash.Error("Issue is required")
+		ctx.Flash.Error(ctx.Tr("hackforger.bounty.error.issue_required"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
 		return
 	}
@@ -143,7 +143,7 @@ func NewBountyPost(ctx *context.Context) {
 	// Resolve issue index to database ID
 	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, issueIndex)
 	if err != nil {
-		ctx.Flash.Error("Issue not found")
+		ctx.Flash.Error(ctx.Tr("hackforger.bounty.error.issue_not_found"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
 		return
 	}
@@ -162,7 +162,7 @@ func NewBountyPost(ctx *context.Context) {
 
 	if err := hackforger_model.CreateBounty(ctx, bounty); err != nil {
 		if hackforger_model.IsErrBountyAlreadyExists(err) {
-			ctx.Flash.Error("A bounty already exists for this issue")
+			ctx.Flash.Error(ctx.Tr("hackforger.bounty.error.already_exists"))
 			ctx.Redirect(ctx.Repo.RepoLink + "/bounties/new")
 			return
 		}
@@ -181,7 +181,7 @@ func NewBountyPost(ctx *context.Context) {
 		Content:      &hackforger_model.HackforgerActionContent{EntityType: "bounty", EntityID: bounty.ID, EntityName: bounty.Title},
 	})
 
-	ctx.Flash.Success("Bounty created successfully")
+	ctx.Flash.Success(ctx.Tr("hackforger.bounty.error.created"))
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
 }
 
@@ -212,13 +212,24 @@ func BountyAction(ctx *context.Context) {
 	case "review":
 		err = hackforger_svc.StartReview(ctx, bountyID, ctx.Doer.ID)
 	default:
-		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "unknown action"})
+		ctx.JSON(http.StatusBadRequest, map[string]string{"error": ctx.Locale.TrString("hackforger.bounty.error.unknown_action")})
 		return
 	}
 
 	if err != nil {
 		log.Error("BountyAction: %v", err)
-		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "internal error"})
+		status := http.StatusUnprocessableEntity
+		msg := ctx.Locale.TrString("hackforger.bounty.error.internal")
+		switch {
+		case hackforger_svc.IsErrInvalidBountyStatus(err):
+			msg = ctx.Locale.TrString("hackforger.bounty.error.invalid_status")
+		case hackforger_svc.IsErrNotPublisher(err):
+			status = http.StatusForbidden
+			msg = ctx.Locale.TrString("hackforger.bounty.error.not_publisher")
+		case hackforger_svc.IsErrBountyHasApplications(err):
+			msg = ctx.Locale.TrString("hackforger.bounty.error.has_applications")
+		}
+		ctx.JSON(status, map[string]string{"error": msg})
 		return
 	}
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -242,13 +253,22 @@ func BountyApplicationAction(ctx *context.Context) {
 	case "reject":
 		err = hackforger_svc.RejectApplication(ctx, applicationID, ctx.Doer.ID)
 	default:
-		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "unknown action"})
+		ctx.JSON(http.StatusBadRequest, map[string]string{"error": ctx.Locale.TrString("hackforger.bounty.error.unknown_action")})
 		return
 	}
 
 	if err != nil {
-		log.Error("BountyAction: %v", err)
-		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "internal error"})
+		log.Error("BountyApplicationAction: %v", err)
+		status := http.StatusUnprocessableEntity
+		msg := ctx.Locale.TrString("hackforger.bounty.error.internal")
+		switch {
+		case hackforger_svc.IsErrInvalidBountyStatus(err):
+			msg = ctx.Locale.TrString("hackforger.bounty.error.invalid_status")
+		case hackforger_svc.IsErrNotPublisher(err):
+			status = http.StatusForbidden
+			msg = ctx.Locale.TrString("hackforger.bounty.error.not_publisher")
+		}
+		ctx.JSON(status, map[string]string{"error": msg})
 		return
 	}
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -263,12 +283,22 @@ func BountySelectWinners(ctx *context.Context) {
 	}
 	var form winnersForm
 	if err := json.NewDecoder(ctx.Req.Body).Decode(&form); err != nil {
-		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		ctx.JSON(http.StatusBadRequest, map[string]string{"error": ctx.Locale.TrString("hackforger.bounty.error.internal")})
 		return
 	}
 
 	if err := hackforger_svc.SelectWinners(ctx, bountyID, ctx.Doer.ID, form.Winners); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "internal error"})
+		log.Error("BountySelectWinners: %v", err)
+		status := http.StatusUnprocessableEntity
+		msg := ctx.Locale.TrString("hackforger.bounty.error.internal")
+		switch {
+		case hackforger_svc.IsErrInvalidBountyStatus(err):
+			msg = ctx.Locale.TrString("hackforger.bounty.error.invalid_status")
+		case hackforger_svc.IsErrNotPublisher(err):
+			status = http.StatusForbidden
+			msg = ctx.Locale.TrString("hackforger.bounty.error.not_publisher")
+		}
+		ctx.JSON(status, map[string]string{"error": msg})
 		return
 	}
 	ctx.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -281,8 +311,8 @@ func BountyListApplications(ctx *context.Context) {
 		BountyID: bountyID,
 	})
 	if err != nil {
-		log.Error("BountyQuery: %v", err)
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		log.Error("BountyListApplications: %v", err)
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": ctx.Locale.TrString("hackforger.bounty.error.internal")})
 		return
 	}
 
@@ -310,8 +340,8 @@ func BountyListWinners(ctx *context.Context) {
 	bountyID := ctx.ParamsInt64("bounty_id")
 	winners, err := hackforger_model.ListBountyWinners(ctx, bountyID)
 	if err != nil {
-		log.Error("BountyQuery: %v", err)
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		log.Error("BountyListWinners: %v", err)
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": ctx.Locale.TrString("hackforger.bounty.error.internal")})
 		return
 	}
 

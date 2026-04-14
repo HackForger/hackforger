@@ -31,12 +31,14 @@ func ManagePhases(ctx *context.Context) {
 
 	phases, err := hackforger_service.GetPhases(ctx, "hackathon", h.ID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		log.Error("ManagePhases/GetPhases: %v", err)
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": ctx.Locale.TrString("hackforger.hackathon.error.internal")})
 		return
 	}
 	phaseTypes, err := hackforger_model.GetPhaseTypesByActivityKind(ctx, "hackathon")
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		log.Error("ManagePhases/GetPhaseTypes: %v", err)
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": ctx.Locale.TrString("hackforger.hackathon.error.internal")})
 		return
 	}
 
@@ -163,7 +165,7 @@ func ManagePhasesReorder(ctx *context.Context) {
 	}
 	if err := hackforger_model.BatchUpdatePhaseSortOrder(ctx, req.Orders); err != nil {
 		log.Error("BatchUpdatePhaseSortOrder: %v", err)
-		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		ctx.JSON(http.StatusInternalServerError, map[string]string{"error": ctx.Locale.TrString("hackforger.hackathon.error.internal")})
 		return
 	}
 	respondWithPhases(ctx, h.ID)
@@ -182,7 +184,7 @@ func respondWithPhases(ctx *context.Context, hackathonID int64) {
 // handlePhaseError maps typed phase errors to JSON responses.
 func handlePhaseError(ctx *context.Context, err error) {
 	status := http.StatusInternalServerError
-	msg := "internal error"
+	msg := ctx.Locale.TrString("hackforger.hackathon.error.internal")
 
 	switch {
 	case hackforger_service.IsErrPhaseOverlap(err):
@@ -200,6 +202,12 @@ func handlePhaseError(ctx *context.Context, err error) {
 	case hackforger_service.IsErrActivePhaseStartLocked(err):
 		status = http.StatusForbidden
 		msg = ctx.Locale.TrString("hackforger.phase.error.active_start_locked")
+	case hackforger_service.IsErrPhaseEndBeforeStart(err):
+		status = http.StatusBadRequest
+		msg = ctx.Locale.TrString("hackforger.phase.error.end_before_start")
+	case hackforger_service.IsErrPhaseNotFound(err):
+		status = http.StatusNotFound
+		msg = ctx.Locale.TrString("hackforger.phase.error.not_found")
 	default:
 		log.Error("Phase operation error: %v", err)
 	}
