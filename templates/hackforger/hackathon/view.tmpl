@@ -85,14 +85,38 @@
 			</div>
 			<div class="hf-card-body">
 				<form method="post" action="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/register" class="ui form">
-					<div class="field">
-						<label>{{ctx.Locale.Tr "hackforger.hackathon.register.mode"}}</label>
-						<select name="org_id" class="ui selection dropdown">
-							<option value="0">{{ctx.Locale.Tr "hackforger.hackathon.register.solo"}}</option>
-							{{range .UserOrgs}}
-							<option value="{{.ID}}">{{.Name}} ({{ctx.Locale.Tr "hackforger.hackathon.register.team"}})</option>
+					<div class="required field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo"}}</label>
+						<select name="repo_id" class="ui search selection dropdown" required>
+							<option value="">— {{ctx.Locale.Tr "hackforger.hackathon.register.select_repo"}} —</option>
+							{{range .UserRepos}}
+							<option value="{{.ID}}" {{if eq .ID $.PreselectedRepoID}}selected{{end}}>{{.FullName}}</option>
 							{{end}}
 						</select>
+						<a href="{{AppSubUrl}}/repo/create?redirect_to={{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}" class="tw-text-sm tw-mt-1 tw-inline-block">+ {{ctx.Locale.Tr "hackforger.hackathon.register.create_repo"}}</a>
+					</div>
+					{{if .Tracks}}
+					<div class="required field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.track"}}</label>
+						<select name="track_id" class="ui selection dropdown" required>
+							<option value="">— {{ctx.Locale.Tr "hackforger.hackathon.register.select_track"}} —</option>
+							{{range .Tracks}}
+							<option value="{{.ID}}">{{.Name}}</option>
+							{{end}}
+						</select>
+					</div>
+					{{end}}
+					<div class="required field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</label>
+						<input name="title" required placeholder="{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}">
+					</div>
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.description"}}</label>
+						<textarea name="description" rows="3"></textarea>
+					</div>
+					<div class="field">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.demo_url"}}</label>
+						<input name="demo_url" type="url">
 					</div>
 					<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.register"}}</button>
 				</form>

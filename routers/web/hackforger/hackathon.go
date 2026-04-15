@@ -263,8 +263,15 @@ func ViewHackathon(ctx *context.Context) {
 		isJudge, _ := hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
 		ctx.Data["IsJudge"] = isJudge
 
-		orgs, _ := organization_model.GetUserOrgsList(ctx, ctx.Doer)
-		ctx.Data["UserOrgs"] = orgs
+		repos, _, _ := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
+			Actor:   ctx.Doer,
+			OwnerID: ctx.Doer.ID,
+			Private: true,
+		})
+		ctx.Data["UserRepos"] = repos
+
+		preselectedRepoID := ctx.FormInt64("repo_id")
+		ctx.Data["PreselectedRepoID"] = preselectedRepoID
 	}
 
 	// Render Markdown for description and prize summary
@@ -333,28 +340,55 @@ func RegisterPost(ctx *context.Context) {
 		}
 	}
 
-	orgID, _ := strconv.ParseInt(ctx.FormString("org_id"), 10, 64)
-	var teamName string
+	// Parse repo selection
+	repoID := ctx.FormInt64("repo_id")
+	if repoID <= 0 {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.repo_required"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
 
-	if orgID > 0 {
-		isMember, err := organization_model.IsOrganizationMember(ctx, orgID, ctx.Doer.ID)
-		if err != nil || !isMember {
-			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.not_org_member"))
-			ctx.Redirect("/hackathon/" + h.Slug)
-			return
-		}
-		if org, err := organization_model.GetOrgByID(ctx, orgID); err == nil {
-			teamName = org.Name
-		}
+	// Verify repo exists
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.repo_required"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
+
+	// Check user has access
+	hasAccess := repo.OwnerID == ctx.Doer.ID
+	if !hasAccess {
+		isMember, _ := organization_model.IsOrganizationMember(ctx, repo.OwnerID, ctx.Doer.ID)
+		hasAccess = isMember
+	}
+	if !hasAccess {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.repo_required"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
+
+	// Derive OrgID and TeamName from repo owner
+	var orgID int64
+	var teamName string
+	repoOwner, _ := user_model.GetUserByID(ctx, repo.OwnerID)
+	if repoOwner != nil && repoOwner.IsOrganization() {
+		orgID = repoOwner.ID
+		teamName = repoOwner.Name
 	} else {
 		teamName = ctx.Doer.Name
 	}
 
+	trackID := ctx.FormInt64("track_id")
+
+	// Create registration
 	r := &hackforger_model.HackathonRegistration{
 		HackathonID: h.ID,
 		UserID:      ctx.Doer.ID,
 		OrgID:       orgID,
 		TeamName:    teamName,
+		RepoID:      repoID,
+		TrackID:     trackID,
 		Status:      hackforger_model.RegistrationStatusApproved,
 	}
 	if err := hackforger_model.CreateRegistration(ctx, r); err != nil {
@@ -366,6 +400,26 @@ func RegisterPost(ctx *context.Context) {
 		}
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
+	}
+
+	// Simultaneously create submission
+	title := ctx.FormString("title")
+	if title == "" {
+		title = repo.Name
+	}
+	s := &hackforger_model.HackathonSubmission{
+		HackathonID:    h.ID,
+		RegistrationID: r.ID,
+		UserID:         ctx.Doer.ID,
+		Title:          title,
+		Description:    ctx.FormString("description"),
+		DemoURL:        ctx.FormString("demo_url"),
+		TrackID:        trackID,
+		RepoID:         repoID,
+		Status:         hackforger_model.SubmissionStatusSubmitted,
+	}
+	if err := hackforger_service.CreateSubmission(ctx, ctx.Doer, h, s); err != nil {
+		log.Error("CreateSubmission on register: %v", err)
 	}
 
 	// Add user to hackathon org
