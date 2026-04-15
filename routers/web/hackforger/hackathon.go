@@ -235,6 +235,16 @@ func ViewHackathon(ctx *context.Context) {
 	ctx.Data["Registrations"] = regs
 	ctx.Data["RegistrationCount"] = regCount
 
+	regRepos := make(map[int64]string)
+	for _, r := range regs {
+		if r.RepoID > 0 {
+			if repo, err := repo_model.GetRepositoryByID(ctx, r.RepoID); err == nil {
+				regRepos[r.RepoID] = repo.FullName()
+			}
+		}
+	}
+	ctx.Data["RegRepos"] = regRepos
+
 	subs, _, _ := hackforger_model.ListSubmissions(ctx, hackforger_model.ListSubmissionsOptions{HackathonID: h.ID})
 	ctx.Data["Submissions"] = subs
 
@@ -470,6 +480,20 @@ func SubmitForm(ctx *context.Context) {
 		Private: true,
 	})
 	ctx.Data["UserRepos"] = repos
+
+	// During development phase, only show repos already registered
+	reg, err := hackforger_model.GetRegistration(ctx, h.ID, ctx.Doer.ID)
+	if err == nil && reg.RepoID > 0 {
+		filteredRepos := make(repo_model.RepositoryList, 0)
+		for _, r := range repos {
+			if r.ID == reg.RepoID {
+				filteredRepos = append(filteredRepos, r)
+			}
+		}
+		ctx.Data["UserRepos"] = filteredRepos
+		ctx.Data["LockedRepoID"] = reg.RepoID
+	}
+
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
 	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
 	ctx.Data["UploadRemoveUrl"] = ""

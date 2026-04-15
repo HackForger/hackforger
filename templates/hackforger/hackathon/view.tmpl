@@ -137,7 +137,13 @@
 			</div>
 			{{range .Registrations}}
 			<div class="hf-row">
-				<div class="hf-row-left"><span>{{.TeamName}}</span></div>
+				<div class="hf-row-left">
+					<span>{{.TeamName}}</span>
+					{{if .RepoID}}
+						{{$repo := index $.RegRepos .RepoID}}
+						{{if $repo}} · <a href="{{AppSubUrl}}/{{$repo}}">{{$repo}}</a>{{end}}
+					{{end}}
+				</div>
 				<span class="hf-badge {{if eq .Status 0}}hf-badge-yellow{{else if eq .Status 1}}hf-badge-green{{else}}hf-badge-red{{end}}">
 					{{if eq .Status 0}}{{ctx.Locale.Tr "hackforger.hackathon.view.pending"}}
 					{{else if eq .Status 1}}{{ctx.Locale.Tr "hackforger.hackathon.view.approved"}}
