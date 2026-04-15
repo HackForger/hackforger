@@ -17,6 +17,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/markup/markdown"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
@@ -274,9 +275,10 @@ func ViewHackathon(ctx *context.Context) {
 		ctx.Data["IsJudge"] = isJudge
 
 		repos, _, _ := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
-			Actor:   ctx.Doer,
-			OwnerID: ctx.Doer.ID,
-			Private: true,
+			Actor:       ctx.Doer,
+			OwnerID:     ctx.Doer.ID,
+			Private:     true,
+			Collaborate: optional.Some(false),
 		})
 		ctx.Data["UserRepos"] = repos
 
@@ -475,9 +477,10 @@ func SubmitForm(ctx *context.Context) {
 
 	// Load user's repos for the project repo selector
 	repos, _, _ := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
-		Actor:   ctx.Doer,
-		OwnerID: ctx.Doer.ID,
-		Private: true,
+		Actor:       ctx.Doer,
+		OwnerID:     ctx.Doer.ID,
+		Private:     true,
+		Collaborate: optional.Some(false),
 	})
 	ctx.Data["UserRepos"] = repos
 

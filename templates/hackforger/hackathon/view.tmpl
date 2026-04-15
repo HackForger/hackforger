@@ -93,7 +93,7 @@
 							<option value="{{.ID}}" {{if eq .ID $.PreselectedRepoID}}selected{{end}}>{{.FullName}}</option>
 							{{end}}
 						</select>
-						<a href="{{AppSubUrl}}/repo/create?redirect_to={{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}" class="tw-text-sm tw-mt-1 tw-inline-block">+ {{ctx.Locale.Tr "hackforger.hackathon.register.create_repo"}}</a>
+						<a href="{{AppSubUrl}}/repo/create" target="_blank" class="tw-text-sm tw-mt-1 tw-inline-block">+ {{ctx.Locale.Tr "hackforger.hackathon.register.create_repo"}}</a>
 					</div>
 					{{if .Tracks}}
 					<div class="required field">
