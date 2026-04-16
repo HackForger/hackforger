@@ -460,10 +460,12 @@ func ApproveProject(ctx context.Context, doerID, projectID int64) error {
 		return err
 	}
 
-	// Notify the applicant about approval (HF-018)
-	doer, _ := user_model.GetUserByID(ctx, doerID)
-	if doer != nil {
-		notify_service.HackforgerEntityStatusChanged(ctx, doer, &notify_service.HackforgerEventOpts{
+	// Notify about approval (HF-018)
+	// Use the applicant as the actor so the feed reads "[applicant] received a grant"
+	// rather than "[admin] received a grant".
+	applicant, _ := user_model.GetUserByID(ctx, project.UserID)
+	if applicant != nil {
+		notify_service.HackforgerEntityStatusChanged(ctx, applicant, &notify_service.HackforgerEventOpts{
 			OpType:       hackforger_model.ActionGrantAwarded,
 			EntityType:   "grant_project",
 			EntityID:     project.ID,

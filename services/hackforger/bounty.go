@@ -20,19 +20,26 @@ import (
 
 // postBountyIssueComment adds a timeline comment to the bounty's linked Issue
 // when a bounty event occurs (created, applied, accepted, completed, etc.).
+// Errors are logged but not propagated — issue comments are best-effort and
+// should not block bounty operations.
 func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64, message string) {
 	doer, err := user_model.GetUserByID(ctx, doerID)
 	if err != nil {
+		log.Error("postBountyIssueComment: GetUserByID(%d): %v", doerID, err)
 		return
 	}
 	issue, err := issues_model.GetIssueByID(ctx, bounty.IssueID)
 	if err != nil {
+		log.Error("postBountyIssueComment: GetIssueByID(%d): %v", bounty.IssueID, err)
 		return
 	}
 	if err := issue.LoadRepo(ctx); err != nil {
+		log.Error("postBountyIssueComment: LoadRepo for issue %d: %v", bounty.IssueID, err)
 		return
 	}
-	_, _ = issue_service.CreateIssueComment(ctx, doer, issue.Repo, issue, message, nil)
+	if _, err := issue_service.CreateIssueComment(ctx, doer, issue.Repo, issue, message, nil); err != nil {
+		log.Error("postBountyIssueComment: CreateIssueComment for issue %d: %v", bounty.IssueID, err)
+	}
 }
 
 // closeBountyIssue closes the Issue linked to a bounty when it completes.
