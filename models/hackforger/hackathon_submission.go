@@ -150,6 +150,19 @@ func SubmissionExistsByUserAndTrack(ctx context.Context, userID, trackID int64) 
 	return db.GetEngine(ctx).Where("user_id = ? AND track_id = ?", userID, trackID).Exist(&HackathonSubmission{})
 }
 
+// GetSubmissionByUserAndHackathon returns the submission for a given user in a hackathon (if any).
+func GetSubmissionByUserAndHackathon(ctx context.Context, hackathonID, userID int64) (*HackathonSubmission, error) {
+	s := &HackathonSubmission{}
+	has, err := db.GetEngine(ctx).Where("hackathon_id = ? AND user_id = ?", hackathonID, userID).Get(s)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, nil
+	}
+	return s, nil
+}
+
 // CountSubmissions returns the number of submissions for a given hackathon.
 func CountSubmissions(ctx context.Context, hackathonID int64) (int64, error) {
 	return db.GetEngine(ctx).Where("hackathon_id = ?", hackathonID).Count(new(HackathonSubmission))
