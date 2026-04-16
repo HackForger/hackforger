@@ -6,14 +6,14 @@
 		<div class="hf-card">
 			<div class="hf-card-body">
 				<form class="ui form" method="post">
-					<div class="required field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</label><input name="title" required></div>
+					<div class="required field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.title"}}</label><input name="title" required value="{{if .ExistingSubmission}}{{.ExistingSubmission.Title}}{{end}}"></div>
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.description"}}</label>
 						{{template "shared/combomarkdowneditor" (dict
 							"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
 							"MarkdownPreviewContext" ""
 							"TextareaName" "description"
-							"TextareaContent" ""
+							"TextareaContent" (Iif .ExistingSubmission .ExistingSubmission.Description "")
 							"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.hackathon.submit.field.description")
 							"DropzoneParentContainer" "form"
 						)}}
@@ -21,19 +21,30 @@
 						<div class="field">{{template "repo/upload" .}}</div>
 						{{end}}
 					</div>
-					<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.demo_url"}}</label><input name="demo_url" type="url"></div>
+					<div class="field"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.demo_url"}}</label><input name="demo_url" type="url" value="{{if .ExistingSubmission}}{{.ExistingSubmission.DemoURL}}{{end}}"></div>
 					{{if .UserRepos}}
 					<div class="field">
 						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo"}}</label>
 						<select name="repo_id" class="ui search selection dropdown">
 							<option value="0">— {{ctx.Locale.Tr "hackforger.hackathon.submit.field.repo_none"}} —</option>
+							{{$lockedRepo := .LockedRepoID}}
+							{{$existingRepo := 0}}{{if .ExistingSubmission}}{{$existingRepo = .ExistingSubmission.RepoID}}{{end}}
 							{{range .UserRepos}}
-							<option value="{{.ID}}">{{.FullName}}</option>
+							<option value="{{.ID}}" {{if or (eq .ID $lockedRepo) (eq .ID $existingRepo)}}selected{{end}}>{{.FullName}}</option>
 							{{end}}
 						</select>
 					</div>
 					{{end}}
-					{{if .Tracks}}<div class="field hf-track-select"><label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.track"}}</label><select name="track_id" class="ui selection dropdown"><option value="0">— None —</option>{{range .Tracks}}<option value="{{.ID}}" title="{{.Name}}">{{.Name}}</option>{{end}}</select></div>{{end}}
+					{{if .Tracks}}
+					<div class="field hf-track-select">
+						<label>{{ctx.Locale.Tr "hackforger.hackathon.submit.field.track"}}</label>
+						<select name="track_id" class="ui selection dropdown">
+							<option value="0">— None —</option>
+							{{$existingTrack := 0}}{{if .ExistingSubmission}}{{$existingTrack = .ExistingSubmission.TrackID}}{{end}}
+							{{range .Tracks}}<option value="{{.ID}}" title="{{.Name}}" {{if eq .ID $existingTrack}}selected{{end}}>{{.Name}}</option>{{end}}
+						</select>
+					</div>
+					{{end}}
 					<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.submit"}}</button>
 				</form>
 			</div>

@@ -464,8 +464,11 @@ func SubmitForm(ctx *context.Context) {
 	if h == nil {
 		return
 	}
+	// Allow submit/update during Registration (to update after repo-based registration)
+	// and Development phases
 	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
-	if !canSubmit {
+	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
+	if !canSubmit && !canRegister {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -497,6 +500,12 @@ func SubmitForm(ctx *context.Context) {
 		ctx.Data["LockedRepoID"] = reg.RepoID
 	}
 
+	// Prefill form with existing submission data (if any)
+	existing, _ := hackforger_model.GetSubmissionByUserAndHackathon(ctx, h.ID, ctx.Doer.ID)
+	if existing != nil {
+		ctx.Data["ExistingSubmission"] = existing
+	}
+
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
 	ctx.Data["UploadUrl"] = setting.AppSubURL + "/hackforger/attachments"
 	ctx.Data["UploadRemoveUrl"] = ""
@@ -514,7 +523,8 @@ func SubmitPost(ctx *context.Context) {
 		return
 	}
 	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
-	if !canSubmit {
+	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
+	if !canSubmit && !canRegister {
 		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
@@ -527,6 +537,32 @@ func SubmitPost(ctx *context.Context) {
 	}
 	trackID, _ := strconv.ParseInt(ctx.FormString("track_id"), 10, 64)
 	repoID, _ := strconv.ParseInt(ctx.FormString("repo_id"), 10, 64)
+
+	// Upsert: if user already has a submission (created at registration), update it;
+	// otherwise create a new one.
+	existing, _ := hackforger_model.GetSubmissionByUserAndHackathon(ctx, h.ID, ctx.Doer.ID)
+	if existing != nil {
+		existing.Title = ctx.FormString("title")
+		existing.Description = ctx.FormString("description")
+		existing.DemoURL = ctx.FormString("demo_url")
+		if trackID > 0 {
+			existing.TrackID = trackID
+		}
+		if repoID > 0 {
+			existing.RepoID = repoID
+		}
+		if err := hackforger_model.UpdateSubmission(ctx, existing); err != nil {
+			log.Error("UpdateSubmission: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+			ctx.Redirect("/hackathon/" + h.Slug + "/submit")
+			return
+		}
+		ctx.Flash.Success(ctx.Tr("hackforger.hackathon.submit.success"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
+	}
+
+	// No existing submission — create new
 	s := &hackforger_model.HackathonSubmission{
 		HackathonID:    h.ID,
 		RegistrationID: reg.ID,

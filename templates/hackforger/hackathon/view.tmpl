@@ -154,8 +154,8 @@
 		</div>
 		{{end}}
 
-		{{/* Submit button */}}
-		{{if and (eq .Hackathon.StatusCache 2) .IsRegistered}}
+		{{/* Submit / Update button — visible during Registration and Hacking phases for registered users */}}
+		{{if and (or (eq .Hackathon.StatusCache 1) (eq .Hackathon.StatusCache 2)) .IsRegistered}}
 		<div class="tw-text-center tw-my-4">
 			<a class="hf-btn hf-btn-primary" href="{{AppSubUrl}}/hackathon/{{.Hackathon.Slug}}/submit">{{svg "octicon-upload" 16}} {{ctx.Locale.Tr "hackforger.hackathon.submit"}}</a>
 		</div>
