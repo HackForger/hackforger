@@ -13,7 +13,7 @@
 							"MarkdownPreviewUrl" (print AppSubUrl "/hackforger/markup")
 							"MarkdownPreviewContext" ""
 							"TextareaName" "description"
-							"TextareaContent" (Iif .ExistingSubmission .ExistingSubmission.Description "")
+							"TextareaContent" (or (and .ExistingSubmission .ExistingSubmission.Description) "")
 							"TextareaPlaceholder" (ctx.Locale.TrString "hackforger.hackathon.submit.field.description")
 							"DropzoneParentContainer" "form"
 						)}}
