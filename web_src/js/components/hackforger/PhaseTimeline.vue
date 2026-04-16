@@ -93,16 +93,15 @@ export default {
       if (!unix) return '';
       const d = new Date(unix * 1000);
       const pad = (n) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     },
-    fromDateLocal(str, isEnd) {
+    fromDateLocal(str) {
       if (!str) return 0;
-      const dt = isEnd ? `${str}T23:59:00` : `${str}T00:00:00`;
-      return Math.floor(new Date(dt).getTime() / 1000);
+      return Math.floor(new Date(str).getTime() / 1000);
     },
     async addPhase() {
-      const startTime = this.fromDateLocal(this.newPhase.startTime, false);
-      const endTime = this.fromDateLocal(this.newPhase.endTime, true);
+      const startTime = this.fromDateLocal(this.newPhase.startTime);
+      const endTime = this.fromDateLocal(this.newPhase.endTime);
       if (!this.newPhase.phaseTypeId || !startTime || !endTime) {
         this.error = 'Please fill all fields';
         return;
@@ -138,7 +137,7 @@ export default {
       }
     },
     async updatePhase(phase, field, event) {
-      const val = this.fromDateLocal(event.target.value, field === 'end');
+      const val = this.fromDateLocal(event.target.value);
       if (!val) return;
       const startTime = field === 'start' ? val : phase.start_time;
       const endTime = field === 'end' ? val : phase.end_time;
@@ -240,7 +239,7 @@ export default {
         </button>
       </strong>
 
-      <input type="date"
+      <input type="datetime-local"
              :value="toDateLocal(phase.start_time)"
              :disabled="phaseState(phase) !== 'future'"
              @change="updatePhase(phase, 'start', $event)"
@@ -248,7 +247,7 @@ export default {
 
       <span class="tw-text-gray">&rarr;</span>
 
-      <input type="date"
+      <input type="datetime-local"
              :value="toDateLocal(phase.end_time)"
              :disabled="phaseState(phase) === 'locked'"
              @change="updatePhase(phase, 'end', $event)"
@@ -277,8 +276,8 @@ export default {
           {{ pt.label }}
         </option>
       </select>
-      <input type="date" v-model="newPhase.startTime" class="tw-text-sm">
-      <input type="date" v-model="newPhase.endTime" class="tw-text-sm">
+      <input type="datetime-local" v-model="newPhase.startTime" class="tw-text-sm">
+      <input type="datetime-local" v-model="newPhase.endTime" class="tw-text-sm">
       <button class="hf-btn hf-btn-primary" :disabled="loading" @click="addPhase">
         + Add Phase
       </button>
