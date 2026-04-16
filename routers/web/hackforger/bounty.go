@@ -228,6 +228,8 @@ func BountyAction(ctx *context.Context) {
 			msg = ctx.Locale.TrString("hackforger.bounty.error.not_publisher")
 		case hackforger_svc.IsErrBountyHasApplications(err):
 			msg = ctx.Locale.TrString("hackforger.bounty.error.has_applications")
+		case hackforger_model.IsErrAlreadyApplied(err):
+			msg = ctx.Locale.TrString("hackforger.bounty.error.already_applied")
 		}
 		ctx.JSON(status, map[string]string{"error": msg})
 		return
