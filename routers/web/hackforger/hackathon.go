@@ -1284,6 +1284,9 @@ func JudgeScoresPost(ctx *context.Context) {
 			e := err.(hackforger_service.ErrScoreOutOfRange)
 			msg = string(ctx.Tr("hackforger.hackathon.error.score_out_of_range", fmt.Sprintf("%.0f", e.MaxScore)))
 			status = http.StatusBadRequest
+		case hackforger_service.IsErrNoRubricConfigured(err):
+			msg = string(ctx.Tr("hackforger.hackathon.error.no_rubric_configured"))
+			status = http.StatusBadRequest
 		case hackforger_model.IsErrInvalidHackathonPhase(err):
 			msg = string(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
 			status = http.StatusBadRequest

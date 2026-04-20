@@ -4,6 +4,7 @@
 package hackforger
 
 import (
+	"fmt"
 	"net/http"
 
 	hackforger_model "forgejo.org/models/hackforger"
@@ -161,11 +162,31 @@ func SubmitScore(ctx *context.APIContext) {
 	for i, s := range f.Scores {
 		scores[i] = hackforger_service.CriteriaScore{CriteriaID: s.CriteriaID, Score: s.Score, Comment: s.Comment}
 	}
-	if err := hackforger_service.SubmitScores(ctx, ctx.Doer.ID, ctx.ParamsInt64(":sid"), scores); err != nil {
-		ctx.Error(http.StatusBadRequest, "SubmitScores", err)
+	err := hackforger_service.SubmitScores(ctx, ctx.Doer.ID, ctx.ParamsInt64(":sid"), scores)
+	if err == nil {
+		ctx.Status(http.StatusCreated)
 		return
 	}
-	ctx.Status(http.StatusCreated)
+	switch {
+	case hackforger_model.IsErrNotJudge(err):
+		ctx.Error(http.StatusForbidden, "SubmitScores",
+			ctx.Tr("hackforger.hackathon.error.not_judge"))
+	case hackforger_service.IsErrNoRubricConfigured(err):
+		ctx.Error(http.StatusBadRequest, "SubmitScores",
+			ctx.Tr("hackforger.hackathon.error.no_rubric_configured"))
+	case hackforger_service.IsErrIncompleteRubric(err):
+		ctx.Error(http.StatusBadRequest, "SubmitScores",
+			ctx.Tr("hackforger.hackathon.error.incomplete_rubric"))
+	case hackforger_service.IsErrScoreOutOfRange(err):
+		e := err.(hackforger_service.ErrScoreOutOfRange)
+		ctx.Error(http.StatusBadRequest, "SubmitScores",
+			ctx.Tr("hackforger.hackathon.error.score_out_of_range", fmt.Sprintf("%.0f", e.MaxScore)))
+	case hackforger_model.IsErrInvalidHackathonPhase(err):
+		ctx.Error(http.StatusBadRequest, "SubmitScores",
+			ctx.Tr("hackforger.hackathon.error.invalid_phase"))
+	default:
+		ctx.Error(http.StatusBadRequest, "SubmitScores", err)
+	}
 }
 
 // ListScores returns all judge scores for a submission.
