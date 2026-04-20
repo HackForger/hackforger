@@ -448,7 +448,7 @@ sed -n '1,80p' routers/web/hackforger/org.go
 ```
 Note the imports it uses (notify_service, ActionOrgJoinRequest, etc.) and the duplicate-detection guard.
 
-- [ ] **Step 4.2: Create the service**
+- [ ] **Step 4.2: Create the service** (mirrors the existing web handler at `routers/web/hackforger/org.go:18-72` exactly — including the per-owner notification loop and the add-member link content)
 
 ```go
 // Copyright 2026 The HackForger Authors. All rights reserved.
@@ -459,9 +459,12 @@ package hackforger
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	hackforger_model "forgejo.org/models/hackforger"
 	organization_model "forgejo.org/models/organization"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
 	notify_service "forgejo.org/services/notify"
 )
 
@@ -471,10 +474,14 @@ var ErrAlreadyOrgMember = errors.New("user is already a member of the org")
 // IsErrAlreadyOrgMember reports whether err == ErrAlreadyOrgMember.
 func IsErrAlreadyOrgMember(err error) bool { return errors.Is(err, ErrAlreadyOrgMember) }
 
-// RequestOrgJoin notifies the org's owners that a user wants to join.
-// Returns ErrAlreadyOrgMember if the doer already belongs to the org.
-// Fire-and-forget: no row is persisted; this only publishes a feed event.
-func RequestOrgJoin(ctx context.Context, org *organization_model.Organization, doer *user_model.User) error {
+// RequestOrgJoin notifies the org's owners (per-owner direct notification)
+// that the doer wants to join. Returns ErrAlreadyOrgMember if the doer already
+// belongs to the org. Fire-and-forget: no row is persisted; this only
+// publishes one feed event per owner.
+//
+// orgLink is the org's web link (e.g. "/web3-innovation"); the API caller
+// supplies it because ctx.Org.OrgLink is web-context only.
+func RequestOrgJoin(ctx context.Context, org *organization_model.Organization, doer *user_model.User, orgLink string) error {
 	isMember, err := organization_model.IsOrganizationMember(ctx, org.ID, doer.ID)
 	if err != nil {
 		return err
@@ -482,20 +489,79 @@ func RequestOrgJoin(ctx context.Context, org *organization_model.Organization, d
 	if isMember {
 		return ErrAlreadyOrgMember
 	}
-	notify_service.HackforgerEntityCreated(ctx, doer, notify_service.HackforgerEntity{
-		Kind: notify_service.ActionOrgJoinRequest,
-		ID:   org.ID,
-		Name: org.Name,
-	})
+
+	ownerTeam, err := organization_model.GetOwnerTeam(ctx, org.ID)
+	if err != nil {
+		return err
+	}
+	if err := ownerTeam.LoadMembers(ctx); err != nil {
+		return err
+	}
+
+	addMemberLink := fmt.Sprintf("%s/teams/%s?username=%s",
+		orgLink, ownerTeam.LowerName, doer.Name)
+
+	for _, owner := range ownerTeam.Members {
+		notify_service.HackforgerEntityCreated(ctx, doer, &notify_service.HackforgerEventOpts{
+			OpType:       hackforger_model.ActionOrgJoinRequest,
+			EntityType:   "org",
+			EntityID:     org.ID,
+			EntityName:   org.Name,
+			OrgID:        org.ID,
+			AudienceType: notify_service.AudienceDirectUser,
+			TargetUserID: owner.ID,
+			Content: map[string]string{
+				"username":        doer.Name,
+				"add_member_link": addMemberLink,
+			},
+		})
+	}
+
+	log.Info("HackForger: user %s requested to join org %s", doer.Name, org.Name)
 	return nil
 }
 ```
 
-> If the existing web handler uses a different `notify_service` API shape, mirror it exactly here. Adjust the struct literal to whatever signature `notify_service.HackforgerEntityCreated` actually accepts in this codebase. Don't invent fields.
+(All struct fields and function signatures copied verbatim from the verified web handler. Do not add or rename fields without grepping the real type definitions first.)
 
 - [ ] **Step 4.3: Replace inline logic in the web handler**
 
-Replace the body of `JoinOrgRequest` in `routers/web/hackforger/org.go` to call `hackforger_service.RequestOrgJoin(ctx, org, ctx.Doer)`. Map `ErrAlreadyOrgMember` to `ctx.Flash.Info(ctx.Tr("hackforger.org.already_member"))`. Other errors → `ctx.ServerError`.
+Rewrite `routers/web/hackforger/org.go` `JoinOrgRequest` (full file) to:
+
+```go
+// Copyright 2026 The HackForger Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package hackforger
+
+import (
+	"forgejo.org/services/context"
+	hackforger_service "forgejo.org/services/hackforger"
+)
+
+// JoinOrgRequest handles a signed-in user requesting to join an organization.
+// Delegates to hackforger_service.RequestOrgJoin so the API and web call the same code.
+func JoinOrgRequest(ctx *context.Context) {
+	org := ctx.Org.Organization
+
+	if ctx.Doer == nil {
+		ctx.Redirect(org.HomeLink())
+		return
+	}
+
+	err := hackforger_service.RequestOrgJoin(ctx, org, ctx.Doer, ctx.Org.OrgLink)
+	switch {
+	case err == nil:
+		ctx.Flash.Success(ctx.Tr("hackforger.org.join_request_sent"))
+	case hackforger_service.IsErrAlreadyOrgMember(err):
+		ctx.Flash.Info(ctx.Tr("hackforger.org.already_member"))
+	default:
+		ctx.ServerError("RequestOrgJoin", err)
+		return
+	}
+	ctx.Redirect(org.HomeLink())
+}
+```
 
 - [ ] **Step 4.4: Compile**
 
@@ -548,7 +614,8 @@ func CreateOrgJoinRequestAPI(ctx *context.APIContext) {
 	//     "$ref": "#/responses/validationError"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	if err := hackforger_service.RequestOrgJoin(ctx, ctx.Org.Organization, ctx.Doer); err != nil {
+	orgLink := ctx.Org.Organization.HomeLink()
+	if err := hackforger_service.RequestOrgJoin(ctx, ctx.Org.Organization, ctx.Doer, orgLink); err != nil {
 		if hackforger_service.IsErrAlreadyOrgMember(err) {
 			ctx.Error(http.StatusUnprocessableEntity, "AlreadyMember", "user is already a member of this organization")
 			return
