@@ -1812,6 +1812,28 @@ func Routes() *web.Route {
 			m.Get("/feed", hackforger_api.GetFeed)
 			m.Get("/search", hackforger_api.SearchAPI)
 
+			// Platform-level attachment upload
+			m.Post("/attachments", reqToken(), hackforger_api.UploadAttachmentAPI)
+
+			// Org join-request (singular, mirrors web /-/org/{org}/join-request)
+			m.Group("/orgs/{org}", func() {
+				m.Post("/join-request", reqToken(), hackforger_api.CreateOrgJoinRequestAPI)
+			}, orgAssignment(true))
+
+			// Admin: reputation settings + phase type catalog
+			m.Group("/admin", func() {
+				m.Group("/reputation/settings", func() {
+					m.Get("", hackforger_api.GetReputationSettingsAPI)
+					m.Put("", bind(hackforger_api.UpdateReputationSettingsForm{}), hackforger_api.UpdateReputationSettingsAPI)
+				}, reqSiteAdmin())
+				m.Group("/phase-types", func() {
+					m.Get("", hackforger_api.ListPhaseTypesAPI)
+					m.Post("", bind(hackforger_api.CreatePhaseTypeForm{}), hackforger_api.CreatePhaseTypeAPI)
+					m.Put("/{id}", bind(hackforger_api.UpdatePhaseTypeForm{}), hackforger_api.UpdatePhaseTypeAPI)
+					m.Delete("/{id}", hackforger_api.DeletePhaseTypeAPI)
+				}, reqSiteAdmin())
+			})
+
 			// Grant Round routes
 			m.Group("/grant-rounds", func() {
 				m.Combo("").
