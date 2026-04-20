@@ -34,6 +34,7 @@ func init() {
 				SortOrder    int    `xorm:"NOT NULL"`
 				StartTime    int64  `xorm:"NOT NULL"`
 				EndTime      int64  `xorm:"NOT NULL"`
+				CustomName   string `xorm:"VARCHAR(100) NOT NULL DEFAULT ''"`
 				CreatedUnix  int64  `xorm:"created"`
 				UpdatedUnix  int64  `xorm:"updated"`
 			}
