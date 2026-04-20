@@ -4,6 +4,7 @@
 package hackforger
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -298,11 +299,37 @@ func PublishHackathon(ctx *context.APIContext) {
 	if h == nil {
 		return
 	}
-	if err := hackforger_service.PublishHackathon(ctx, ctx.Doer.ID, h); err != nil {
-		ctx.Error(http.StatusBadRequest, "PublishHackathon", err)
+	err := hackforger_service.PublishHackathon(ctx, ctx.Doer.ID, h)
+	if err == nil {
+		ctx.JSON(http.StatusOK, map[string]string{"status": "open"})
 		return
 	}
-	ctx.JSON(http.StatusOK, map[string]string{"status": "open"})
+	switch {
+	case hackforger_service.IsErrNoTracks(err):
+		ctx.Error(http.StatusBadRequest, "PublishHackathon",
+			ctx.Tr("hackforger.hackathon.error.no_tracks"))
+	case hackforger_service.IsErrNoCriteria(err):
+		typed := err.(hackforger_service.ErrNoCriteria)
+		if typed.TrackID == 0 {
+			ctx.Error(http.StatusBadRequest, "PublishHackathon",
+				ctx.Tr("hackforger.hackathon.error.publish_requires_criteria"))
+		} else {
+			trackName := fmt.Sprintf("#%d", typed.TrackID)
+			if t, terr := hackforger_model.GetTrackByID(ctx, typed.TrackID); terr == nil && t != nil {
+				trackName = t.Name
+			}
+			ctx.Error(http.StatusBadRequest, "PublishHackathon",
+				ctx.Tr("hackforger.hackathon.error.track_requires_criteria", trackName))
+		}
+	case hackforger_service.IsErrNoRegistrationPhase(err):
+		ctx.Error(http.StatusBadRequest, "PublishHackathon",
+			ctx.Tr("hackforger.hackathon.error.no_registration_phase"))
+	case hackforger_service.IsErrNoDevelopmentPhase(err):
+		ctx.Error(http.StatusBadRequest, "PublishHackathon",
+			ctx.Tr("hackforger.hackathon.error.no_development_phase"))
+	default:
+		ctx.Error(http.StatusBadRequest, "PublishHackathon", err)
+	}
 }
 
 // StartHackathon transitions a hackathon from Open to Hacking.

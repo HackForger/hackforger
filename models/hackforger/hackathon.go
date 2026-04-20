@@ -149,25 +149,6 @@ func (err ErrNotJudge) Unwrap() error {
 	return util.ErrPermissionDenied
 }
 
-// ErrNoCriteria represents a missing scoring criteria error.
-type ErrNoCriteria struct {
-	HackathonID int64
-}
-
-// IsErrNoCriteria checks if an error is a ErrNoCriteria.
-func IsErrNoCriteria(err error) bool {
-	_, ok := err.(ErrNoCriteria)
-	return ok
-}
-
-func (err ErrNoCriteria) Error() string {
-	return fmt.Sprintf("no scoring criteria defined [hackathon_id: %d]", err.HackathonID)
-}
-
-func (err ErrNoCriteria) Unwrap() error {
-	return util.ErrInvalidArgument
-}
-
 // CreateHackathon creates a new hackathon in the database.
 func CreateHackathon(ctx context.Context, h *Hackathon) error {
 	return db.Insert(ctx, h)
