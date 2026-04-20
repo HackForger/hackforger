@@ -6,7 +6,11 @@
 
 > **Web 端测试是必选项，不可使用单元测试或 API 测试替代 Web 界面操作。**
 > **关键验证节点必须使用 agent-browser 截屏记录作为测试证据。**
-> **API 仅用于 git 操作（Fork/PR）和设计上需通过 API 的操作。**
+> **API 调用允许用于 Forgejo 标准 git 操作（Fork/PR/Commit/Star/Reaction/Follow/Team/Issue 等）以及阶段切换等无 UI 触发的自动化机制；但 HackForger 自有的用户操作（创建 hackathon、报名、提交、评分、领 bounty 等）必须通过 web UI 验证。**
+>
+> **注意**：API 平价（每个 web 操作都有 API 等价端点）是平台的独立设计目标，由 [`docs/skills/hackforger-api/`](../../../skills/hackforger-api/) 维护和审计。E2E 用 web 不代表 API 缺失；反之 API 完备也不意味着可以跳过 web E2E。两者目的不同。
+>
+> **关于阶段切换**：Hackathon 的 Open→Hacking→Judging→Finished 由 gocron 调度器（`hackforger_hackathon_status` @ every 5min）按 phase 起止时间自动触发，**不存在手动"开始 Hacking"/"开始评审"操作**。E2E 中遇到阶段切换步骤，应通过设置较短的 phase 时长（如 1–2 分钟）+ 等待 cron 完成。各 phase 任务文件中描述的"点击开始按钮 POST /manage/start" 是基于已知失效的死路由，将在后续 PR 中清理。
 
 ## 文件清单
 
