@@ -385,6 +385,30 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 		return ErrNoDevelopmentPhase{HackathonID: h.ID}
 	}
 
+	// Validate scoring criteria — at least one criterion required globally.
+	criteriaList, err := hackforger_model.ListCriteriaByHackathon(ctx, h.ID)
+	if err != nil {
+		return err
+	}
+	if len(criteriaList) == 0 {
+		return ErrNoCriteria{HackathonID: h.ID}
+	}
+
+	// Each track must have at least one enabled criterion (via effective rubric).
+	tracks, err := hackforger_model.ListTracksByHackathon(ctx, h.ID)
+	if err != nil {
+		return err
+	}
+	for _, t := range tracks {
+		rubric, err := GetEffectiveRubric(ctx, t.ID)
+		if err != nil {
+			return err
+		}
+		if len(rubric) == 0 {
+			return ErrNoCriteria{HackathonID: h.ID, TrackID: t.ID}
+		}
+	}
+
 	// Set published
 	if err := hackforger_model.SetIsPublished(ctx, h.ID, true); err != nil {
 		return err

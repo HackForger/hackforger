@@ -71,3 +71,15 @@
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
+
+-
+  id: 7
+  org_id: 3
+  owner_id: 2
+  name: "Publish Without Criteria"
+  slug: "publish-no-criteria"
+  description: "Fixture — Draft, 1 track, phases, but zero criteria"
+  status_cache: 0
+  max_team_size: 5
+  created_unix: 1672578000
+  updated_unix: 1672578000

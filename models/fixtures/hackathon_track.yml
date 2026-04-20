@@ -79,3 +79,13 @@
   prize_dist_mode: "winner_takes_all"
   prize_dist_ratios: ""
   created_unix: 1672578000
+
+-
+  id: 8
+  hackathon_id: 7
+  name: "Solo Track"
+  description: "Only track for publish-no-criteria fixture"
+  prize_credits: 0
+  prize_dist_mode: "winner_takes_all"
+  prize_dist_ratios: ""
+  created_unix: 1672578000
