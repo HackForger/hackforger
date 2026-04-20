@@ -77,6 +77,9 @@ func (e ErrNoCriteria) Error() string {
     }
     return fmt.Sprintf("track has no enabled scoring criteria [hackathon: %d, track: %d]", e.HackathonID, e.TrackID)
 }
+// Unwrap lets errors.Is detect invalid-argument and route to HTTP 400 — matches
+// the dominant pattern in models/hackforger/ and services/hackforger/hackathon_criteria.go.
+func (e ErrNoCriteria) Unwrap() error { return util.ErrInvalidArgument }
 func IsErrNoCriteria(err error) bool { _, ok := err.(ErrNoCriteria); return ok }
 ```
 
@@ -105,6 +108,7 @@ type ErrNoRubricConfigured struct{ TrackID int64 }
 func (e ErrNoRubricConfigured) Error() string {
     return fmt.Sprintf("no scoring rubric configured for track [track: %d]", e.TrackID)
 }
+func (e ErrNoRubricConfigured) Unwrap() error { return util.ErrInvalidArgument }
 func IsErrNoRubricConfigured(err error) bool { _, ok := err.(ErrNoRubricConfigured); return ok }
 ```
 
@@ -195,16 +199,19 @@ func checkCriteriaModifiable(ctx context.Context, hackathonID int64, op criteria
 
 ```js
 import {showInfoToast, showErrorToast} from '../../modules/toast.js';
+import {formatDatetime} from '../../utils/time.js';
+// NOTE: Forgejo's `showInfoToast` renders **green with octicon-check** (toast.js:11-15);
+// it is the canonical success toast. No `showSuccessToast` exists.
 // ...
 async submitScores(submissionId) {
   // ...
   if (resp.ok) {
     this.saved[submissionId] = true
     this.lastSavedAt[submissionId] = Date.now()
-    showInfoToast(this.messages.score_saved)
+    showInfoToast(this.messages.scoreSaved)
   } else {
     const data = await resp.json()
-    this.errors[submissionId] = data.message || this.messages.error_generic
+    this.errors[submissionId] = data.message || this.messages.errorGeneric
     this.globalError = this.errors[submissionId]
     showErrorToast(this.globalError)
   }
@@ -218,7 +225,7 @@ async submitScores(submissionId) {
 <div v-if="saved[sub.id] && !expanded[sub.id]" class="hf-card-body hf-score-summary">
   <div class="tw-flex tw-items-center tw-gap-3">
     <svg class="svg octicon-check-circle-fill tw-text-green"/>
-    <span>{{ messages.score_saved_at.replace('%s', formatTime(lastSavedAt[sub.id])) }}</span>
+    <span>{{ messages.scoreSavedAt.replace('%s', formatTime(lastSavedAt[sub.id])) }}</span>
   </div>
   <div class="tw-mt-2 tw-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))">
     <div v-for="c in activeRubric" :key="c.criteria_id">
@@ -227,7 +234,7 @@ async submitScores(submissionId) {
     </div>
   </div>
   <button class="hf-btn hf-btn-outline" @click="expanded[sub.id] = true">
-    {{ messages.update_scores }}
+    {{ messages.updateScores }}
   </button>
 </div>
 <div v-else><!-- 现有表单 --></div>
@@ -237,18 +244,20 @@ async submitScores(submissionId) {
 
 ```vue
 <button class="hf-btn hf-btn-primary" @click="submitScores(sub.id)">
-  {{ saved[sub.id] ? messages.update_scores : messages.submit_scores }}
+  {{ saved[sub.id] ? messages.updateScores : messages.submitScores }}
 </button>
 ```
 
 **4. 顶部 sticky 进度条 + "下一个未评"**：
 
+Sticky top uses a concrete pixel offset (Forgejo convention — `web_src/css/repo.css:1383,2405,2460`). No `--topbar-height` CSS variable exists in the project. Judge page has no secondary tabbar above this region, so `top: 0` is correct:
+
 ```vue
-<div class="hf-judge-progress-sticky" style="position: sticky; top: var(--topbar-height);">
-  <span>{{ scoredCount }} / {{ activeSubmissions.length }} {{ messages.progress_label }}</span>
+<div class="hf-judge-progress-sticky" style="position: sticky; top: 0; z-index: 10; background: var(--color-box-body);">
+  <span>{{ scoredCount }} / {{ activeSubmissions.length }} {{ messages.progressLabel }}</span>
   <div class="ui indicating progress"><div class="bar" :style="{width: progressPercent + '%'}"></div></div>
   <button v-if="nextUnscoredSubId" @click="scrollToSubmission(nextUnscoredSubId)">
-    {{ messages.next_unscored }}
+    {{ messages.nextUnscored }}
   </button>
 </div>
 ```
@@ -265,15 +274,15 @@ async submitScores(submissionId) {
 
 ```vue
 <div v-if="!activeRubric.length" class="ui warning message">
-  {{ messages.rubric_not_configured }}
+  {{ messages.rubricNotConfigured }}
 </div>
 ```
 
-### B.2 Vue 组件 i18n 策略
+### B.2 Vue 组件 i18n 策略（per-key data-locale-*）
 
-当前 `JudgeScoreCard.vue` 所有字符串都硬编码英文，没有 i18n 机制。为了支持 zh-CN，采用 **template 预 marshal** 方案（与现有 tracks/rubrics JSON 注入同构）：
+当前 `JudgeScoreCard.vue` 所有字符串都硬编码英文。遵循 **Forgejo 现有惯例**（见 `templates/repo/actions/view.tmpl`、`templates/repo/contributors.tmpl`、`web_src/js/features/code-frequency.js`）：逐键 `data-locale-*` 属性，不用 JSON bag。`templates/base/head_script.tmpl:34-45` 官方文档说明 i18n 三种传递渠道，module-specific 字符串应走 data-attribute。
 
-**`templates/hackforger/hackathon/judge.tmpl`** 新增 `data-messages` 属性：
+**`templates/hackforger/hackathon/judge.tmpl`** 逐键注入：
 
 ```html
 <div id="hackforger-judge-scorecard"
@@ -281,37 +290,36 @@ async submitScores(submissionId) {
      data-tracks="{{.TracksJSON}}"
      data-submissions="{{.SubmissionsJSON}}"
      data-rubrics="{{.RubricsJSON}}"
-     data-messages="{{.MessagesJSON}}">
+     data-locale-score-saved="{{ctx.Locale.Tr "hackforger.hackathon.judge.scores_saved"}}"
+     data-locale-score-saved-at="{{ctx.Locale.Tr "hackforger.hackathon.judge.score_saved_at"}}"
+     data-locale-update-scores="{{ctx.Locale.Tr "hackforger.hackathon.judge.update_scores"}}"
+     data-locale-submit-scores="{{ctx.Locale.Tr "hackforger.hackathon.judge.submit_scores"}}"
+     data-locale-progress-label="{{ctx.Locale.Tr "hackforger.hackathon.judge.progress_detail"}}"
+     data-locale-next-unscored="{{ctx.Locale.Tr "hackforger.hackathon.judge.next_unscored"}}"
+     data-locale-rubric-not-configured="{{ctx.Locale.Tr "hackforger.hackathon.judge.rubric_not_configured"}}"
+     data-locale-error-generic="{{ctx.Locale.Tr "hackforger.hackathon.judge.error_generic"}}">
 </div>
 ```
 
-**Handler** `JudgePage` 组装 `MessagesJSON`：
-
-```go
-msgs := map[string]string{
-    "score_saved":           ctx.Tr("hackforger.hackathon.judge.score_saved"),
-    "score_saved_at":        ctx.Tr("hackforger.hackathon.judge.score_saved_at"),
-    "update_scores":         ctx.Tr("hackforger.hackathon.judge.update_scores"),
-    "submit_scores":         ctx.Tr("hackforger.hackathon.judge.submit_scores"),
-    "progress_label":        ctx.Tr("hackforger.hackathon.judge.progress_label"),
-    "next_unscored":         ctx.Tr("hackforger.hackathon.judge.next_unscored"),
-    "rubric_not_configured": ctx.Tr("hackforger.hackathon.judge.rubric_not_configured"),
-    "error_generic":         ctx.Tr("hackforger.hackathon.judge.error_generic"),
-}
-msgsJSON, _ := json.Marshal(msgs)
-ctx.Data["MessagesJSON"] = string(msgsJSON)
-```
-
-**init.js** 把 messages 传进组件 props：
+**`init.js`** 组装 messages 对象：
 
 ```js
 createApp(JudgeScoreCard, {
   // ...existing
-  messages: JSON.parse(judgeEl.dataset.messages || '{}'),
+  messages: {
+    scoreSaved:          judgeEl.getAttribute('data-locale-score-saved'),
+    scoreSavedAt:        judgeEl.getAttribute('data-locale-score-saved-at'),
+    updateScores:        judgeEl.getAttribute('data-locale-update-scores'),
+    submitScores:        judgeEl.getAttribute('data-locale-submit-scores'),
+    progressLabel:       judgeEl.getAttribute('data-locale-progress-label'),
+    nextUnscored:        judgeEl.getAttribute('data-locale-next-unscored'),
+    rubricNotConfigured: judgeEl.getAttribute('data-locale-rubric-not-configured'),
+    errorGeneric:        judgeEl.getAttribute('data-locale-error-generic'),
+  },
 }).mount(judgeEl);
 ```
 
-**Vue 组件** `props: { messages: {type: Object, default: () => ({})} }`，用 `this.messages.score_saved` 访问。`score_saved_at` 需要参数替换时做本地 `formatTemplate(msg, arg)` 或直接拼接 —— 对 `"Saved at %s"` 这种简单场景用 `this.messages.score_saved_at.replace('%s', formatTime(t))`。
+**Vue 组件** `props: { messages: {type: Object, default: () => ({})} }`；访问用 `this.messages.scoreSaved`（camelCase）。带参 key 用 `String.prototype.replace` 拼接（Forgejo locale 的 `%d`/`%s` 占位符保留，JS 端手动替换）。
 
 ### B.2a 新增 computed / methods
 
@@ -331,9 +339,8 @@ methods: {
   },
   formatTime(ms) {
     if (!ms) return '';
-    const d = new Date(ms);
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    // Use Forgejo's locale-aware formatter — respects user 12/24h preference.
+    return formatDatetime(new Date(ms), {hour: 'numeric', minute: '2-digit'});
   },
 },
 ```
@@ -488,24 +495,37 @@ COMMIT;
 
 ---
 
-## i18n keys（新增 / 修改）
+## i18n keys
 
-所有 key 必须同时写入 `options/locale/locale_en-US.ini` 和 `locale_zh-CN.ini` 的 `[hackforger]` section。
+所有新 key 同时写入 `options/locale/locale_en-US.ini` 和 `locale_zh-CN.ini` 的 `[hackforger]` section。**优先复用已存在的 key**（实施时须检查 `locale_en-US.ini` 当前内容）。
+
+### 复用已存在的 key（不要覆写、不要重复定义）
+
+| Key | 已存在于 | 用途 |
+|---|---|---|
+| `hackforger.hackathon.judge.submit_scores` | locale_en-US.ini:4177 ("Submit Scores") | Button 文案（未评审时）|
+| `hackforger.hackathon.judge.scores_saved` | 4178 ("Scores saved successfully") | Success toast |
+| `hackforger.hackathon.judge.progress_detail` | 4176 ("%d of %d submissions scored") | Sticky 进度条文案（JS 端 `.replace('%d',N).replace('%d',M)`） |
+| `hackforger.hackathon.error.incomplete_rubric` | 4193 | Deep defense 当 payload 过滤后为空 |
+
+### 新增 key
 
 | Key | en-US | zh-CN |
 |---|---|---|
 | `hackforger.hackathon.error.publish_requires_criteria` | Cannot publish: at least one scoring criterion is required | 无法发布：至少需要配置一个评分标准 |
 | `hackforger.hackathon.error.track_requires_criteria` | Track "%s" has no enabled scoring criteria | 赛道 "%s" 没有启用任何评分项 |
 | `hackforger.hackathon.error.no_rubric_configured` | No scoring criteria configured for this track — please contact the organizer | 该赛道尚未配置评分标准，请联系组织者 |
-| `hackforger.hackathon.manage.criteria.judging_add_only` | Judging has started. You can add new criteria but cannot modify or delete existing ones. | 评审阶段已开始，你可以新增评分项，但无法修改或删除已有项目。 |
-| `hackforger.hackathon.judge.score_saved` | Scores saved | 分数已保存 |
+| `hackforger.hackathon.manage.criteria.judging_add_only` | Judging has started. You can add new criteria but cannot modify or delete existing ones. | 评审阶段已开始，你可以新增评分项，但无法修改或删除已有项目 |
 | `hackforger.hackathon.judge.score_saved_at` | Saved at %s | 保存于 %s |
-| `hackforger.hackathon.judge.update_scores` | Update scores | 更新分数 |
-| `hackforger.hackathon.judge.submit_scores` | Submit scores | 提交分数 |
-| `hackforger.hackathon.judge.progress_label` | submissions scored | 已评审 |
+| `hackforger.hackathon.judge.update_scores` | Update Scores | 更新分数 |
 | `hackforger.hackathon.judge.next_unscored` | Next unscored → | 下一个未评 → |
-| `hackforger.hackathon.judge.rubric_not_configured` | This track has no scoring criteria configured. Ask the organizer to add criteria. | 该赛道尚未配置评分标准，请组织者补充后再评分。 |
-| `hackforger.hackathon.judge.error_generic` | Could not save scores. Please try again. | 保存分数失败，请重试。 |
+| `hackforger.hackathon.judge.rubric_not_configured` | This track has no scoring criteria configured. Ask the organizer to add criteria. | 该赛道尚未配置评分标准，请组织者补充后再评分 |
+| `hackforger.hackathon.judge.error_generic` | Could not save scores. Please try again. | 保存分数失败，请重试 |
+
+### 注意
+
+- `hackforger.hackathon.error.no_criteria`（4196）已有、语义贴近但专指 "before starting judging" 场景。publish gate 用**新 key** `publish_requires_criteria` 而非复用 `no_criteria`，因为错误触发时机不同。
+- `hackforger.hackathon.error.criteria_locked`（4195）已有、与 Judging 阶段 Update/Delete 拒绝的场景语义一致，**复用这条**；不要为 C.1 新增额外 key。
 
 ---
 
