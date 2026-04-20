@@ -211,12 +211,17 @@
 		</div>
 
 		{{/* 3. Scoring Criteria (editable until judging starts) */}}
-		{{if lt .Hackathon.StatusCache 3}}
+		{{if le .Hackathon.StatusCache 3}}
 		<div class="hf-card">
 			<div class="hf-card-head">
 				<div class="hf-card-head-left">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria"}}</div>
 			</div>
 			<div class="hf-card-body">
+				{{if eq .Hackathon.StatusCache 3}}
+				<div class="ui info message">
+					{{ctx.Locale.Tr "hackforger.hackathon.error.criteria_locked"}}
+				</div>
+				{{end}}
 				{{if .Criteria}}
 				<table class="tw-w-full">
 					<thead>
@@ -241,11 +246,15 @@
 							<td><input name="weight" type="number" step="0.1" value="{{.Weight}}" required></td>
 							<td><input name="sort_order" type="number" value="{{.SortOrder}}"></td>
 							<td class="tw-flex tw-gap-1">
+								{{if lt $.Hackathon.StatusCache 3}}
 									<button class="hf-btn hf-btn-primary" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.edit"}}</button>
+								{{end}}
 								</form>
+								{{if lt $.Hackathon.StatusCache 3}}
 								<form method="post" action="{{AppSubUrl}}/hackathon/{{$.Hackathon.Slug}}/manage/criteria/{{.ID}}/delete" class="tw-inline" onsubmit="return confirm('{{ctx.Locale.Tr "hackforger.confirm.delete_activity"}}');">
 									<button class="hf-btn hf-btn-danger" type="submit">{{ctx.Locale.Tr "hackforger.hackathon.manage.criteria.delete"}}</button>
 								</form>
+								{{end}}
 							</td>
 						</tr>
 						{{end}}
