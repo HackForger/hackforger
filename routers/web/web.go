@@ -546,8 +546,6 @@ func registerRoutes(m *web.Route) {
 			m.Get("", hackforger_web.ManageHackathon)
 			m.Post("/update", hackforger_web.UpdateHackathonPost)
 			m.Post("/publish", hackforger_web.ManagePhasePost)
-			m.Post("/start", hackforger_web.ManagePhasePost)
-			m.Post("/judge", hackforger_web.ManagePhasePost)
 			m.Get("/finalize-preview", hackforger_web.FinalizePreview)
 			m.Post("/finalize", hackforger_web.FinalizeConfirm)
 			m.Post("/cancel", hackforger_web.ManagePhasePost)
