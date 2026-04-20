@@ -24,15 +24,15 @@ func helpLangFile(ctx *context.Context, section string) (string, []byte, error) 
 		section + "." + lang + ".md",
 		section + ".en-US.md",
 	}
+	var lastErr error
 	for _, name := range tryFiles {
 		content, err := options.AssetFS().ReadFile("hackforger-help", name)
 		if err == nil {
 			return name, content, nil
 		}
+		lastErr = err
 	}
-	// Both failed — return the last error.
-	content, err := options.AssetFS().ReadFile("hackforger-help", tryFiles[len(tryFiles)-1])
-	return "", content, err
+	return "", nil, lastErr
 }
 
 func renderHelpSection(ctx *context.Context, section string) (template.HTML, error) {
