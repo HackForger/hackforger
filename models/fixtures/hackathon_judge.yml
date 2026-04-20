@@ -1,0 +1,8 @@
+# HackathonJudge fixtures. Judge rows link users to a specific track's judging panel.
+# Table columns: id, hackathon_id, track_id, user_id, created_unix.
+-
+  id: 1
+  hackathon_id: 8
+  track_id: 9
+  user_id: 2
+  created_unix: 1672578000

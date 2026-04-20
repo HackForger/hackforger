@@ -62,17 +62,36 @@ func (err ErrIncompleteRubric) Unwrap() error {
 	return util.ErrInvalidArgument
 }
 
+// criteriaOp enumerates the CRUD operation attempted on criteria, so the gate
+// can permit Add during Judging while still blocking Update/Delete.
+type criteriaOp int
+
+const (
+	criteriaOpAdd criteriaOp = iota
+	criteriaOpUpdate
+	criteriaOpDelete
+)
+
 // checkCriteriaModifiable verifies the hackathon is in a phase that allows
-// criteria modification (Draft or Open). Returns ErrInvalidHackathonPhase
-// if the hackathon has progressed past Open.
-func checkCriteriaModifiable(ctx context.Context, hackathonID int64) error {
+// the requested criteria operation.
+//   - Add:             allowed in Draft / Open / Hacking / Judging (rescue path)
+//   - Update / Delete: allowed in Draft / Open / Hacking only
+//   - Finalized / Cancelled: everything blocked
+func checkCriteriaModifiable(ctx context.Context, hackathonID int64, op criteriaOp) error {
 	h, err := hackforger_model.GetHackathonByID(ctx, hackathonID)
 	if err != nil {
 		return err
 	}
-	// Allow criteria changes during Draft, Registration, and Hacking phases.
-	// Lock once judging starts (StatusCache >= Judging).
-	if h.StatusCache >= hackforger_model.HackathonStatusJudging {
+	// Hard-block once finalized or cancelled — no changes ever.
+	if h.StatusCache >= hackforger_model.HackathonStatusFinished {
+		return hackforger_model.ErrInvalidHackathonPhase{
+			HackathonID: h.ID,
+			Current:     h.StatusCache,
+			Expected:    hackforger_model.HackathonStatusHacking,
+		}
+	}
+	// Judging: allow only Add (rescue), block Update/Delete.
+	if h.StatusCache == hackforger_model.HackathonStatusJudging && op != criteriaOpAdd {
 		return hackforger_model.ErrInvalidHackathonPhase{
 			HackathonID: h.ID,
 			Current:     h.StatusCache,
@@ -85,7 +104,7 @@ func checkCriteriaModifiable(ctx context.Context, hackathonID int64) error {
 // AddCriteria creates a new judge criterion for a hackathon and seeds it
 // to all existing tracks. The hackathon must be in Draft or Open status.
 func AddCriteria(ctx context.Context, hackathonID int64, name, description string, maxScore, weight float64, sortOrder int) error {
-	if err := checkCriteriaModifiable(ctx, hackathonID); err != nil {
+	if err := checkCriteriaModifiable(ctx, hackathonID, criteriaOpAdd); err != nil {
 		return err
 	}
 
@@ -122,7 +141,7 @@ func UpdateCriteria(ctx context.Context, c *hackforger_model.HackathonJudgeCrite
 	if err != nil {
 		return err
 	}
-	if err := checkCriteriaModifiable(ctx, existing.HackathonID); err != nil {
+	if err := checkCriteriaModifiable(ctx, existing.HackathonID, criteriaOpUpdate); err != nil {
 		return err
 	}
 	return hackforger_model.UpdateCriteria(ctx, c)
@@ -135,7 +154,7 @@ func RemoveCriteria(ctx context.Context, criteriaID int64) error {
 	if err != nil {
 		return err
 	}
-	if err := checkCriteriaModifiable(ctx, existing.HackathonID); err != nil {
+	if err := checkCriteriaModifiable(ctx, existing.HackathonID, criteriaOpDelete); err != nil {
 		return err
 	}
 

@@ -9,7 +9,15 @@
 					data-hackathon-slug="{{.Hackathon.Slug}}"
 					data-tracks="{{.TracksJSON}}"
 					data-submissions="{{.SubmissionsJSON}}"
-					data-rubrics="{{.RubricsJSON}}">
+					data-rubrics="{{.RubricsJSON}}"
+					data-locale-score-saved="{{ctx.Locale.Tr "hackforger.hackathon.judge.scores_saved"}}"
+					data-locale-score-saved-at="{{ctx.Locale.Tr "hackforger.hackathon.judge.score_saved_at"}}"
+					data-locale-update-scores="{{ctx.Locale.Tr "hackforger.hackathon.judge.update_scores"}}"
+					data-locale-submit-scores="{{ctx.Locale.Tr "hackforger.hackathon.judge.submit_scores"}}"
+					data-locale-progress-label="{{ctx.Locale.Tr "hackforger.hackathon.judge.progress_detail"}}"
+					data-locale-next-unscored="{{ctx.Locale.Tr "hackforger.hackathon.judge.next_unscored"}}"
+					data-locale-rubric-not-configured="{{ctx.Locale.Tr "hackforger.hackathon.judge.rubric_not_configured"}}"
+					data-locale-error-generic="{{ctx.Locale.Tr "hackforger.hackathon.judge.error_generic"}}">
 				</div>
 				<noscript>
 					<div class="ui warning message">JavaScript is required for the scoring interface.</div>

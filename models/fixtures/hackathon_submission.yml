@@ -142,3 +142,17 @@
   rank: 0
   created_unix: 1672578200
   updated_unix: 1672578200
+
+-
+  id: 100
+  hackathon_id: 8
+  registration_id: 1
+  user_id: 4
+  track_id: 9
+  title: "Submission For Empty Rubric Test"
+  description: ""
+  status: 0
+  total_score: 0
+  rank: 0
+  created_unix: 1672578000
+  updated_unix: 1672578000

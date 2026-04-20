@@ -12,7 +12,7 @@
 				{{if eq .OpType 30}}{{ctx.Locale.Tr "hackforger.feed.hackathon_created" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 31}}{{ctx.Locale.Tr "hackforger.feed.hackathon_registered" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 32}}{{ctx.Locale.Tr "hackforger.feed.hackathon_submitted" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
-				{{else if eq .OpType 33}}{{ctx.Locale.Tr "hackforger.feed.hackathon_scored" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
+				{{else if eq .OpType 33}}{{ctx.Locale.Tr "hackforger.feed.hackathon_scored" .EntityName (printf "%s/leaderboard" (HackforgerEntityURL .EntityType .EntitySlug))}}
 				{{else if eq .OpType 34}}{{ctx.Locale.Tr "hackforger.feed.bounty_created" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 35}}{{ctx.Locale.Tr "hackforger.feed.bounty_claimed" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 36}}{{ctx.Locale.Tr "hackforger.feed.bounty_delivered" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}

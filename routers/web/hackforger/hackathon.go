@@ -728,8 +728,17 @@ func ManagePhasePost(ctx *context.Context) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_tracks"))
 		} else if hackforger_service.IsErrNoSubmissions(err) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_submissions"))
-		} else if hackforger_model.IsErrNoCriteria(err) {
-			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.no_criteria"))
+		} else if hackforger_service.IsErrNoCriteria(err) {
+			typed := err.(hackforger_service.ErrNoCriteria)
+			if typed.TrackID == 0 {
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.publish_requires_criteria"))
+			} else {
+				trackName := fmt.Sprintf("#%d", typed.TrackID)
+				if t, terr := hackforger_model.GetTrackByID(ctx, typed.TrackID); terr == nil && t != nil {
+					trackName = t.Name
+				}
+				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.track_requires_criteria", trackName))
+			}
 		} else if hackforger_model.IsErrInvalidHackathonPhase(err) {
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase_action"))
 		} else if hackforger_service.IsErrNoRegistrationPhase(err) {
@@ -1274,6 +1283,9 @@ func JudgeScoresPost(ctx *context.Context) {
 		case hackforger_service.IsErrScoreOutOfRange(err):
 			e := err.(hackforger_service.ErrScoreOutOfRange)
 			msg = string(ctx.Tr("hackforger.hackathon.error.score_out_of_range", fmt.Sprintf("%.0f", e.MaxScore)))
+			status = http.StatusBadRequest
+		case hackforger_service.IsErrNoRubricConfigured(err):
+			msg = string(ctx.Tr("hackforger.hackathon.error.no_rubric_configured"))
 			status = http.StatusBadRequest
 		case hackforger_model.IsErrInvalidHackathonPhase(err):
 			msg = string(ctx.Tr("hackforger.hackathon.error.invalid_phase"))

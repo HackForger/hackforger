@@ -5,11 +5,13 @@ package hackforger
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"forgejo.org/models/db"
 	hackforger_model "forgejo.org/models/hackforger"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/util"
 	notify_service "forgejo.org/services/notify"
 )
 
@@ -19,6 +21,20 @@ type CriteriaScore struct {
 	Score      float64
 	Comment    string
 }
+
+// ErrNoRubricConfigured means the track being scored has no active scoring
+// criteria — organizer-side configuration error. Judge UI surfaces this as
+// "please contact the organizer".
+type ErrNoRubricConfigured struct{ TrackID int64 }
+
+func (e ErrNoRubricConfigured) Error() string {
+	return fmt.Sprintf("no scoring rubric configured for track [track: %d]", e.TrackID)
+}
+
+func (e ErrNoRubricConfigured) Unwrap() error { return util.ErrInvalidArgument }
+
+// IsErrNoRubricConfigured checks if err is ErrNoRubricConfigured.
+func IsErrNoRubricConfigured(err error) bool { _, ok := err.(ErrNoRubricConfigured); return ok }
 
 // SubmitScores validates and records a judge's scores for all criteria on a submission.
 func SubmitScores(ctx context.Context, judgeID, submissionID int64, scores []CriteriaScore) error {
@@ -55,6 +71,11 @@ func SubmitScores(ctx context.Context, judgeID, submissionID int64, scores []Cri
 	rubric, err := GetEffectiveRubric(ctx, sub.TrackID)
 	if err != nil {
 		return err
+	}
+
+	// Early-reject empty rubric — organizer hasn't configured criteria for this track.
+	if len(rubric) == 0 {
+		return ErrNoRubricConfigured{TrackID: sub.TrackID}
 	}
 
 	// 5. Build criteria map for validation
