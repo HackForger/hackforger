@@ -167,3 +167,50 @@ func TestHackForgerReputationRecalcUnauthenticated(t *testing.T) {
 	req := NewRequest(t, "POST", "/api/v1/hackforger/reputation/recalculate/user4")
 	MakeRequest(t, req, http.StatusUnauthorized)
 }
+
+// TestAPIHackforgerReputationSettings exercises GET/PUT /hackforger/admin/reputation/settings.
+func TestAPIHackforgerReputationSettings(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("Admin PUT then GET roundtrip", func(t *testing.T) {
+		_, adminToken := hackforgerLoginAs(t, 1) // user1 = admin per fixtures
+		putBody := map[string]string{
+			"weights": `{"hackathon":0.5,"bounty":0.3,"grant":0.2}`,
+			"tiers":   `[{"name":"bronze","min":0},{"name":"silver","min":100}]`,
+		}
+		req := NewRequestWithJSON(t, "PUT", "/api/v1/hackforger/admin/reputation/settings", putBody).
+			AddTokenAuth(adminToken)
+		MakeRequest(t, req, http.StatusOK)
+
+		req = NewRequest(t, "GET", "/api/v1/hackforger/admin/reputation/settings").
+			AddTokenAuth(adminToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var got struct {
+			Weights string `json:"weights"`
+			Tiers   string `json:"tiers"`
+		}
+		DecodeJSON(t, resp, &got)
+		assert.Contains(t, got.Weights, "hackathon")
+		assert.Contains(t, got.Tiers, "bronze")
+	})
+
+	t.Run("403 for non-admin", func(t *testing.T) {
+		_, userToken := hackforgerLoginAs(t, 2) // user2 = regular user
+		req := NewRequestWithJSON(t, "PUT", "/api/v1/hackforger/admin/reputation/settings",
+			map[string]string{"weights": `{"x":1}`}).
+			AddTokenAuth(userToken)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("422 on invalid JSON", func(t *testing.T) {
+		_, adminToken := hackforgerLoginAs(t, 1)
+		req := NewRequestWithJSON(t, "PUT", "/api/v1/hackforger/admin/reputation/settings",
+			map[string]string{"weights": "not-json"}).
+			AddTokenAuth(adminToken)
+		MakeRequest(t, req, http.StatusUnprocessableEntity)
+	})
+}
+
+// silence unused import warnings in test (auth_model + unittest + user_model imported elsewhere in this file)
+var _ = auth_model.AccessTokenScopeAll
+var _ = unittest.AssertExistsAndLoadBean[user_model.User]
