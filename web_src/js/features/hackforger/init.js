@@ -42,6 +42,16 @@ export function initHackforger() {
         tracks: JSON.parse(judgeEl.dataset.tracks || '[]'),
         submissions: JSON.parse(judgeEl.dataset.submissions || '{}'),
         rubrics: JSON.parse(judgeEl.dataset.rubrics || '{}'),
+        messages: {
+          scoreSaved:          judgeEl.getAttribute('data-locale-score-saved') || 'Scores saved',
+          scoreSavedAt:        judgeEl.getAttribute('data-locale-score-saved-at') || 'Saved at %s',
+          updateScores:        judgeEl.getAttribute('data-locale-update-scores') || 'Update Scores',
+          submitScores:        judgeEl.getAttribute('data-locale-submit-scores') || 'Submit Scores',
+          progressLabel:       judgeEl.getAttribute('data-locale-progress-label') || '%d of %d submissions scored',
+          nextUnscored:        judgeEl.getAttribute('data-locale-next-unscored') || 'Next unscored →',
+          rubricNotConfigured: judgeEl.getAttribute('data-locale-rubric-not-configured') || 'No rubric configured',
+          errorGeneric:        judgeEl.getAttribute('data-locale-error-generic') || 'Could not save scores',
+        },
       }).mount(judgeEl);
     })();
   }
