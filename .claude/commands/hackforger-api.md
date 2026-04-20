@@ -34,11 +34,13 @@ This skill covers **every web-facing user operation** in HackForger. Pick the ri
 
 | Module | Reference | Covers |
 |--------|-----------|--------|
-| Hackathons | `docs/skills/hackforger-api/hackathons.md` | create / publish / register / submit / score / finalize / leaderboard / phases / criteria |
+| Hackathons | `docs/skills/hackforger-api/hackathons.md` | create / publish / register / submit / score / finalize / leaderboard / phases / criteria / admin phase type catalog |
 | Bounties | `docs/skills/hackforger-api/bounties.md` | create / apply / accept / complete / pay / cancel / winners (competitive) |
 | Grants | `docs/skills/hackforger-api/grants.md` | round CRUD / open / close / projects / approve / award / distribute |
 | Credits | `docs/skills/hackforger-api/credits.md` | balance / transactions / redeem options / orders / fulfill / admin deposit-deduct |
-| Feed/Search/Reputation | `docs/skills/hackforger-api/feed-search-reputation.md` | global feed / unified search / reputation leaderboard / assistant chat |
+| Feed/Search/Reputation | `docs/skills/hackforger-api/feed-search-reputation.md` | global feed / unified search / reputation leaderboard / reputation settings (admin) / assistant chat |
+| Orgs | `docs/skills/hackforger-api/orgs.md` | join requests |
+| Attachments | `docs/skills/hackforger-api/attachments.md` | platform-level rich-text uploads |
 
 Story-level mapping (E2E user journey → API call):
 → `docs/skills/hackforger-api/user-stories.md`

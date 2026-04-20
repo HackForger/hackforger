@@ -8,7 +8,9 @@ The `/hackforger-api` slash command (defined in `.claude/commands/hackforger-api
 - **[bounties.md](bounties.md)** — Per-repo bounties: create, applications, review, complete, pay, cancel, winners (competitive mode).
 - **[grants.md](grants.md)** — Grant rounds (Draft→Open→Review→Finalized→Distributed), project submissions, approve/award/distribute.
 - **[credits.md](credits.md)** — Balance, transactions, redeem options + key pool, redeem orders + fulfillment, admin deposit/deduct.
-- **[feed-search-reputation.md](feed-search-reputation.md)** — Global feed, unified search, reputation leaderboard, assistant chat.
+- **[feed-search-reputation.md](feed-search-reputation.md)** — Global feed, unified search, reputation leaderboard, reputation algorithm settings, assistant chat.
+- **[orgs.md](orgs.md)** — HackForger extensions to orgs: join-request notification.
+- **[attachments.md](attachments.md)** — Platform-level (RepoID=-1) rich-text uploads.
 - **[user-stories.md](user-stories.md)** — E2E full-cycle user journey (Phase 0–10) mapped to API calls. Use this when a task is described in user-story form.
 - **[gaps.md](gaps.md)** — Web-only operations that lack API equivalents (backlog for parity).
 

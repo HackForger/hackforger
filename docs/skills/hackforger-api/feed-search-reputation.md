@@ -27,6 +27,13 @@ POST /hackforger/admin/reindex
 | GET  | `/hackforger/reputation/leaderboard` | Top-N leaderboard (params: `limit`) |
 | POST | `/hackforger/reputation/recalculate/{username}` | Force recalculation (admin only) |
 
+### Reputation algorithm settings (admin)
+
+| Verb | Path | Purpose |
+|------|------|---------|
+| GET | `/hackforger/admin/reputation/settings` | Read raw `weights` and `tiers` JSON |
+| PUT | `/hackforger/admin/reputation/settings` | Update one or both fields (partial update; non-empty fields must be valid JSON) |
+
 ## Assistant chat
 
 | Verb | Path | Purpose |

@@ -4,12 +4,14 @@ Backlog of web-facing operations that have **no equivalent `/api/v1/hackforger/.
 
 ## Real gaps
 
-| # | Web route | Module | Notes / suggested API |
-|---|-----------|--------|----------------------|
-| 1 | `POST /hackforger/attachments` | Platform-level rich text | Uploads attachments with `RepoID=-1` for use in hackathon descriptions, grant project pages, submissions, etc. — content not bound to any repo/issue/release. **Forgejo's stdlib API only supports repo-/issue-/release-scoped uploads** (`/issues/{index}/assets`, `/releases/{id}/assets`); none can produce a `RepoID=-1` attachment. Suggest: `POST /hackforger/attachments` (multipart `file`) returning `{"uuid":"..."}`. |
-| 2 | `POST /-/admin/hackforger/reputation` | Reputation algorithm config | Sets the platform-wide `reputation.weights` and `reputation.tiers` JSON via `hackforger_model.SetSetting`. There is no API to read/write these settings. Suggest: `GET/PUT /hackforger/admin/reputation/settings` (admin only). |
-| 3 | `POST /-/admin/hackforger/phase-types` (+ `/{id}/edit`, `/{id}/delete`) | Phase type catalog (admin) | CRUD on the global library of phase types (Registration, Development, Judging, etc.). Suggest: `m.Group("/admin/hackforger/phase-types")` with Get/Post/Put/Delete. |
-| 4 | `POST /-/org/{org}/join-request` | Org membership | Hacker requests to join organizer's org (used in team formation). Suggest: `POST /hackforger/orgs/{org}/join-requests`. |
+> ✅ All 4 previously-listed gaps closed in PR #73 (commit `feat(api): close 4 hackforger API parity gaps`). The endpoints are now documented in:
+>
+> - `attachments.md` — `POST /hackforger/attachments`
+> - `feed-search-reputation.md` — `GET/PUT /hackforger/admin/reputation/settings`
+> - `hackathons.md` — phase type catalog CRUD (`/hackforger/admin/phase-types`)
+> - `orgs.md` — `POST /hackforger/orgs/{org}/join-request`
+>
+> Backlog is empty as of 2026-04-20.
 
 ## Dead routes (clean-up, not parity gaps)
 

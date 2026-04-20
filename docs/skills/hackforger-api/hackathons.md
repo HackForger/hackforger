@@ -106,3 +106,18 @@ These configure the *schedule* the cron uses. Editing a phase reschedules the go
 1. (Wait for Judging phase)
 2. GET `/hackforger/hackathons/{id}/submissions` (filter assigned)
 3. POST `/hackforger/hackathons/{id}/submissions/{sid}/score` (×N submissions)
+
+## Admin: phase type catalog
+
+The **phase type catalog** is the global library of phase definitions (Registration, Development, Judging, etc.) that organizers pick from when configuring a hackathon's timeline. Per-hackathon `/phases` (above) creates *instances* from these types.
+
+Auth: `reqToken() + reqSiteAdmin()`.
+
+| Verb | Path | Purpose |
+|------|------|---------|
+| GET | `/hackforger/admin/phase-types` | List all phase types (flat array) |
+| POST | `/hackforger/admin/phase-types` | Create (`activity_kind`, `key`, `display_name_i18n`, `is_unique`, `allowed_actions`, `default_order`) |
+| PUT | `/hackforger/admin/phase-types/{id}` | Full overwrite |
+| DELETE | `/hackforger/admin/phase-types/{id}` | Remove |
+
+`activity_kind` is one of `hackathon`, `bounty`, `grant`. `display_name_i18n` is an i18n **key** (e.g. `hackforger.phase.registration`), not display text — clients translate via locale.
