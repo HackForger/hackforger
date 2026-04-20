@@ -73,6 +73,11 @@ func SubmitScores(ctx context.Context, judgeID, submissionID int64, scores []Cri
 		return err
 	}
 
+	// Early-reject empty rubric — organizer hasn't configured criteria for this track.
+	if len(rubric) == 0 {
+		return ErrNoRubricConfigured{TrackID: sub.TrackID}
+	}
+
 	// 5. Build criteria map for validation
 	rubricMap := make(map[int64]*EffectiveCriteria, len(rubric))
 	for _, c := range rubric {

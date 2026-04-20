@@ -83,3 +83,15 @@
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
+
+-
+  id: 8
+  org_id: 3
+  owner_id: 2
+  name: "Judging Without Rubric"
+  slug: "judging-no-rubric"
+  description: "Fixture — Judging phase, judge assigned, submission present, but zero criteria"
+  status_cache: 3
+  max_team_size: 5
+  created_unix: 1672578000
+  updated_unix: 1672578000
