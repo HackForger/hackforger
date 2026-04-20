@@ -1,5 +1,9 @@
 <script>
 import {POST} from '../../modules/fetch.js';
+import {showInfoToast, showErrorToast} from '../../modules/toast.js';
+import {formatDatetime} from '../../utils/time.js';
+// NOTE: Forgejo's `showInfoToast` renders green with octicon-check (toast.js:11-15).
+// It is the canonical success toast; no `showSuccessToast` exists. Do not swap.
 
 export default {
   props: {
@@ -7,14 +11,18 @@ export default {
     tracks: {type: Array, required: true},
     submissions: {type: Object, required: true},
     rubrics: {type: Object, required: true},
+    messages: {type: Object, default: () => ({})},
   },
   data() {
     return {
       activeTrackId: this.tracks.length ? this.tracks[0].id : 0,
-      scores: {},    // {subId: {criteriaId: {score, comment}}}
-      saving: {},    // {subId: bool}
-      saved: {},     // {subId: bool}
-      errors: {},    // {subId: string}
+      scores: {},       // {subId: {criteriaId: {score, comment}}}
+      saving: {},       // {subId: bool}
+      saved: {},        // {subId: bool}
+      errors: {},       // {subId: string}
+      lastSavedAt: {},  // {subId: timestamp ms}
+      expanded: {},     // {subId: bool} — collapsed summary unless true
+      globalError: '',  // top-of-page error banner text
     };
   },
   created() {
@@ -27,6 +35,8 @@ export default {
         this.saving[sub.id] = false;
         this.saved[sub.id] = false;
         this.errors[sub.id] = '';
+        this.lastSavedAt[sub.id] = 0;
+        this.expanded[sub.id] = false;
         for (const c of rubric) {
           this.scores[sub.id][c.criteria_id] = {score: 0, comment: ''};
         }
@@ -53,6 +63,10 @@ export default {
     progressPercent() {
       return this.activeSubmissions.length ? (this.scoredCount / this.activeSubmissions.length * 100) : 0;
     },
+    nextUnscoredSubId() {
+      const s = this.activeSubmissions.find((s) => !this.saved[s.id]);
+      return s ? s.id : null;
+    },
   },
   methods: {
     getScore(subId, cId) {
@@ -72,9 +86,32 @@ export default {
       if (!this.scores[subId][cId]) this.scores[subId][cId] = {score: 0, comment: ''};
       this.scores[subId][cId].comment = event.target.value;
     },
+    scrollToSubmission(subId) {
+      const el = document.getElementById('submission-' + subId);
+      if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'});
+    },
+    formatTime(ms) {
+      if (!ms) return '';
+      // Forgejo locale-aware formatter; respects 12/24h preference.
+      return formatDatetime(new Date(ms), {hour: 'numeric', minute: '2-digit'});
+    },
+    fillTemplate(tpl, ...args) {
+      // Replace %s (or %d) placeholders in order — locale ini uses these.
+      let i = 0;
+      return (tpl || '').replace(/%[sd]/g, () => (i < args.length ? String(args[i++]) : ''));
+    },
     async submitScores(submissionId) {
       this.saving[submissionId] = true;
       this.errors[submissionId] = '';
+      this.globalError = '';
+
+      if (this.activeRubric.length === 0) {
+        this.globalError = this.messages.rubricNotConfigured;
+        showErrorToast(this.globalError);
+        this.saving[submissionId] = false;
+        return;
+      }
+
       const subScores = this.scores[submissionId] || {};
       const payload = this.activeRubric.map((c) => ({
         criteria_id: c.criteria_id,
@@ -88,12 +125,20 @@ export default {
         );
         if (resp.ok) {
           this.saved[submissionId] = true;
+          this.lastSavedAt[submissionId] = Date.now();
+          this.expanded[submissionId] = false;
+          showInfoToast(this.messages.scoreSaved);
         } else {
-          const data = await resp.json();
-          this.errors[submissionId] = data.message || 'Error';
+          const data = await resp.json().catch(() => ({}));
+          const msg = data.message || this.messages.errorGeneric;
+          this.errors[submissionId] = msg;
+          this.globalError = msg;
+          showErrorToast(msg);
         }
-      } catch {
-        this.errors[submissionId] = 'Network error';
+      } catch (e) {
+        this.errors[submissionId] = this.messages.errorGeneric;
+        this.globalError = this.messages.errorGeneric;
+        showErrorToast(this.messages.errorGeneric);
       }
       this.saving[submissionId] = false;
     },
