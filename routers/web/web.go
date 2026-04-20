@@ -523,6 +523,9 @@ func registerRoutes(m *web.Route) {
 		m.Get("/credits", hackforger_web.ExploreCredits)
 	}, ignExploreSignIn)
 
+	// HackForger: in-app help center (public, no auth required)
+	m.Get("/help", hackforger_web.HelpPage)
+
 	// HackForger: public search route (JSON endpoint for web frontend)
 	m.Get("/hackforger/search", hackforger_web.SearchWeb)
 

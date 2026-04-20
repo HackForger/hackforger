@@ -1,0 +1,31 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content">
+	<div class="ui container">
+		<h1 class="tw-mb-4">{{ctx.Locale.Tr "hackforger.help.title"}}</h1>
+
+		<div class="hf-card tw-mb-4">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">
+					{{svg "octicon-rocket" 16}}
+					<span class="tw-ml-2 tw-font-medium">{{ctx.Locale.Tr "hackforger.help.platform.title"}}</span>
+				</div>
+			</div>
+			<div class="hf-card-body">
+				<article class="markup">{{.SynnovatorHTML}}</article>
+			</div>
+		</div>
+
+		<div class="hf-card tw-mb-4">
+			<div class="hf-card-head">
+				<div class="hf-card-head-left">
+					{{svg "octicon-tools" 16}}
+					<span class="tw-ml-2 tw-font-medium">{{ctx.Locale.Tr "hackforger.help.system.title"}}</span>
+				</div>
+			</div>
+			<div class="hf-card-body">
+				<article class="markup">{{.HackforgerHTML}}</article>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
