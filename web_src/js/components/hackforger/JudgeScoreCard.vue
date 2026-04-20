@@ -156,11 +156,21 @@ export default {
     </a>
   </div>
 
-  <!-- Progress bar -->
-  <div class="hf-card">
+  <!-- Error banner (top) -->
+  <div v-if="globalError" class="ui error message visible tw-mb-4" role="alert">
+    {{ globalError }}
+  </div>
+
+  <!-- Sticky progress bar — top:0 because judge page has no secondary tabbar. -->
+  <div class="hf-card" style="position: sticky; top: 0; z-index: 10; background: var(--color-box-body);">
     <div class="hf-card-body">
-      <div class="tw-flex tw-justify-between tw-mb-2">
-        <span>{{ scoredCount }} / {{ activeSubmissions.length }} submissions scored</span>
+      <div class="tw-flex tw-justify-between tw-items-center tw-mb-2">
+        <span>{{ fillTemplate(messages.progressLabel, scoredCount, activeSubmissions.length) }}</span>
+        <button v-if="nextUnscoredSubId"
+                class="hf-btn hf-btn-sm hf-btn-outline"
+                @click="scrollToSubmission(nextUnscoredSubId)">
+          {{ messages.nextUnscored }}
+        </button>
       </div>
       <div class="ui indicating progress">
         <div class="bar" :style="{width: progressPercent + '%'}"></div>
