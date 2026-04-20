@@ -20,6 +20,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 	actions_service "forgejo.org/services/actions"
 	notify_service "forgejo.org/services/notify"
 	release_service "forgejo.org/services/release"
@@ -66,6 +67,28 @@ func (e ErrNoDevelopmentPhase) Error() string {
 
 // IsErrNoDevelopmentPhase checks if err is ErrNoDevelopmentPhase.
 func IsErrNoDevelopmentPhase(err error) bool { _, ok := err.(ErrNoDevelopmentPhase); return ok }
+
+// ErrNoCriteria means a hackathon or track has no scoring criteria — either
+// no criteria row exists for the hackathon (TrackID == 0) or every criteria
+// is disabled via hackathon_track_criteria for the given track (TrackID != 0).
+type ErrNoCriteria struct {
+	HackathonID int64
+	TrackID     int64 // 0 = global; non-zero = specific track has no enabled criteria
+}
+
+func (e ErrNoCriteria) Error() string {
+	if e.TrackID == 0 {
+		return fmt.Sprintf("hackathon has no scoring criteria [id: %d]", e.HackathonID)
+	}
+	return fmt.Sprintf("track has no enabled scoring criteria [hackathon: %d, track: %d]", e.HackathonID, e.TrackID)
+}
+
+// Unwrap lets errors.Is detect invalid-argument and route HTTP 400 — aligns
+// with the dominant pattern in services/hackforger/hackathon_criteria.go.
+func (e ErrNoCriteria) Unwrap() error { return util.ErrInvalidArgument }
+
+// IsErrNoCriteria checks if err is ErrNoCriteria.
+func IsErrNoCriteria(err error) bool { _, ok := err.(ErrNoCriteria); return ok }
 
 // ErrDuplicateSubmission means a user has already submitted to this track.
 type ErrDuplicateSubmission struct {
