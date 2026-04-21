@@ -50,33 +50,45 @@ The existing `logo.svg` becomes a **default fallback** (= `logo-light.svg` conte
 
 ### 3.2 Logo swap mechanism (CSS only)
 
-Forgejo's header template emits the logo as `<img class="ui logo full" src="{{AppSubUrl}}/assets/img/logo.svg" alt="...">`.
+**Verified call-sites** (`grep` results):
+| File | Markup | Rendered size |
+|---|---|---|
+| `templates/base/head_navbar.tmpl:10` | `<img width="30" height="30" src=".../logo.svg" alt="..." aria-hidden="true">` (no class) | 30×30 (header, every page) |
+| `templates/home.tmpl:5` | `<img class="logo" width="220" height="220" src=".../logo.svg" alt="...">` | 220×220 (anonymous landing) |
+| `templates/user/auth/signin_openid.tmpl:6` | `<img width="100" height="100" src=".../logo.svg" alt="...">` (no class) | 100×100 |
+| `templates/status/500.tmpl:22` | `<img width="30" height="30" src=".../logo.svg" alt="..." aria-hidden="true">` (no class) | 30×30 |
 
-We can't change the `src` from CSS, but we CAN swap the displayed image using `content: url(...)` on the img element under a body-class selector. This is a well-supported technique in WebKit/Chromium/Firefox.
-
-In each theme override block:
+A class-based selector misses 3 of 4 sites. **Selector must be an attribute selector**:
 
 ```css
 /* theme-hackforger-light.css override */
-img.logo, img.full.logo {
+img[src$="/img/logo.svg"] {
     content: url("/assets/img/logo-light.svg");
 }
 ```
 
 ```css
 /* theme-hackforger-dark.css override */
-img.logo, img.full.logo {
+img[src$="/img/logo.svg"] {
     content: url("/assets/img/logo-dark.svg");
 }
 ```
 
-This works because the active body class loads exactly one theme CSS, which sets `content:` to the matching variant. No JS, no template forks, no Forgejo `Site Logo` setting changes.
+`src$="/img/logo.svg"` matches any `<img>` whose src ends with `/img/logo.svg` — covers both `{{AssetUrlPrefix}}` resolved with and without subpath.
 
-### 3.3 Favicon swap
+**Layout safety:** both source and target SVGs share the same intrinsic dimensions (`viewBox="0 0 365 51"`). Author-set `width`/`height` attributes take precedence; layout boxes are unchanged. The header's pre-existing 30×30 squashing of a 365×51 SVG is a Forgejo design choice, not introduced by this spec.
 
-Browser caches favicons aggressively and does not re-fetch on theme change. **Decision:** ship `favicon-light.svg` as the default `<link rel="icon">` (orange icon — visible against typical browser-tab backgrounds, both light and dark Chrome/Safari themes). Do NOT attempt a runtime swap. Document this limitation in the spec.
+**Accessibility:** `content: url()` on `<img>` preserves the element's accessible name from `alt`. Verified via WAI-ARIA: replaced-content does not strip `alt`. Test plan adds VoiceOver + NVDA verification at the home page logo (the one without `aria-hidden`).
 
-If the user later wants per-theme favicons, the right fix is a JS one-liner that updates the link href on theme change — out of scope for this spec.
+**Browser support:** `content: url()` on `<img>`: Chrome 65+, Firefox 60+, Safari 9+ (caniuse "css-content"). Fallback: default `logo.svg` ships as `logo-light` content (set in §3.1), so unsupported browsers see the orange light logo regardless of theme — degraded but functional.
+
+### 3.3 Favicon
+
+**Out of scope for this spec.** Two reasons:
+1. Favicon was not in the user-reported defects (logo white-text + light too white).
+2. Per-theme favicon swap requires JS (link[rel=icon] href change) plus careful viewBox math (favicons must be effectively-square; source is 365×51 with stroke overflow). Reviewer verified the icon math in the previous draft was wrong (85×50 clips the green leaf stroke; favicons need square viewBox like 85×85 with vertical centering — non-trivial).
+
+**Action:** Leave existing `favicon.svg` / `favicon.png` untouched. File a follow-up issue if per-theme favicon becomes important.
 
 ### 3.4 Light theme surface ladder
 
@@ -139,74 +151,82 @@ Uses `inset` so it lives ON the surface (no false drop-shadow), `0 1px 0` for to
 }
 ```
 
-### 3.8 Cyan/Pink colorize — aim at HackForger surfaces
+### 3.8 Cyan/Pink colorize — cleanup only
 
-**Drop** the `.ui.label.cyan` / `.ui.label.pink` overrides from PR #84 (selectors don't fire — Forgejo labels use inline style).
+**Drop** the `.ui.label.cyan` / `.ui.label.pink` rules from PR #84. They never fire because Forgejo labels use inline `style="background:#hex"` set per-label by users, not class-based colors. Verified: zero class-based label usages exist for `.cyan` / `.pink` in the codebase. The rules are dead CSS.
 
-**Add** targeted styling for HackForger-controlled chip surfaces. Verify these class names exist in the codebase before writing the rules; if a name differs, update the rule. Initial targets:
+Also remove the `.ui.label.green` rule for the same reason (Forgejo doesn't emit `class="label green"` — it emits `class="ui label" style="..."`).
 
-- `.hackforger-bounty-status[data-status]` — color by status (open=green, in-review=cyan, complete=pink-faded)
-- `.hackforger-phase-pill[data-kind]` — color by phase kind (registration=cyan, judging=pink, finalize=green)
-- `.hackforger-credit-tx[data-direction]` — credit (incoming) green-tint, debit (outgoing) pink-tint
+**Aspirational chip work is out of scope.** Targeted HackForger chip styling (bounty status, hackathon phase, credit tx direction) requires both new CSS AND new template/Vue markup with stable class names. None of those classes exist today. That work belongs in a separate "HackForger chip system" spec, not bolted onto this theme polish.
 
-If no such class exists today, add an `extract` step in the implementation plan to grep for the existing class names and adapt selectors. **No new template/component changes** — only CSS that targets existing markup.
-
-If after a quick grep no HackForger chip markup is found, defer the colorize-targeted-pass to a separate spec and remove the unused `.ui.label.cyan/.pink` rules from the current themes. Don't ship dead CSS.
+Net effect: the colorize section of both themes shrinks to one paragraph cleanup; no new selectors added.
 
 ## 4. File-by-file changes
 
 ### `custom/public/assets/img/`
-- **CREATE** `logo-light.svg` (= `/tmp/issue70/logo-1.bin`, strip `<style>` block if any)
-- **CREATE** `logo-dark.svg` (= `/tmp/issue70/logo-2.bin`, strip `@media` block)
-- **CREATE** `favicon-light.svg` (cropped icon-only viewBox of logo-1)
-- **CREATE** `favicon-dark.svg` (cropped icon-only viewBox of logo-2)
-- **MODIFY** `logo.svg` — replace with the contents of `logo-light.svg` (default fallback for any non-themed caller)
-- **MODIFY** `favicon.svg` — replace with `favicon-light.svg` content (default fallback; orange icon visible on any browser tab background)
+- **CREATE** `logo-light.svg` (= `/tmp/issue70/logo-1.bin` verbatim — orange variant. Strip any `<style>` or `@media` block; verify with `grep -c '<style\|@media' logo-light.svg` returns 0)
+- **CREATE** `logo-dark.svg` (= `/tmp/issue70/logo-2.bin` verbatim — green variant. Same strip + verify)
+- **MODIFY** `logo.svg` — replace contents with the contents of `logo-light.svg` (default fallback for any non-themed caller, e.g., browsers that don't support `content: url()`)
+- **DO NOT TOUCH** `favicon.svg` / `favicon.png` (out of scope per §3.3)
 
 ### `custom/public/assets/css/theme-hackforger-light.css`
 - Replace the surface-ladder block (section 3.4 values).
 - Replace `a:hover` color (3.5).
 - Replace `:focus-visible` outline color (3.5).
 - Replace primary button hover shadow (3.7).
-- Append `img.logo, img.full.logo { content: url("/assets/img/logo-light.svg"); }`.
-- Remove the `.ui.label.cyan/.pink` rules; add (or stub) the HackForger-targeted chip rules per 3.8.
+- Append `img[src$="/img/logo.svg"] { content: url("/assets/img/logo-light.svg"); }`.
+- **Remove** the `.ui.label.cyan/.pink/.green` rules from PR #84 (3.8).
 
 ### `custom/public/assets/css/theme-hackforger-dark.css`
 - Append surface-lift `inset` shadow rules (3.6).
 - Replace `a:hover` color (3.5).
 - Replace `:focus-visible` outline color (3.5).
-- Append `img.logo, img.full.logo { content: url("/assets/img/logo-dark.svg"); }`.
-- Same colorize cleanup as light (3.8).
+- Append `img[src$="/img/logo.svg"] { content: url("/assets/img/logo-dark.svg"); }`.
+- **Remove** the `.ui.label.cyan/.pink/.green` rules from PR #84 (3.8).
 
 ## 5. Testing strategy
 
-Manual E2E only — no unit/integration tests for theme CSS:
+Manual E2E only — no unit/integration tests for theme CSS. After merge, run `make frontend && make backend` (per CLAUDE.md), restart `gitea web`, then in browser:
 
-1. Restart `gitea web` after merge.
-2. Hard-refresh `localhost:3000` in browser (Cmd+Shift+R).
-3. Verify on **light theme**:
-   - Logo: orange-bg icon + black "Syn" letters visible against warm paper body
-   - Body bg is visibly cream (not stark white) — should read as "paper" from 3ft
-   - Cards (issue cards, repo summary) are clearly lighter than body
-   - Tab through a form: focus ring is dark-green-1, not fluorescent
-   - Hover any link in an issue list: text shifts to dark-1, no strobe
-   - `.ui.primary.button` hover: visible green tint shadow
-4. Verify on **dark theme**:
-   - Logo: white-bg icon + green wordmark + white "Syn" letters visible against deep-black body
-   - Side panel / repo file tree shows visible top-edge highlight (1px white at 4% opacity)
-   - Hover/focus same quieter behavior
-5. Toggle theme in user prefs → confirm logo swaps without page reload (or with one reload, depending on how Forgejo applies theme switch).
-6. Browser tab: favicon shows the orange icon (same in both themes — accepted limitation).
+### 5.1 Light theme
+1. Hard-refresh (Cmd+Shift+R).
+2. **Logo at all 4 call-sites** (per §3.2 table): header navbar (every page), `/` home, `/user/login/openid` signin, 500 error page if reproducible. Each must render the orange variant; black "Syn" letters visible against warm paper.
+3. **Surface depth**: body bg reads as cream (not white) from 3ft viewing distance.
+4. **Card lift inversion**: cards/segments are clearly lighter than body (paper-on-desk metaphor visible).
+5. **Hover quietness**: hover any link on an issue list — text shifts to `--color-primary-dark-1` (#A8E632), no strobe to fluorescent.
+6. **Focus ring**: Tab through a form — outline is dark-green-1, 3px offset.
+7. **Primary button hover**: green tint shadow visible.
+
+### 5.2 Dark theme
+1. Switch theme via user prefs → reload.
+2. **Logo at all 4 call-sites**: green variant; white "Syn" letters visible against deep-black body.
+3. **Surface lift**: side panel / repo file tree / nav menu show 1px white-4% top-edge highlight (subtle, intentional, only visible on calibrated displays).
+4. Same hover/focus quieter checks.
+
+### 5.3 Theme toggle behavior
+Switch theme in user prefs and confirm: the logo changes **on the next page navigation** (not live, because the theme CSS file is loaded by `<link>` and Forgejo reloads the page on theme change anyway). If logo is stale after navigation, it indicates aggressive browser caching of `logo-light.svg` / `logo-dark.svg` — hard-refresh resolves; document if seen.
+
+### 5.4 Accessibility
+- **Screen reader announcement**: VoiceOver (Cmd+F5 on macOS) on the home page logo — should announce "logo" (or the localized translation). The header logo has `aria-hidden="true"` so should be skipped — verify it IS skipped.
+- **WCAG AA contrast** between `--color-text` (resolved value: check `getComputedStyle`) and the new light surface tokens `#efece1` / `#e7e3d4` / `#ddd8c5` / `#e3decd` / `#f6f3e9`. Use a contrast checker; document the actual ratios as a CSS comment block. Minimum 4.5:1 for `--color-text` body, 3:1 for `--color-text-light` (large or non-essential text).
+- **Color-only meaning**: confirm the logo swap doesn't lose information for monochrome users (the brand mark is icon + word; both variants encode "HackForger" in the wordmark).
+
+### 5.5 Browser support smoke test
+Verify on Safari (Mac), Chrome, Firefox: the `content: url()` swap takes effect. If any browser falls back to default `logo.svg`, that's acceptable degradation per §3.2 (default = light variant ships).
+
+### 5.6 Frontend rebuild
+Per CLAUDE.md: worktree must run `make frontend` before `make backend`. Confirm `public/assets/` rebuild is fresh by checking timestamps after build.
 
 ## 6. Risks & mitigations
 
 | Risk | Mitigation |
 |---|---|
-| `content: url()` on `<img>` not supported in older browsers | Caniuse shows >97% global; acceptable. Fallback is the default `logo.svg` (which we set to logo-light), so worst case all users see the light logo regardless of theme — degraded but functional. |
-| Forgejo caches CSS aggressively, theme swap doesn't appear | Document hard-refresh requirement in test plan. |
-| `.hackforger-bounty-status` etc. class names don't exist today | Spec acknowledges (3.8): grep first, defer colorize-targeted pass to separate spec if no markup found. Prevents shipping dead CSS. |
-| Surface depths feel too dark for users used to PR #84 light | Subjective; user explicitly asked "太白了" so directional risk is low. Spec commits to one set of values; if user disagrees post-merge, easy revert/tweak in a follow-up. |
-| Logo SVGs (logo-1/logo-2) might still contain designer's `<style>` block referencing classes that conflict | Spec mandates STRIP any `<style>` and `@media` blocks during the copy step; verify with `grep` after copying. |
+| `content: url()` on `<img>` not supported on older browsers | Default `logo.svg` ships as light variant; unsupported browsers see the light logo regardless of theme — degraded but functional. Test plan §5.5 verifies on 3 browsers. |
+| Forgejo caches CSS / SVG aggressively after theme swap | Test plan §5.3 calls out hard-refresh requirement; document if observed. |
+| Surface depths feel too dark vs. PR #84 light | User explicitly asked "太白了" (too white) → directional risk is low. Values committed in §3.4 are reversible in a follow-up if needed. |
+| Logo SVGs contain designer's `<style>` or `@media` rules that conflict with the static copy approach | §4 mandates `grep -c '<style\|@media'` returns 0 after copying. |
+| Light surface tokens reduce contrast against `--color-text` below WCAG AA | Test plan §5.4 makes contrast verification explicit. If a token fails, narrow the surface step (e.g., `#efece1` → `#f0ede2`) until AA passes. |
+| `content: url()` strips `<img alt>` from accessibility tree | Test plan §5.4 verifies VoiceOver behavior. If broken, fall back to dropping the swap on that single surface and accept light-variant logo there. |
 
 ## 7. Out of scope
 
