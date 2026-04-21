@@ -61,8 +61,10 @@
 a, a.muted, a.suppressed {
     color: var(--color-primary-dark-2);
 }
+/* /quieter pass 2 — hover lifts to dark-1, not raw fluorescent.
+ * Stops the dense-page strobe on issue lists / file trees. */
 a:hover, a.muted:hover, a.suppressed:hover {
-    color: var(--color-primary);
+    color: var(--color-primary-dark-1);
 }
 a:visited {
     color: var(--color-primary-dark-4);
@@ -71,7 +73,7 @@ a:visited {
     color: var(--color-text);
 }
 .ui.menu a:hover, .ui.dropdown .menu > .item:hover {
-    color: var(--color-primary);
+    color: var(--color-primary-dark-1);
 }
 
 /* /quieter — neon glow only on the loud sizes.
@@ -96,29 +98,23 @@ a:visited {
     }
 }
 
-/* /colorize — chip / label variants per DESIGN.md §5.
- * Pill shape, 15% surface, 100% text. */
-.ui.label.cyan, .ui.labels .label.cyan {
-    background: var(--color-cyan-alpha-15);
-    color: var(--color-cyan);
-    border: none;
-    border-radius: 999px;
-}
-.ui.label.pink, .ui.labels .label.pink {
-    background: var(--color-pink-alpha-15);
-    color: var(--color-pink);
-    border: none;
-    border-radius: 999px;
-}
-.ui.label.green, .ui.labels .label.green {
-    background: rgba(187, 253, 59, 0.15);
-    color: var(--color-primary);
-    border: none;
-    border-radius: 999px;
+/* /colorize cleanup — removed .ui.label.cyan/.pink/.green rules from PR #84.
+ * Forgejo labels use inline style="background:#hex" set per-label, not class
+ * names, so these selectors never fired. Targeted HackForger chip styling
+ * (bounty/phase/credit) deferred to a separate spec. */
+
+/* /polish — DESIGN.md §4 ambient lift via inset highlight.
+ * 1px white at 4% opacity at the top edge of elevated surfaces.
+ * Visible on calibrated displays as a subtle "lift" without a line;
+ * gracefully invisible on uncalibrated displays. */
+.ui.segment, .ui.card, .ui.menu, .ui.attached.header,
+.repository .header-wrapper, .ui.tabular.menu {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* /harden — keyboard focus ring restored on all interactive elements.
- * The bundled theme strips outline; AA requires a visible focus indicator. */
+/* /quieter — focus ring uses dark-1 with 3px offset for AA visibility
+ * without competing with hover/active for attention (was raw fluorescent
+ * which made keyboard nav strobing). */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -126,6 +122,12 @@ textarea:focus-visible,
 select:focus-visible,
 .ui.button:focus-visible,
 .ui.dropdown:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-primary-dark-1);
+    outline-offset: 3px;
+}
+
+/* Logo theme swap — green variant on dark theme.
+ * Attribute selector covers all 4 call-sites. Both SVGs share viewBox. */
+img[src$="/img/logo.svg"] {
+    content: url("/assets/img/logo-dark.svg");
 }
