@@ -244,6 +244,30 @@ jobs:
           echo "Pushed index update to main"
 `
 
+// phasesToMilestones converts hackathon phases into Milestone records for the
+// track repo. Phases with EndTime == 0 (unscheduled) produce no milestone —
+// a milestone without a deadline has no semantic meaning in HackForger's
+// phase-marker model (unlike Forgejo's user-authored milestones, which are
+// meaningful as issue-grouping buckets even without deadlines).
+func phasesToMilestones(phases []*hackforger_model.Phase, repoID int64) []*issues_model.Milestone {
+	result := make([]*issues_model.Milestone, 0, len(phases))
+	for _, p := range phases {
+		if p.EndTime == 0 {
+			continue
+		}
+		name := p.CustomName
+		if name == "" && p.PhaseType != nil {
+			name = p.PhaseType.Key // "registration", "development", "judging", "results"
+		}
+		result = append(result, &issues_model.Milestone{
+			RepoID:       repoID,
+			Name:         name,
+			DeadlineUnix: timeutil.TimeStamp(p.EndTime),
+		})
+	}
+	return result
+}
+
 // CreateTrackWithRepo creates a Forgejo Repository in the hackathon's linked
 // Organization for the track, then inserts the track record.
 // The repo is named "track-{ID}" to avoid issues with Unicode/Chinese track names.
@@ -322,23 +346,11 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 	}
 
 	// Auto-create phase milestones on the track repo from Phase records.
-	// Each phase becomes a milestone; deadline = phase EndTime.
+	// Phases without EndTime are skipped; see phasesToMilestones for rationale.
 	phases, phaseErr := hackforger_model.GetPhasesByActivity(ctx, "hackathon", h.ID)
 	if phaseErr == nil {
-		for _, p := range phases {
-			name := p.CustomName
-			if name == "" && p.PhaseType != nil {
-				name = p.PhaseType.Key // "registration", "development", "judging", "results"
-			}
-			var deadline timeutil.TimeStamp
-			if p.EndTime > 0 {
-				deadline = timeutil.TimeStamp(p.EndTime)
-			}
-			_ = issues_model.NewMilestone(ctx, &issues_model.Milestone{
-				RepoID:       repo.ID,
-				Name:         name,
-				DeadlineUnix: deadline,
-			})
+		for _, m := range phasesToMilestones(phases, repo.ID) {
+			_ = issues_model.NewMilestone(ctx, m)
 		}
 	}
 	return nil
