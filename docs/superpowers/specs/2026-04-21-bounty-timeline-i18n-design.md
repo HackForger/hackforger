@@ -31,15 +31,18 @@ Two defects:
 
 ### Language selection rule
 
-At write time, select language in this order:
+At write time, read `issue.Repo.MustOwner(ctx).Language` and pass it to `translation.NewLocale(lang)`. `NewLocale` (`modules/translation/translation.go:178-206`) handles all fallbacks internally:
 
-1. **Repo owner's user-preferred language** (`repo.MustOwner(ctx).Language`, a `VARCHAR(5)` like `"zh-CN"` or `"en-US"`).
-2. **Instance default** (`setting.Langs[0]`) if the owner has no preference set.
-3. **Hard fallback:** `"zh-CN"` if `setting.Langs` is empty (defensive — should not occur).
+- Empty / unknown lang → falls back to `setting.Langs[0]` (instance default).
+- `setting.Langs` ever empty → `NewLocale` still returns a usable locale labeled "unknown"; `TrString` returns the key itself.
 
-Rationale: the repo owner is the de-facto steward of the Issue thread. Their language aligns with the project's internal sphere (team members, contributors active in that repo). Using the *actor's* (doer's) language would make the same Issue thread multilingual over time — worse UX than single-language-per-repo.
+**The helper does NOT need its own fallback chain.** Pass `owner.Language` directly to `NewLocale`.
 
-For Organization-owned repos, `MustOwner` returns the Org's User record, which also has a `Language` field.
+Rationale: the repo owner is the de-facto steward of the Issue thread. Their language aligns with the project's internal sphere. Using the *actor's* (doer's) language would make the same Issue thread multilingual over time — worse UX than single-language-per-repo.
+
+For Organization-owned repos, `MustOwner` returns the Org's User record, which also has a `Language` field. **In practice, most Orgs do not set a language preference**, so org-owned bounties will typically render in `setting.Langs[0]` (zh-CN on our instance).
+
+On `MustOwner` internal error, Forgejo returns a synthetic `&User{Name: "error", Language: ""}` (`models/repo/repo.go:484-494`) — the empty-Language path handles this.
 
 ### Helper signature change
 
@@ -53,61 +56,75 @@ func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty
 func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64, key string, args ...any)
 ```
 
+`TrString` signature verified: `TrString(trKey string, trArgs ...any) string` (`modules/translation/i18n/localestore.go:201`).
+
 Inside the helper:
 
-1. Load `doer` (existing).
-2. Load `issue` + `issue.Repo` (existing, via `LoadRepo`).
-3. Resolve language: `lang := issue.Repo.MustOwner(ctx).Language`, fallback chain above.
-4. Build locale: `locale := translation.NewLocale(lang)`.
-5. Render: `message := locale.TrString(key, args...)`.
-6. `issue_service.CreateIssueComment(ctx, doer, issue.Repo, issue, message, nil)` (existing).
+1. Load `doer` via `user_model.GetUserByID` (existing).
+2. Load `issue` via `issues_model.GetIssueByID` (existing).
+3. Load `issue.Repo` via `issue.LoadRepo(ctx)` (existing).
+4. `lang := issue.Repo.MustOwner(ctx).Language`.
+5. `locale := translation.NewLocale(lang)`.
+6. `message := locale.TrString(key, args...)`.
+7. `issue_service.CreateIssueComment(ctx, doer, issue.Repo, issue, message, nil)` (existing).
 
 All error paths remain best-effort (log + return, never propagate — matches current behavior).
 
 ### Locale keys
 
-Add 4 keys under the `[hackforger]` section of both `locale_en-US.ini` and `locale_zh-CN.ini`:
+Add the following four lines under the existing `[hackforger]` section (line 3932 in `locale_en-US.ini`, parallel location in `locale_zh-CN.ini`). **Do NOT prefix keys with `hackforger.` inside the file** — Forgejo composes the lookup key as `<section>.<key>` at load time. Verify by reference: existing key `bounty.error.issue_required` (file line 3957) is looked up as `hackforger.bounty.error.issue_required` from Go.
 
-**`options/locale/locale_zh-CN.ini`:**
+**`options/locale/locale_zh-CN.ini` (under `[hackforger]`):**
 ```ini
-bounty.timeline.applied = 📋 **悬赏申请** — @%s 申请承接
-bounty.timeline.accepted = 🏷 **悬赏已接受** — @%s 认领
+bounty.timeline.applied = 📋 **悬赏申请** — **%s** 申请承接
+bounty.timeline.accepted = 🏷 **悬赏已接受** — **%s** 认领
 bounty.timeline.completed = ✅ **悬赏已完成** — 交付已接受并发放
 bounty.timeline.cancelled = ❌ **悬赏已取消**
 ```
 
-**`options/locale/locale_en-US.ini`:**
+**`options/locale/locale_en-US.ini` (under `[hackforger]`):**
 ```ini
-bounty.timeline.applied = 📋 **Bounty Application** — @%s applied
-bounty.timeline.accepted = 🏷 **Bounty Accepted** — claimed by @%s
+bounty.timeline.applied = 📋 **Bounty Application** — **%s** applied
+bounty.timeline.accepted = 🏷 **Bounty Accepted** — claimed by **%s**
 bounty.timeline.completed = ✅ **Bounty Completed** — delivery accepted and bounty fulfilled
 bounty.timeline.cancelled = ❌ **Bounty Cancelled**
 ```
 
-**Why `@%s` instead of `**%s**` or plain `%s`:** Forgejo parses `@username` in comment markdown as a user mention, which auto-generates a notification to that user. For the Accept case this is exactly what we want (applicant learns they were accepted). For Apply, the mentioned user is the comment author — Forgejo suppresses self-mention notifications, so no noise. Consistent format across the four keys.
+Go call sites reference the keys with the section prefix:
+- `locale.TrString("hackforger.bounty.timeline.applied", applicantName)`
+- `locale.TrString("hackforger.bounty.timeline.accepted", applicantName)`
+- `locale.TrString("hackforger.bounty.timeline.completed")`
+- `locale.TrString("hackforger.bounty.timeline.cancelled")`
+
+**Why `**%s**` (bold) and NOT `@%s` (mention):** Using `@username` would trigger Forgejo's user-mention parser, generating a separate notification to that user. HackForger already has its own notification path (`notify_service.HackforgerEntityStatusChanged` with audience routing) for these events, so a mention-notification would be duplicate and was not part of Issue #34's scope. Bold formatting gives visual emphasis without side effects. Usernames in Forgejo are restricted to `[a-zA-Z0-9._-]` so direct interpolation into markdown is safe from injection.
 
 ### Call site changes
+
+**Helper for resolving display name** (add near `postBountyIssueComment`):
+
+```go
+// resolveUsername loads a user by ID and returns their login name; on error
+// falls back to "user #<id>" to match the prior Timeline convention. Both
+// callers inside bounty.go need this, and resolution is best-effort.
+func resolveUsername(ctx context.Context, userID int64) string {
+    u, err := user_model.GetUserByID(ctx, userID)
+    if err != nil {
+        return fmt.Sprintf("user #%d", userID)
+    }
+    return u.Name
+}
+```
 
 **Apply** (`bounty.go:166`):
 
 ```go
-applicant, err := user_model.GetUserByID(ctx, userID)
-applicantName := fmt.Sprintf("user-%d", userID) // fallback for deleted users
-if err == nil {
-    applicantName = applicant.Name
-}
-postBountyIssueComment(ctx, bounty, userID, "hackforger.bounty.timeline.applied", applicantName)
+postBountyIssueComment(ctx, bounty, userID, "hackforger.bounty.timeline.applied", resolveUsername(ctx, userID))
 ```
 
 **Accept** (`bounty.go:253`):
 
 ```go
-applicant, err := user_model.GetUserByID(ctx, app.UserID)
-applicantName := fmt.Sprintf("user-%d", app.UserID)
-if err == nil {
-    applicantName = applicant.Name
-}
-postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.accepted", applicantName)
+postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.accepted", resolveUsername(ctx, app.UserID))
 ```
 
 **Complete** (`bounty.go:402`):
@@ -122,7 +139,7 @@ postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.complete
 postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.cancelled")
 ```
 
-Applicant-lookup errors fall back to `user-{id}` (never crash or skip the comment). This matches the existing best-effort contract.
+Fallback format `user #<id>` matches the old output for rare deleted-user cases. Never crashes or skips the comment (best-effort contract).
 
 ## Out of Scope
 
