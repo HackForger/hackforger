@@ -20,6 +20,7 @@
 - `services/hackforger/hackathon_internal_test.go` — white-box test for unexported `phasesToMilestones`
 - `docs/tests/e2e/tasks/2026-04-21-issue-83-milestones-epoch-date.md` — E2E task for manual agent-browser verification
 - `docs/tests/e2e/reports/2026-04-21-issue-83-milestones-epoch-date-report.md` — E2E report (populated in Task 8)
+- `docs/tests/e2e/reports/screenshots/2026-04-21-issue-83/` — screenshot directory for E2E checkpoints
 
 **Modified:**
 - `services/hackforger/hackathon.go` — extract `phasesToMilestones`; rewrite loop at line 324-343 to use it
@@ -104,7 +105,7 @@ func TestPhasesToMilestones_EmptyInput(t *testing.T) {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test ./services/hackforger/ -run TestPhasesToMilestones -v 2>&1 | tail -30`
+Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test -tags "sqlite sqlite_unlock_notify" ./services/hackforger/ -run TestPhasesToMilestones -v 2>&1 | tail -30`
 
 Expected: compilation FAILS with `undefined: phasesToMilestones`.
 
@@ -212,15 +213,15 @@ Use the Edit tool; the exact `old_string` to match (from line 324 through line 3
 
 - [ ] **Step 3: Run the unit tests — expect PASS**
 
-Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test ./services/hackforger/ -run TestPhasesToMilestones -v 2>&1 | tail -30`
+Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test -tags "sqlite sqlite_unlock_notify" ./services/hackforger/ -run TestPhasesToMilestones -v 2>&1 | tail -30`
 
 Expected: all four test cases `PASS`.
 
 - [ ] **Step 4: Run the full hackforger service test suite — no regressions**
 
-Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test ./services/hackforger/... 2>&1 | tail -20`
+Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test -tags "sqlite sqlite_unlock_notify" ./services/hackforger/... 2>&1 | tail -20`
 
-Expected: `ok  forgejo.org/services/hackforger ...` (all tests pass, including the pre-existing `TestPublishHackathon_NoCriteria`).
+Expected: `ok  forgejo.org/services/hackforger ...` (all tests pass, including the pre-existing `TestPublishHackathon_NoCriteria` which uses the sqlite test DB).
 
 - [ ] **Step 5: Commit**
 
@@ -472,9 +473,9 @@ Expected: binary produced at `./gitea`. If template syntax errors are present, t
 
 - [ ] **Step 3: Run model + service tests**
 
-Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test ./services/hackforger/... ./models/hackforger/... ./models/issues/... 2>&1 | tail -30`
+Run: `cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch && go test -tags "sqlite sqlite_unlock_notify" ./services/hackforger/... ./models/hackforger/... ./models/issues/... 2>&1 | tail -30`
 
-Expected: all `ok`. The milestone model tests in `models/issues/milestone_test.go` remain untouched, so they should continue to pass.
+Expected: all `ok`. The milestone model tests in `models/issues/milestone_test.go` remain untouched, so they should continue to pass. The `sqlite` build tag matches the project convention documented in `CLAUDE.md` (required for any test that touches sqlite).
 
 - [ ] **Step 4: Commit (if any build artifacts need committing — unlikely)**
 
@@ -489,7 +490,7 @@ If `make frontend` produced generated files in `web_src/` or similar that should
 
 - [ ] **Step 1: Copy the single-feature template and fill it**
 
-First read the template to copy its structure: `docs/tests/e2e/templates/single-feature-test.md`.
+First read the template to copy its structure: `docs/tests/e2e/templates/single-feature-e2e.md`.
 
 Then write `docs/tests/e2e/tasks/2026-04-21-issue-83-milestones-epoch-date.md` with this content:
 
@@ -506,8 +507,11 @@ Then write `docs/tests/e2e/tasks/2026-04-21-issue-83-milestones-epoch-date.md` w
 1. Worktree built: `make frontend && TAGS="bindata sqlite sqlite_unlock_notify" make backend`.
 2. `custom/conf/app.ini` copied from the main repo (CLAUDE.md memory `feedback_worktree_config.md`).
 3. `data/queues/common/LOCK` removed if server was running previously.
-4. Start server: `./gitea web` (worktree, port 3000 per app.ini).
-5. Login as `hackforger` / `admin1234`.
+4. **Port 3000 available.** The main HackForger instance also uses `HTTP_PORT = 3000`. Either:
+   - Stop any process on port 3000: `lsof -iTCP:3000 -sTCP:LISTEN` → if something is listening, kill it or use the fallback below.
+   - Or edit the worktree's `custom/conf/app.ini` to use a free port (e.g., `HTTP_PORT = 3100`), then use that port in the agent-browser steps below.
+5. Start server: `./gitea web` (worktree).
+6. Login as `hackforger` / `admin1234`.
 
 ## Test Steps
 
@@ -530,30 +534,47 @@ Then write `docs/tests/e2e/tasks/2026-04-21-issue-83-milestones-epoch-date.md` w
    ```bash
    sqlite3 data/gitea.db
    ```
-2.3 Get the track repo's id:
+2.3 **Verify the milestone table schema first** (NOT NULL columns differ across migrations):
+   ```sql
+   .schema milestone
+   ```
+   Expected columns (confirm before inserting): `id`, `repo_id`, `name`, `content`, `is_closed`, `num_issues`, `num_closed_issues`, `completeness`, `is_overdue`, `created_unix`, `updated_unix`, `deadline_unix`, `closed_date_unix`. If additional NOT NULL columns appear that the INSERTs below don't set, add them with sensible defaults (0 / empty string).
+
+2.4 Get the track repo's id and bind it as a sqlite3 parameter:
    ```sql
    SELECT id, name FROM repository WHERE name = 'e2e-track-1';
    ```
-   Note the id (call it `TRACK_REPO_ID`).
-2.4 Insert a legacy bad-data milestone:
+   Copy the returned id (an integer like `42`). All subsequent INSERTs below use a literal integer in place of `:repo_id`. (Sqlite3 CLI supports `.param set :repo_id 42` then substituting `:repo_id` in queries; use whichever form you prefer — the important thing is to not paste the literal string `TRACK_REPO_ID` into SQL.)
+
+2.5 Insert a legacy bad-data milestone (substitute the integer id from 2.4):
    ```sql
    INSERT INTO milestone
      (repo_id, name, content, is_closed, num_issues, num_closed_issues,
       completeness, created_unix, updated_unix, deadline_unix, closed_date_unix)
    VALUES
-     (TRACK_REPO_ID, 'legacy-bad-milestone', '', 0, 0, 0, 0,
+     (42, 'legacy-bad-milestone', '', 0, 0, 0, 0,
       strftime('%s','now'), strftime('%s','now'), 0, 0);
    ```
-2.5 Also insert a closed legacy milestone for the ClosedDateUnix guard:
+
+2.6 Also insert a closed legacy milestone for the ClosedDateUnix guard:
    ```sql
    INSERT INTO milestone
      (repo_id, name, content, is_closed, num_issues, num_closed_issues,
       completeness, created_unix, updated_unix, deadline_unix, closed_date_unix)
    VALUES
-     (TRACK_REPO_ID, 'legacy-closed-no-close-date', '', 1, 0, 0, 100,
+     (42, 'legacy-closed-no-close-date', '', 1, 0, 0, 100,
       strftime('%s','now'), strftime('%s','now'), 0, 0);
    ```
-2.6 Exit sqlite (`.exit`). Restart server.
+
+2.7 Verify both rows inserted successfully:
+   ```sql
+   SELECT id, name, deadline_unix, closed_date_unix, is_closed
+   FROM milestone
+   WHERE name LIKE 'legacy-%';
+   ```
+   Expected: 2 rows returned with `deadline_unix = 0`.
+
+2.8 Exit sqlite (`.exit`). Restart server on the same port as precondition #4.
 
 ### Step 3: Verify all three render paths
 
@@ -621,14 +642,29 @@ EOF
 
 - [ ] **Step 1: Start the server**
 
-Ensure app.ini copied (per CLAUDE.md memory). Run:
+First, ensure app.ini is copied and port 3000 is free:
+```bash
+cp /Users/h2oslabs/Workspace/hackforger/custom/conf/app.ini \
+   /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch/custom/conf/app.ini
+# Check for port conflict with the main instance
+lsof -iTCP:3000 -sTCP:LISTEN
+```
+
+If `lsof` shows a process on 3000 (likely the main HackForger instance), either stop it, or override the port in the worktree's `app.ini`:
+```bash
+sed -i '' 's/HTTP_PORT = 3000/HTTP_PORT = 3100/' \
+   /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch/custom/conf/app.ini
+```
+Then use `http://localhost:3100` everywhere below.
+
+Start the server:
 ```bash
 cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/fix-83-milestones-epoch
 rm -f data/queues/common/LOCK
 ./gitea web > /tmp/gitea-e2e-83.log 2>&1 &
 ```
 
-Wait ~3 seconds; verify: `curl -s http://localhost:3000/ | head -c 200` returns HTML.
+Wait ~3 seconds; verify: `curl -s http://localhost:<PORT>/ | head -c 200` returns HTML (substitute `<PORT>` = 3000 or 3100 depending on what you chose).
 
 - [ ] **Step 2: Execute the E2E steps using agent-browser**
 
@@ -673,8 +709,12 @@ OR
 
 - [ ] **Step 4: Stop the server**
 
+**Safety:** `pkill -f 'gitea web'` would also kill the main HackForger instance. Target only the worktree process:
 ```bash
-pkill -f 'gitea web'
+# Find the worktree's gitea PID (started in Step 1)
+pgrep -f "$(pwd)/gitea web" | xargs -I {} kill {}
+# Verify stopped
+lsof -iTCP:3000 -sTCP:LISTEN || lsof -iTCP:3100 -sTCP:LISTEN
 ```
 
 - [ ] **Step 5: Commit**
