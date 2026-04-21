@@ -1,73 +1,448 @@
-/* HackForger Dark Theme — based on DESIGN.md "High-Energy Kineticism / Void and Vibe"
-   Overrides the bundled web_src/css/themes/theme-hackforger-dark.css at runtime
-   via Forgejo's custom/public asset precedence. */
-
-/* === Local fonts (no Google CDN call from internal instance) === */
-
-@font-face {
-  font-family: 'Poppins'; font-display: swap; font-weight: 400; font-style: normal;
-  src: url('../fonts/Poppins-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Poppins'; font-display: swap; font-weight: 500; font-style: normal;
-  src: url('../fonts/Poppins-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Poppins'; font-display: swap; font-weight: 600; font-style: normal;
-  src: url('../fonts/Poppins-SemiBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Poppins'; font-display: swap; font-weight: 700; font-style: normal;
-  src: url('../fonts/Poppins-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Manrope'; font-display: swap; font-weight: 400; font-style: normal;
-  src: url('../fonts/Manrope-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Manrope'; font-display: swap; font-weight: 500; font-style: normal;
-  src: url('../fonts/Manrope-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Manrope'; font-display: swap; font-weight: 600; font-style: normal;
-  src: url('../fonts/Manrope-SemiBold.woff2') format('woff2');
-}
-
-/* === Design tokens (CSS variables) === */
+@import "../chroma/dark.css";
+@import "../codemirror/dark.css";
+@import "../markup/dark.css";
+@import "../hackforger-colors-dark.css";
 
 :root {
-  /* DESIGN.md §2 — Core palette */
+  --steel-900: #10161d;
+  --steel-850: #131a21;
+  --steel-800: #171e26;
+  --steel-750: #1d262f;
+  --steel-700: #242d38;
+  --steel-650: #2b3642;
+  --steel-600: #374351;
+  --steel-550: #445161;
+  --steel-500: #515f70;
+  --steel-450: #5f6e80;
+  --steel-400: #6d7d8f;
+  --steel-350: #7c8c9f;
+  --steel-300: #8c9caf;
+  --steel-250: #9dadc0;
+  --steel-200: #aebed0;
+  --steel-150: #c0cfe0;
+  --steel-100: #d2e0f0;
+  --is-dark-theme: true;
+  --color-primary: #6EBFA0;
+  --color-primary-contrast: #0D3F30;
+  --color-primary-dark-1: #7CC4A0;
+  --color-primary-dark-2: #E0F0EA;
+  --color-primary-dark-3: #E0F0EA;
+  --color-primary-dark-4: #E0F0EA;
+  --color-primary-dark-5: #E0F0EA;
+  --color-primary-dark-6: #E0F0EA;
+  --color-primary-dark-7: #E0F0EA;
+  --color-primary-light-1: #1F8C65;
+  --color-primary-light-2: #106B4C;
+  --color-primary-light-3: #106B4C;
+  --color-primary-light-4: #0D3F30;
+  --color-primary-light-5: #0D3F30;
+  --color-primary-light-6: #0D3F30;
+  --color-primary-light-7: #0D3F30;
+  --color-primary-alpha-10: #18805C19;
+  --color-primary-alpha-20: #18805C33;
+  --color-primary-alpha-30: #18805C4b;
+  --color-primary-alpha-40: #18805C66;
+  --color-primary-alpha-50: #18805C80;
+  --color-primary-alpha-60: #18805C99;
+  --color-primary-alpha-70: #18805Cb3;
+  --color-primary-alpha-80: #18805Ccc;
+  --color-primary-alpha-90: #18805Ce1;
+  --color-primary-hover: var(--color-primary-light-1);
+  --color-primary-active: var(--color-primary-light-2);
+  --color-secondary: #222838;
+  --color-secondary-dark-1: var(--steel-550);
+  --color-secondary-dark-2: var(--steel-500);
+  --color-secondary-dark-3: var(--steel-450);
+  --color-secondary-dark-4: var(--steel-400);
+  --color-secondary-dark-5: var(--steel-350);
+  --color-secondary-dark-6: var(--steel-300);
+  --color-secondary-dark-7: var(--steel-250);
+  --color-secondary-dark-8: var(--steel-200);
+  --color-secondary-dark-9: var(--steel-150);
+  --color-secondary-dark-10: var(--steel-100);
+  --color-secondary-dark-11: var(--steel-100);
+  --color-secondary-dark-12: var(--steel-100);
+  --color-secondary-dark-13: var(--steel-100);
+  --color-secondary-light-1: var(--steel-650);
+  --color-secondary-light-2: var(--steel-700);
+  --color-secondary-light-3: var(--steel-750);
+  --color-secondary-light-4: var(--steel-800);
+  --color-secondary-alpha-10: #2b364219;
+  --color-secondary-alpha-20: #2b364233;
+  --color-secondary-alpha-30: #2b36424b;
+  --color-secondary-alpha-40: #2b364266;
+  --color-secondary-alpha-50: #2b364280;
+  --color-secondary-alpha-60: #2b364299;
+  --color-secondary-alpha-70: #2b3642b3;
+  --color-secondary-alpha-80: #2b3642cc;
+  --color-secondary-alpha-90: #2b3642e1;
+  --color-secondary-hover: var(--color-secondary-light-1);
+  --color-secondary-active: var(--color-secondary-light-2);
+  /* console colors - used for actions console and console files */
+  --color-console-fg: #eeeff2;
+  --color-console-fg-subtle: #959cab;
+  --color-console-bg: #1f212b;
+  --color-console-border: #383c47;
+  --color-console-hover-bg: #ffffff16;
+  --color-console-active-bg: #454a57;
+  --color-console-menu-bg: #383c47;
+  --color-console-menu-border: #5c6374;
+  /* colors */
+  --color-red: #C83C23;
+  --color-orange: #C9A87A;
+  --color-yellow: #D4A22E;
+  --color-olive: #8EBA3A;
+  --color-green: #1F8C65;
+  --color-teal: #0d9488;
+  --color-blue: #2563eb;
+  --color-violet: #7c3aed;
+  --color-purple: #9333ea;
+  --color-pink: #db2777;
+  --color-brown: #a47252;
+  --color-grey: var(--steel-500);
+  --color-black: #111827;
+  /* light variants */
+  --color-red-light: #dc2626;
+  --color-orange-light: #f97316;
+  --color-yellow-light: #eab308;
+  --color-olive-light: #839311;
+  --color-green-light: #16a34a;
+  --color-teal-light: #14b8a6;
+  --color-blue-light: #3b82f6;
+  --color-violet-light: #8b5cf6;
+  --color-purple-light: #a855f7;
+  --color-pink-light: #ec4899;
+  --color-brown-light: #94674a;
+  --color-grey-light: var(--steel-300);
+  --color-black-light: #1f2937;
+  /* dark 1 variants produced via Sass scale-color(color, $lightness: -10%) */
+  --color-red-dark-1: #a71919;
+  --color-orange-dark-1: #d34f0b;
+  --color-yellow-dark-1: #b67c04;
+  --color-olive-dark-1: #839311;
+  --color-green-dark-1: #137337;
+  --color-teal-dark-1: #0c857a;
+  --color-blue-dark-1: #1554e0;
+  --color-violet-dark-1: #6a1feb;
+  --color-purple-dark-1: #8519e7;
+  --color-pink-dark-1: #c7216b;
+  --color-brown-dark-1: #94674a;
+  --color-black-dark-1: #0f1623;
+  /* dark 2 variants produced via Sass scale-color(color, $lightness: -20%) */
+  --color-red-dark-2: #941616;
+  --color-orange-dark-2: #bb460a;
+  --color-yellow-dark-2: #ca8a04;
+  --color-olive-dark-2: #91a313;
+  --color-green-dark-2: #15803d;
+  --color-teal-dark-2: #0a766d;
+  --color-blue-dark-2: #2563eb;
+  --color-violet-dark-2: #5c14d8;
+  --color-purple-dark-2: #7c3aed;
+  --color-pink-dark-2: #b11d5f;
+  --color-brown-dark-2: #a47252;
+  --color-black-dark-2: #111827;
+  /* ansi colors used for actions console and console files */
+  --color-ansi-black: #1d2328;
+  --color-ansi-red: #cc4848;
+  --color-ansi-green: #87ab63;
+  --color-ansi-yellow: #cc9903;
+  --color-ansi-blue: #3a8ac6;
+  --color-ansi-magenta: #d22e8b;
+  --color-ansi-cyan: #00918a;
+  --color-ansi-white: var(--color-console-fg-subtle);
+  --color-ansi-bright-black: #424851;
+  --color-ansi-bright-red: #d15a5a;
+  --color-ansi-bright-green: #93b373;
+  --color-ansi-bright-yellow: #eaaf03;
+  --color-ansi-bright-blue: #4e96cc;
+  --color-ansi-bright-magenta: #d74397;
+  --color-ansi-bright-cyan: #00b6ad;
+  --color-ansi-bright-white: var(--color-console-fg);
+  /* other colors */
+  --color-gold: #C4A432;
+  --color-white: #ffffff;
+  --color-pure-black: #000000;
+  --color-diff-removed-word-bg: #783030;
+  --color-diff-added-word-bg: #255c39;
+  --color-diff-removed-row-bg: #432121;
+  --color-diff-moved-row-bg: #825718;
+  --color-diff-added-row-bg: #1b3625;
+  --color-diff-removed-row-border: #783030;
+  --color-diff-moved-row-border: #a67a1d;
+  --color-diff-added-row-border: #255c39;
+  --color-diff-inactive: var(--steel-650);
+  --color-error-border: #922A18;
+  --color-error-bg: #5A1A0E;
+  --color-error-bg-active: #783030;
+  --color-error-bg-hover: #783030;
+  --color-error-text: #FCEAE6;
+  --color-success-border: #6B9A28;
+  --color-success-bg: #2D4A10;
+  --color-success-text: #EEF5DC;
+  --color-warning-border: #B88E20;
+  --color-warning-bg: #524008;
+  --color-warning-text: #FDF5E0;
+  --color-info-border: #1A7858;
+  --color-info-bg: #0F4535;
+  --color-info-text: #E0F0EA;
+  --color-red-badge: #b91c1c;
+  --color-red-badge-bg: #b91c1c22;
+  --color-red-badge-hover-bg: #b91c1c44;
+  --color-green-badge: #16a34a;
+  --color-green-badge-bg: #16a34a22;
+  --color-green-badge-hover-bg: #16a34a44;
+  --color-yellow-badge: #ca8a04;
+  --color-yellow-badge-bg: #ca8a0422;
+  --color-yellow-badge-hover-bg: #ca8a0444;
+  --color-orange-badge: #ea580c;
+  --color-orange-badge-bg: #ea580c22;
+  --color-orange-badge-hover-bg: #ea580c44;
+
+  /* Colors for thin elements: octicons, text, borders */
+  --thin-lightness: 0.68;
+  --regular-chroma: 0.19;
+  --color-thin-green: oklch(var(--thin-lightness) var(--regular-chroma) 145deg);
+  --color-thin-red: oklch(var(--thin-lightness) var(--regular-chroma) 27deg);
+  --color-thin-purple: oklch(var(--thin-lightness) var(--regular-chroma) 298deg);
+  --color-thin-orange: oklch(var(--thin-lightness) var(--regular-chroma) 41deg);
+
+  /* Ditto but when additional highlight is needed, e.g. on user interaction */
+  --thin-lightness-highlight: 0.75;
+  --color-thin-red-highlight: oklch(var(--thin-lightness-highlight) var(--regular-chroma) 27deg);
+
+  /* Background colors. WIP, currently only covers danger buttons */
+  --bg-lightness: 0.26;
+  --bg-chroma: 0.05;
+  --color-danger-bg: oklch(var(--bg-lightness) var(--bg-chroma) 27deg);
+
+  /* target-based colors */
+  --color-body: #141618;
+  --color-box-header: #1E2228;
+  --color-box-body: #1E2228;
+  --color-box-body-highlight: #252A33;
+  --color-text-dark: #F4F2EF;
+  --color-text: #ECEEF3;
+  --color-text-light: #C2C8D5;
+  --color-text-light-1: #8A94A8;
+  --color-text-light-2: #8A94A8;
+  --color-text-light-3: #5A6478;
+  --color-footer: #141618;
+  --color-timeline: #283040;
+  --color-input-text: #ECEEF3;
+  --color-input-background: #252A33;
+  --color-input-toggle-background: #252A33;
+  --color-input-border: #283040;
+  --color-input-border-hover: #5A6478;
+  --color-header-wrapper: #141618;
+  --color-header-wrapper-transparent: #242d3800;
+  --color-light: #00000028;
+  --color-light-mimic-enabled: rgba(0, 0, 0, calc(40 / 255 * 222 / 255 / var(--opacity-disabled)));
+  --color-light-border: #ffffff28;
+  --color-hover: #1E2430;
+  --color-active: #252C38;
+  --color-menu: #141618;
+  --color-card: #1E2228;
+  --fancy-card-bg: #1A1E22;
+  --fancy-card-border: var(--steel-600);
+  --color-markup-table-row: #ffffff06;
+  --color-markup-code-block: #172024;
+  --color-markup-code-inline: var(--steel-850);
+  --color-button: var(--steel-600);
+  --color-code-bg: #1A2428;
+  --color-shadow: #00000060;
+  --color-secondary-bg: #141618;
+  --color-text-focus: #fff;
+  --color-expand-button: #3c404d;
+  --color-placeholder-text: var(--color-text-light-3);
+  --color-editor-line-highlight: var(--steel-700);
+  --color-project-board-bg: var(--color-secondary-light-3);
+  --color-project-board-dark-label: var(--color-text-light-3);
+  --color-caret: var(--color-text);
+  /* should ideally be --color-text-dark, see #15651 */
+  --color-reaction-bg: #ffffff12;
+  --color-reaction-active-bg: var(--color-primary-alpha-30);
+  --color-reaction-hover-bg: var(--color-primary-alpha-40);
+  --color-tooltip-text: #ffffff;
+  --color-tooltip-bg: #000000f0;
+  --color-nav-bg: #141618;
+  --color-nav-hover-bg: #253038;
+  --color-nav-text: var(--color-text);
+  --color-secondary-nav-bg: var(--color-body);
+  --color-label-text: #fff;
+  --color-label-bg: var(--steel-600);
+  --color-label-hover-bg: var(--steel-550);
+  --color-label-active-bg: var(--steel-500);
+  --color-label-bg-alt: var(--steel-550);
+  --color-accent: var(--color-primary-light-1);
+  --color-small-accent: var(--color-primary-light-5);
+  --color-highlight-fg: var(--color-primary-light-4);
+  --color-highlight-bg: var(--color-primary-alpha-20);
+  --color-overlay-backdrop: #080808c0;
+  /* pattern colors for image diff */
+  --checkerboard-color-1: #474747;
+  --checkerboard-color-2: #313131;
+  accent-color: var(--color-accent);
+  color-scheme: dark;
+}
+/* invert emojis that are hard to read otherwise */
+.emoji[aria-label="check mark"],
+.emoji[aria-label="currency exchange"],
+.emoji[aria-label="TOP arrow"],
+.emoji[aria-label="END arrow"],
+.emoji[aria-label="ON! arrow"],
+.emoji[aria-label="SOON arrow"],
+.emoji[aria-label="heavy dollar sign"],
+.emoji[aria-label="copyright"],
+.emoji[aria-label="registered"],
+.emoji[aria-label="trade mark"],
+.emoji[aria-label="multiply"],
+.emoji[aria-label="plus"],
+.emoji[aria-label="minus"],
+.emoji[aria-label="divide"],
+.emoji[aria-label="curly loop"],
+.emoji[aria-label="double curly loop"],
+.emoji[aria-label="wavy dash"],
+.emoji[aria-label="paw prints"],
+.emoji[aria-label="musical note"],
+.emoji[aria-label="musical notes"] {
+  filter: invert(100%) hue-rotate(180deg);
+}
+i.grey.icon.icon.icon.icon {
+  color: var(--steel-350) !important;
+}
+.ui.secondary.vertical.menu {
+  border-radius: 0.28571429rem !important;
+  overflow: hidden;
+}
+.ui.basic.primary.button.item {
+  background-color: var(--color-active) !important;
+  color: var(--color-text) !important;
+  box-shadow: none !important;
+}
+.ui.red.label.notification_count,
+.ui.primary.label,
+.ui.primary.labels .label {
+  background-color: var(--color-primary-light-3) !important;
+}
+.ui.labeled.icon.buttons > .button > .icon,
+.ui.labeled.icon.button > .icon {
+  background-color: var(--color-light) !important;
+}
+#review-box .review-comments-counter {
+  background-color: var(--color-shadow) !important;
+  color: var(--color-white) !important;
+  margin-left: 0.5em;
+}
+.ui.basic.labels .primary.label,
+.ui.ui.ui.basic.primary.label {
+  color: var(--color-text-dark) !important;
+}
+.ui.yellow.label.pending-label {
+  color: var(--color-warning-text) !important;
+}
+::selection {
+  background: #18805C !important;
+  color: #E0F0EA !important;
+}
+strong.attention-important, svg.attention-important {
+  color: var(--color-violet-light);
+}
+strong.attention-note, svg.attention-note {
+  color: var(--color-blue-light);
+}
+strong.attention-caution, svg.attention-caution {
+  color: var(--color-red-light);
+}
+.ui.basic.red.button {
+  background-color: var(--color-red);
+  color: var(--color-white);
+}
+.ui.basic.red.button:hover,
+.ui.basic.red.button:focus {
+  background-color: var(--color-red-dark-1);
+  color: var(--color-white);
+}
+.ui.basic.red.button:active {
+  background-color: var(--color-red-dark-2);
+  color: var(--color-white);
+}
+
+/* ============================================================
+   HackForger DESIGN.md "High-Energy Kineticism" overrides
+   These rules come last in the file → win cascade against the
+   bundled hackforger-dark base (which defines all 260 vars
+   needed by Fomantic UI / base CSS so component borders and
+   inputs don't fall back to browser defaults).
+   ============================================================ */
+
+/* === Local fonts (no Google CDN call) === */
+@font-face { font-family: 'Poppins'; font-display: swap; font-weight: 400; src: url('../fonts/Poppins-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Poppins'; font-display: swap; font-weight: 500; src: url('../fonts/Poppins-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Poppins'; font-display: swap; font-weight: 600; src: url('../fonts/Poppins-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Poppins'; font-display: swap; font-weight: 700; src: url('../fonts/Poppins-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-display: swap; font-weight: 400; src: url('../fonts/Manrope-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-display: swap; font-weight: 500; src: url('../fonts/Manrope-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-display: swap; font-weight: 600; src: url('../fonts/Manrope-SemiBold.woff2') format('woff2'); }
+
+:root {
+  /* DESIGN.md §2 — Core palette (overrides bundled --color-primary green-blue) */
   --color-primary: #BBFD3B;
+  --color-primary-contrast: #0e0e0e;
   --color-primary-dark-1: #A6E532;
   --color-primary-dark-2: #91CD2A;
+  --color-primary-dark-3: #7CB422;
+  --color-primary-dark-4: #679C1A;
+  --color-primary-dark-5: #528412;
+  --color-primary-dark-6: #3D6B0A;
+  --color-primary-dark-7: #285202;
   --color-primary-light-1: #C8FE5C;
   --color-primary-light-2: #D5FE7E;
-  --color-primary-alpha-30: rgba(187, 253, 59, 0.30);
-  --color-primary-alpha-50: rgba(187, 253, 59, 0.50);
+  --color-primary-light-3: #E1FE9F;
+  --color-primary-light-4: #EEFEC1;
+  --color-primary-light-5: #F4FED4;
+  --color-primary-light-6: #F8FEE2;
+  --color-primary-light-7: #FCFFEE;
+  --color-primary-alpha-10: #BBFD3B19;
+  --color-primary-alpha-20: #BBFD3B33;
+  --color-primary-alpha-30: #BBFD3B4b;
+  --color-primary-alpha-40: #BBFD3B66;
+  --color-primary-alpha-50: #BBFD3B80;
+  --color-primary-alpha-60: #BBFD3B99;
+  --color-primary-alpha-70: #BBFD3Bb3;
+  --color-primary-alpha-80: #BBFD3Bcc;
+  --color-primary-alpha-90: #BBFD3Be1;
+  --color-primary-hover: var(--color-primary-light-1);
+  --color-primary-active: var(--color-primary-dark-1);
+  --color-accent: #BBFD3B;
 
-  --color-secondary: #37f5ef;
-  --color-tertiary: #ff8db4;
-  --color-error: #ff7351;
-  --color-error-bg: rgba(255, 115, 81, 0.15);
-
-  /* DESIGN.md §2.4 — Surface hierarchy (Tonal Layering) */
+  /* DESIGN.md §2.4 — Surface hierarchy ("Void and Vibe", #0e0e0e foundation) */
   --color-body: #0e0e0e;
   --color-box-body: #131313;
   --color-box-body-highlight: #262626;
   --color-box-header: #191919;
   --color-secondary-bg: #191919;
   --color-menu: #191919;
+  --color-card: #191919;
+  --color-button: #191919;
+  --color-nav-bg: #131313;
+  --color-nav-hover-bg: #262626;
+  --color-header-wrapper: #131313;
+  --color-footer: #0e0e0e;
 
   /* DESIGN.md §6 — body text NOT pure white */
   --color-text: #ababab;
   --color-text-light: #757575;
+  --color-text-light-1: #8a8a8a;
   --color-text-light-2: #525252;
   --color-text-light-3: #3d3d3d;
   --color-text-dark: #d4d4d8;
 
-  /* DESIGN.md §2.3 — "No-Line" rule: Ghost Border @ 15% opacity */
+  /* DESIGN.md §2.3 — "No-Line" / Ghost Border @ 15% opacity */
   --color-border: rgba(72, 72, 72, 0.15);
+  --color-border-secondary: rgba(72, 72, 72, 0.10);
   --color-light-border: rgba(72, 72, 72, 0.10);
+  --color-input-border: rgba(72, 72, 72, 0.20);
+  --color-input-border-hover: rgba(72, 72, 72, 0.30);
 
   /* Radius scale (DESIGN.md §5) */
   --border-radius: 4px;
@@ -78,94 +453,27 @@
   /* Typography (DESIGN.md §3) */
   --fonts-regular: 'Manrope', 'OPPOSans', 'PingFang SC', system-ui, sans-serif;
   --fonts-display: 'Poppins', 'Epilogue', 'PingFang SC', system-ui, sans-serif;
-  --fonts-monospace: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
 }
 
-/* === Body & headlines === */
+/* === Component overrides (DESIGN.md §5) === */
 
-body {
-  background: var(--color-body);
-  color: var(--color-text);
-  font-family: var(--fonts-regular);
-  line-height: 1.6;
-}
-
+body { font-family: var(--fonts-regular); line-height: 1.6; }
 h1, h2, h3, .ui.header, .display-lg, .display-md {
   font-family: var(--fonts-display);
   letter-spacing: -0.02em;
-  color: var(--color-text-dark);
 }
 
-.ui.label, .label-md {
-  font-family: var(--fonts-regular);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
+/* Buttons — pill, no shadow, neon glow on hover */
+.ui.button { border-radius: var(--border-radius-full); font-family: var(--fonts-regular); font-weight: 500; letter-spacing: 0.02em; box-shadow: none; transition: background 0.15s ease, box-shadow 0.2s ease; }
+.ui.primary.button { background: var(--color-primary); color: var(--color-primary-contrast); }
+.ui.primary.button:hover, .ui.primary.button:focus { background: var(--color-primary-light-1); box-shadow: 0 0 24px var(--color-primary-alpha-30); }
 
-/* === Buttons (DESIGN.md §5) — pill, no shadow === */
+/* Cards — 8px radius, no border, hover lift */
+.ui.card, .ui.cards > .card { border-radius: var(--border-radius-medium); border: none !important; background: var(--color-box-header); box-shadow: none; transition: background 0.15s ease, transform 0.15s ease; }
+.ui.card:hover, .ui.cards > .card:hover { background: var(--color-box-body-highlight); transform: translateY(-2px); }
 
-.ui.button {
-  border-radius: var(--border-radius-full);
-  font-family: var(--fonts-regular);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  box-shadow: none;
-  transition: background 0.15s ease, box-shadow 0.2s ease;
-}
-.ui.primary.button {
-  background: var(--color-primary);
-  color: #0e0e0e;
-}
-.ui.primary.button:hover, .ui.primary.button:focus {
-  background: var(--color-primary-light-1);
-  box-shadow: 0 0 24px var(--color-primary-alpha-30);
-}
-.ui.secondary.button {
-  background: transparent;
-  border: 1px solid rgba(72, 72, 72, 0.20);
-  color: var(--color-text);
-}
-.ui.secondary.button:hover {
-  background: var(--color-box-body-highlight);
-}
-.ui.basic.button, .ui.tertiary.button {
-  background: transparent;
-  box-shadow: none;
-  color: var(--color-text);
-}
-.ui.basic.button:hover, .ui.tertiary.button:hover {
-  background: transparent !important;
-  border-bottom: 2px solid var(--color-primary);
-  color: var(--color-text-dark);
-}
-
-/* === Cards (DESIGN.md §5) — 8px radius, no border, hover lift === */
-
-.ui.card, .ui.cards > .card {
-  border-radius: var(--border-radius-medium);
-  border: none !important;
-  background: var(--color-box-header);
-  box-shadow: none;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-.ui.card:hover, .ui.cards > .card:hover {
-  background: var(--color-box-body-highlight);
-  transform: translateY(-2px);
-}
-
-/* === Inputs (DESIGN.md §5) — bottom stroke on focus === */
-
-.ui.input input,
-.ui.form input[type=text],
-.ui.form input[type=email],
-.ui.form input[type=password],
-.ui.form input[type=search],
-.ui.form input[type=number],
-.ui.form input[type=url],
-.ui.form textarea,
-.ui.dropdown {
+/* Inputs — bottom stroke focus */
+.ui.input input, .ui.form input[type=text], .ui.form input[type=email], .ui.form input[type=password], .ui.form input[type=search], .ui.form input[type=number], .ui.form input[type=url], .ui.form textarea, .ui.dropdown {
   background: var(--color-box-body-highlight);
   border: none;
   border-bottom: 2px solid transparent;
@@ -173,89 +481,24 @@ h1, h2, h3, .ui.header, .display-lg, .display-md {
   color: var(--color-text);
   transition: border-color 0.15s ease;
 }
-.ui.input input:focus,
-.ui.form input[type=text]:focus,
-.ui.form input[type=email]:focus,
-.ui.form input[type=password]:focus,
-.ui.form input[type=search]:focus,
-.ui.form input[type=number]:focus,
-.ui.form input[type=url]:focus,
-.ui.form textarea:focus {
+.ui.input input:focus, .ui.form input[type=text]:focus, .ui.form input[type=email]:focus, .ui.form input[type=password]:focus, .ui.form input[type=search]:focus, .ui.form textarea:focus {
   background: var(--color-box-body-highlight);
   border-bottom-color: var(--color-primary);
   outline: none;
 }
-.ui.form .error.field input,
-.ui.form .error.field textarea {
-  border-bottom-color: var(--color-error);
-  background: var(--color-error-bg);
-  color: var(--color-error);
-}
 
-/* === Modals (DESIGN.md §5) — 20px radius, glassmorphism backdrop === */
+/* Modals — 20px radius, glassmorphism backdrop */
+.ui.modal { border-radius: var(--border-radius-large); }
+.ui.dimmer.modals, .ui.dimmer { background: rgba(14, 14, 14, 0.80); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.ui.modal > .header { font-family: var(--fonts-display); letter-spacing: -0.01em; border-bottom: none; }
 
-.ui.modal {
-  border-radius: var(--border-radius-large);
-  background: var(--color-box-header);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.50);
-}
-.ui.modal > .header {
-  background: var(--color-box-header);
-  border-bottom: none;
-  border-top-left-radius: var(--border-radius-large);
-  border-top-right-radius: var(--border-radius-large);
-  font-family: var(--fonts-display);
-  letter-spacing: -0.01em;
-}
-.ui.modal > .actions {
-  background: var(--color-box-header);
-  border-top: none;
-  border-bottom-left-radius: var(--border-radius-large);
-  border-bottom-right-radius: var(--border-radius-large);
-}
-.ui.dimmer.modals, .ui.dimmer {
-  background: rgba(14, 14, 14, 0.80);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
+/* Labels (DESIGN.md §3) — uppercase + spaced */
+.ui.label, .label-md { font-family: var(--fonts-regular); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; font-weight: 500; }
+.ui.tag.label, .ui.basic.label { border-radius: var(--border-radius-full); }
 
-/* === Chips & tags (DESIGN.md §5) === */
+/* Dividers (DESIGN.md §6 Don't) — kill 1px solid lines */
+.ui.divider { border: none; height: 12px; margin: 0; }
 
-.ui.tag.label, .ui.basic.label {
-  border-radius: var(--border-radius-full);
-}
-.ui.label.green   { background: rgba(187, 253, 59, 0.15); color: var(--color-primary); }
-.ui.label.cyan    { background: rgba(55, 245, 239, 0.15); color: var(--color-secondary); }
-.ui.label.pink    { background: rgba(255, 141, 180, 0.15); color: var(--color-tertiary); }
-.ui.label.orange  { background: rgba(255, 115, 81, 0.15);  color: var(--color-error); }
-
-/* === Dividers (DESIGN.md §6 Don't) — kill 1px solid lines === */
-
-.ui.divider {
-  border: none;
-  height: 12px;
-  margin: 0;
-}
-.ui.horizontal.divider {
-  height: auto;
-  color: var(--color-text-light-2);
-}
-
-/* === Scrollbar === */
-
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--color-body); }
-::-webkit-scrollbar-thumb { background: var(--color-box-body-highlight); border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-text-light-3); }
-
-/* === Links === */
-
+/* Links */
 a, a.muted { color: var(--color-primary); }
 a:hover, a.muted:hover { color: var(--color-primary-light-1); text-decoration: none; }
-
-/* === Code blocks === */
-
-code, pre, .CodeMirror {
-  font-family: var(--fonts-monospace);
-  background: var(--color-box-body);
-}
