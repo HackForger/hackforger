@@ -45,20 +45,27 @@
     --fancy-card-bg: #f6f3e9;
     --color-button: #ddd8c5;
 
-    /* /quieter — primary green stays as the neon driver, but on light
-     * we need a darker variant for "ink" (text/links) so the green
-     * doesn't get washed out against paper. */
-    --color-primary: #BBFD3B;          /* unchanged: action color */
-    --color-primary-dark-1: #A8E632;
-    --color-primary-dark-2: #6FA118;   /* link-on-paper green */
-    --color-primary-dark-3: #5A8413;
-    --color-primary-dark-4: #45660F;   /* visited link */
+    /* /normalize — committed ink-on-paper scale that passes WCAG AA.
+     * Action surfaces (button bg, current-tab) stay fluorescent;
+     * dark-* scale is the "ink" variant for text on cream paper.
+     * All dark-* values verified ≥4.5:1 against --color-body. */
+    --color-primary: #BBFD3B;          /* action: button bg, 13.8:1 with #1a1a1a text */
     --color-primary-contrast: #1a1a1a;
+    --color-primary-hover: #93C82B;    /* button hover bg, 8.45:1 with text */
+    --color-primary-active: #7AAB1F;   /* button active bg, 6.20:1 with text */
+    --color-primary-dark-1: #4D7008;   /* repo header counts, label text — 4.92:1 AA */
+    --color-primary-dark-2: #3D5A09;   /* link rest — 6.79:1 AA */
+    --color-primary-dark-3: #2C4D08;   /* link hover — 8.22:1 AAA */
+    --color-primary-dark-4: #1A2D04;   /* visited link — 12.5:1 AAA */
+    /* Override visible alpha tokens (reaction bg) so they match new dark-2 */
+    --color-primary-alpha-20: rgba(61, 90, 9, 0.20);
+    --color-primary-alpha-30: rgba(61, 90, 9, 0.30);
 
     /* /harden — text contrast on paper.
-     * #595959 on #fbfaf7 → 7.0:1 (passes AAA normal text) */
+     * Tightened text-light to #4a4a4a for safer margin on highlighted
+     * surfaces (was #595959 → 4.84:1 on #ddd8c5; now 5.84:1). */
     --color-text: #1a1a1a;
-    --color-text-light: #595959;       /* AAA */
+    --color-text-light: #4a4a4a;       /* AAA on body, AA+ on every surface */
     --color-text-light-1: #707070;
     --color-text-light-2: #8a8a8a;
     --color-text-light-3: #a8a8a8;
@@ -104,9 +111,12 @@ a:visited {
 }
 .ui.primary.button:hover {
     /* /polish — soft green-tint shadow on paper (was invisible black-8%).
-     * Brand tint at 18% opacity gives visible affordance, keeps ink-on-paper feel. */
+     * Brand tint at 18% opacity gives visible affordance, keeps ink-on-paper feel.
+     * Background uses --color-primary-hover (#93C82B, 8.45:1 with text #1a1a1a)
+     * — was previously --color-primary-dark-1 which is now ink-dark and
+     * would fail contrast as a button bg. */
     box-shadow: 0 2px 12px 0 rgba(111, 161, 24, 0.18);
-    background-color: var(--color-primary-dark-1);
+    background-color: var(--color-primary-hover);
 }
 .ui.huge.primary.button:hover,
 .ui.massive.primary.button:hover {
@@ -118,7 +128,9 @@ a:visited {
     .full.height > .ui.menu,
     .ui.modal,
     .ui.modals.dimmer {
-        background-color: rgba(251, 250, 247, 0.97) !important;
+        /* matches new --color-body #efece1 (PR #87 changed body, this
+         * fallback wasn't kept in sync) */
+        background-color: rgba(239, 236, 225, 0.97) !important;
     }
 }
 
@@ -127,9 +139,11 @@ a:visited {
  * names, so these selectors never fired. Targeted HackForger chip styling
  * (bounty/phase/credit) deferred to a separate spec. */
 
-/* /quieter — focus ring uses dark-3 (one step darker than link rest at
- * dark-2) so it's visibly distinct without going lighter where AA contrast
- * against #efece1 cream paper would fail. 3px offset for AA visibility. */
+/* /normalize — focus ring uses non-green teal #0e7b75 to break the
+ * focus-vs-hover collision (both were dark-3 forest green previously).
+ * 4.34:1 against body, passes 3:1 non-text minimum on every surface.
+ * Hue distinction (cyan ~180° vs yellow-green ~80°) gives keyboard
+ * users a clear "focus" signal regardless of hover state. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -137,7 +151,7 @@ textarea:focus-visible,
 select:focus-visible,
 .ui.button:focus-visible,
 .ui.dropdown:focus-visible {
-    outline: 2px solid var(--color-primary-dark-3);
+    outline: 2px solid #0e7b75;
     outline-offset: 3px;
 }
 
