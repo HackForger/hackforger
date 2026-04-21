@@ -11,22 +11,22 @@
  * reserved for action moments.
  * ============================================================ */
 
-/* /bolder — surface ladder with warm-neutral undertone.
- * Cool grays read as "draft / unfinished" in light mode; a 1-2pt
- * yellow/red shift gives the surfaces editorial warmth without
- * tipping into beige. */
+/* /bolder pass 2 — committed warm-paper depth (PR #84 was too white).
+ * Body drops to ~93% luminance with visible cream tint; cards INVERT
+ * lighter than body to land the "fresh paper sheet on aged desk" metaphor.
+ * WCAG: verify --color-text contrast against new tokens (test plan §5.4). */
 :root {
-    --color-body: #fbfaf7;            /* warm paper white */
-    --color-box-body: #f3f1ea;        /* tonal step 1 */
-    --color-box-body-highlight: #e8e5db;
-    --color-box-header: #ebe8df;
-    --color-menu: #f3f1ea;
-    --color-card: #ffffff;            /* cards lift above body */
-    --color-markup-table-row: #f3f1ea;
-    --color-markup-code-block: #ebe8df;
-    --color-active: #e0ddd2;
-    --color-hover: #ebe8df;
-    --color-secondary: #d4d1c5;
+    --color-body: #efece1;            /* aged paper, ~93% */
+    --color-box-body: #e7e3d4;        /* tonal step 1, ~90% */
+    --color-box-body-highlight: #ddd8c5;
+    --color-box-header: #e3decd;
+    --color-menu: #e7e3d4;
+    --color-card: #f6f3e9;            /* fresh sheet on desk (lighter than body) */
+    --color-markup-table-row: #e7e3d4;
+    --color-markup-code-block: #ddd8c5;
+    --color-active: #cfc9b3;
+    --color-hover: #ddd8c5;
+    --color-secondary: #c8c2ab;
 
     /* /quieter — primary green stays as the neon driver, but on light
      * we need a darker variant for "ink" (text/links) so the green
@@ -86,7 +86,9 @@ a:visited {
     color: var(--color-primary-contrast);
 }
 .ui.primary.button:hover {
-    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+    /* /polish — soft green-tint shadow on paper (was invisible black-8%).
+     * Brand tint at 18% opacity gives visible affordance, keeps ink-on-paper feel. */
+    box-shadow: 0 2px 12px 0 rgba(111, 161, 24, 0.18);
     background-color: var(--color-primary-dark-1);
 }
 .ui.huge.primary.button:hover,
@@ -103,28 +105,14 @@ a:visited {
     }
 }
 
-/* /colorize — paper-tone chips. Lower opacity, darker text. */
-.ui.label.cyan, .ui.labels .label.cyan {
-    background: var(--color-cyan-alpha-15);
-    color: var(--color-cyan);
-    border: none;
-    border-radius: 999px;
-}
-.ui.label.pink, .ui.labels .label.pink {
-    background: var(--color-pink-alpha-15);
-    color: var(--color-pink);
-    border: none;
-    border-radius: 999px;
-}
-.ui.label.green, .ui.labels .label.green {
-    background: rgba(111, 161, 24, 0.12);
-    color: var(--color-primary-dark-3);
-    border: none;
-    border-radius: 999px;
-}
+/* /colorize cleanup — removed .ui.label.cyan/.pink/.green rules from PR #84.
+ * Forgejo labels use inline style="background:#hex" set per-label, not class
+ * names, so these selectors never fired. Targeted HackForger chip styling
+ * (bounty/phase/credit) deferred to a separate spec. */
 
-/* /harden — focus ring on paper uses the dark-2 ink green so it's
- * visible against any of the warm surfaces. */
+/* /quieter — focus ring uses dark-3 (one step darker than link rest at
+ * dark-2) so it's visibly distinct without going lighter where AA contrast
+ * against #efece1 cream paper would fail. 3px offset for AA visibility. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -132,6 +120,14 @@ textarea:focus-visible,
 select:focus-visible,
 .ui.button:focus-visible,
 .ui.dropdown:focus-visible {
-    outline: 2px solid var(--color-primary-dark-2);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-primary-dark-3);
+    outline-offset: 3px;
+}
+
+/* Logo theme swap — orange variant on light theme.
+ * Attribute selector covers all 4 call-sites (header, home, signin, 500),
+ * since 3 of 4 templates emit the img with no class. Both source and
+ * target SVGs share viewBox="0 0 365 51" — layout boxes preserved. */
+img[src$="/img/logo.svg"] {
+    content: url("/assets/img/logo-light.svg");
 }
