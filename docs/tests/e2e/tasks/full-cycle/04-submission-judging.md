@@ -116,15 +116,16 @@
 **角色**: hackforger (Organizer), judge_carol, judge_dave, hacker_eve, hacker_frank
 **来源**: J1 Steps 1.16-1.20
 
-### Step 7.1: Organizer 启动评审 (Hacking -> Judging)
-- **角色**: hackforger session
-- **UI 路径**: 管理页面 `/hackathon/web3-innovation/manage` → 状态管理区域
-- **操作**: 点击"开始评审"按钮（POST `/hackathon/web3-innovation/manage/judge`）
+### Step 7.1: 等待 Judging 阶段自动开启 (Hacking -> Judging)
+- **角色**: hackforger session（仅做观察验证）
+- **前置**: development phase 在 hackathon 创建时已配置较短时长
+- **操作**: 不触发任何 UI 操作；等待 cron 切换
 - **验证**:
-  - 状态变更：`Hacking(2)` -> `Judging(3)`
-  - 不再接受新提交
+  - 状态自动从 `Hacking(2)` 变为 `Judging(3)`
+  - 不再接受新提交（验证：尝试 POST /submissions 应返回错误）
   - Feed 事件: `hackathon_phase_changed(50)`
 - **截图**: `screenshots/full-cycle/p7-01-judging-started.png`
+- **设计说明**: 同 Step 3.1
 
 ### Step 7.2: Judge1 为所有提交评分
 - **角色**: judge_carol session

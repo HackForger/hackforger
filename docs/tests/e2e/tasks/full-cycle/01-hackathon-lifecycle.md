@@ -196,14 +196,15 @@
 **角色**: hackforger (Organizer)
 **来源**: J1 Step 1.10
 
-### Step 3.1: Organizer 启动 Hacking (Open -> Hacking)
-- **角色**: hackforger session
-- **UI 路径**: 管理页面 `/hackathon/web3-innovation/manage` → 状态管理区域
-- **操作**: 点击"开始 Hacking"按钮（POST `/hackathon/web3-innovation/manage/start`）
+### Step 3.1: 等待 Hacking 阶段自动开启 (Open -> Hacking)
+- **角色**: hackforger session（仅做观察验证，不操作）
+- **前置**: Step 1.1 创建 Hackathon 时设置短时长（例如 registration phase 时长 90s，开始时间 = 创建时刻 + 0s）
+- **操作**: 不触发任何 UI 操作；等待最多 5 分钟让 `hackforger_hackathon_status` cron 完成阶段切换。可在管理页 `/hackathon/web3-innovation/manage` 周期刷新观察状态条
 - **验证**:
-  - 状态变更：`Open(1)` -> `Hacking(2)`
+  - 状态自动从 `Open(1)` 变为 `Hacking(2)`，无需任何用户点击
   - Feed 事件: `hackathon_phase_changed(50)` -- 全局 + 组织可见
-- **截图**: `screenshots/full-cycle/p3-01-hacking-started.png`
+- **截图**: `screenshots/full-cycle/p3-01-hacking-started.png` —— 截图时机：状态变更后的管理页
+- **设计说明**: 阶段切换由 gocron `hackforger_hackathon_status` (every 5min) + gocron 在 phase start/end 时刻触发的 `onPhaseEvent` 完成；不存在"开始 Hacking"按钮
 
 ### Step 3.2: [约束验证] 重复发布 -> 应被拒绝
 - **角色**: hackforger session
