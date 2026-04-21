@@ -28,6 +28,23 @@
     --color-hover: #ddd8c5;
     --color-secondary: #c8c2ab;
 
+    /* Header / nav / footer — bundled theme had #FAFAF8 (near-white) which
+     * makes the header bar look pure white against the cream body. Match
+     * the surface ladder: header at box-header tone (slightly darker than
+     * body, like a newspaper masthead on cream paper); footer + nav at
+     * box-body tone. Inputs lift to card-light for "form on paper" feel. */
+    --color-header-wrapper: #e3decd;
+    --color-nav-bg: #e7e3d4;
+    --color-nav-hover-bg: #ddd8c5;
+    --color-secondary-bg: #efece1;
+    --color-footer: #e7e3d4;
+    --color-input-background: #f6f3e9;
+    --color-input-toggle-background: #f6f3e9;
+    --color-input-border: #c8c2ab;
+    --color-input-border-hover: #8e8a82;
+    --fancy-card-bg: #f6f3e9;
+    --color-button: #ddd8c5;
+
     /* /quieter — primary green stays as the neon driver, but on light
      * we need a darker variant for "ink" (text/links) so the green
      * doesn't get washed out against paper. */
