@@ -14,6 +14,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/translation"
 	issue_service "forgejo.org/services/issue"
 	notify_service "forgejo.org/services/notify"
 )
@@ -22,7 +23,12 @@ import (
 // when a bounty event occurs (created, applied, accepted, completed, etc.).
 // Errors are logged but not propagated — issue comments are best-effort and
 // should not block bounty operations.
-func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64, message string) {
+//
+// The message is rendered from a locale key using the repo owner's preferred
+// language (falling back to the instance default via translation.NewLocale).
+// This keeps each Issue thread in a single language — the one aligned with
+// the project's steward.
+func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty, doerID int64, key string, args ...any) {
 	doer, err := user_model.GetUserByID(ctx, doerID)
 	if err != nil {
 		log.Error("postBountyIssueComment: GetUserByID(%d): %v", doerID, err)
@@ -37,9 +43,23 @@ func postBountyIssueComment(ctx context.Context, bounty *hackforger_model.Bounty
 		log.Error("postBountyIssueComment: LoadRepo for issue %d: %v", bounty.IssueID, err)
 		return
 	}
+	owner := issue.Repo.MustOwner(ctx)
+	locale := translation.NewLocale(owner.Language)
+	message := locale.TrString(key, args...)
 	if _, err := issue_service.CreateIssueComment(ctx, doer, issue.Repo, issue, message, nil); err != nil {
 		log.Error("postBountyIssueComment: CreateIssueComment for issue %d: %v", bounty.IssueID, err)
 	}
+}
+
+// resolveUsername returns the login name for userID, or "user #<id>" if the
+// user cannot be loaded (deleted, demoted, etc.). Used by bounty Timeline
+// messages so deletions never block or crash the best-effort comment path.
+func resolveUsername(ctx context.Context, userID int64) string {
+	u, err := user_model.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Sprintf("user #%d", userID)
+	}
+	return u.Name
 }
 
 // closeBountyIssue closes the Issue linked to a bounty when it completes.
@@ -163,7 +183,7 @@ func ApplyForBounty(ctx context.Context, bountyID, userID int64, message string)
 	}
 	// Auto-watch: applicant receives milestone events for this bounty's repo
 	_ = repo_model.WatchRepo(ctx, userID, bounty.RepoID, true)
-	postBountyIssueComment(ctx, bounty, userID, fmt.Sprintf("📋 **Bounty Application** — user #%d applied", userID))
+	postBountyIssueComment(ctx, bounty, userID, "hackforger.bounty.timeline.applied", resolveUsername(ctx, userID))
 	return app, nil
 }
 
@@ -250,7 +270,7 @@ func AcceptApplication(ctx context.Context, applicationID, doerID int64) error {
 				})
 			}
 		}
-		postBountyIssueComment(ctx, bounty, doerID, fmt.Sprintf("🏷 **Bounty Accepted** — claimed by user #%d", app.UserID))
+		postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.accepted", resolveUsername(ctx, app.UserID))
 
 		return nil
 	})
@@ -399,7 +419,7 @@ func CompleteBounty(ctx context.Context, bountyID, doerID int64) error {
 			})
 		}
 
-		postBountyIssueComment(ctx, bounty, doerID, "✅ **Bounty Completed** — delivery accepted and bounty fulfilled.")
+		postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.completed")
 		// Close the linked Issue — bounty completion means task is done.
 		closeBountyIssue(ctx, bounty, doerID)
 
@@ -623,7 +643,7 @@ func CancelBounty(ctx context.Context, bountyID, doerID int64) error {
 			},
 		})
 	}
-	postBountyIssueComment(ctx, bounty, doerID, "❌ **Bounty Cancelled**")
+	postBountyIssueComment(ctx, bounty, doerID, "hackforger.bounty.timeline.cancelled")
 
 	return nil
 }
