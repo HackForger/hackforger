@@ -158,3 +158,6 @@ docs/tests/e2e/*.pdf
 
 # E2E test screenshots (temporary artifacts, hosted on GitHub Releases if needed)
 tests/screenshots/
+
+# Git worktrees (project-local isolated workspaces)
+.worktrees/
