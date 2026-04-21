@@ -8,6 +8,7 @@
   slug: "judging-hackathon"
   description: "A hackathon being judged (credits test depends on this)"
   status_cache: 3
+  is_published: true
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -20,6 +21,7 @@
   slug: "draft-hackathon"
   description: "A hackathon in draft status for testing"
   status_cache: 0
+  is_published: false
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -32,6 +34,7 @@
   slug: "open-hackathon"
   description: "A hackathon accepting registrations"
   status_cache: 1
+  is_published: true
   max_team_size: 4
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -44,6 +47,7 @@
   slug: "hacking-hackathon"
   description: "A hackathon in the hacking phase"
   status_cache: 2
+  is_published: true
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -56,6 +60,7 @@
   slug: "finished-hackathon"
   description: "A completed hackathon with results"
   status_cache: 4
+  is_published: true
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -68,6 +73,7 @@
   slug: "cancelled-hackathon"
   description: "A cancelled hackathon"
   status_cache: 5
+  is_published: true
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -80,6 +86,7 @@
   slug: "publish-no-criteria"
   description: "Fixture — Draft, 1 track, phases, but zero criteria"
   status_cache: 0
+  is_published: false
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
@@ -92,6 +99,7 @@
   slug: "judging-no-rubric"
   description: "Fixture — Judging phase, judge assigned, submission present, but zero criteria"
   status_cache: 3
+  is_published: true
   max_team_size: 5
   created_unix: 1672578000
   updated_unix: 1672578000
