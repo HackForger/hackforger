@@ -58,7 +58,7 @@
 									{{svg "octicon-clock" 14}}
 									{{ctx.Locale.Tr "repo.milestones.closed" $closedDate}}
 								{{else}}
-									{{if .DeadlineString}}
+									{{if and .DeadlineString (ne .DeadlineUnix 0)}}
 										<span class="flex-text-inline {{if .IsOverdue}}text red{{end}}">
 											{{svg "octicon-calendar" 14}}
 											{{DateUtils.AbsoluteShort (.DeadlineString|DateUtils.ParseLegacy)}}
