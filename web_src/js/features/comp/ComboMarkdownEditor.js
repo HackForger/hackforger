@@ -330,7 +330,13 @@ class ComboMarkdownEditor {
   }
 
   setupLinkInserter() {
+    // The "Insert link" modal is only rendered on pages whose templates
+    // include the new-markdown-link partial (issue/PR comment forms, etc.).
+    // Editors mounted in other contexts (e.g. some HackForger forms) won't
+    // have this modal — skip silently rather than throwing on the null
+    // querySelector result.
     const newLinkModal = this.container.querySelector('div[data-modal-name="new-markdown-link"]');
+    if (!newLinkModal) return;
     newLinkModal.setAttribute('data-markdown-link-modal-id', this.elementIdSuffix);
     const textarea = document.getElementById(`_combo_markdown_editor_${this.elementIdSuffix}`);
 
