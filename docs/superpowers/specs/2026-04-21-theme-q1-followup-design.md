@@ -108,24 +108,36 @@ Rationale: 6-point downward shift makes the cream tint actually visible at typic
 
 ### 3.5 Hover + focus quieter pass
 
-Both themes:
+Hover and focus must move IN THE DIRECTION OF MORE ATTENTION relative to the resting state — and "more attention" is theme-dependent:
+- **Dark theme**: links rest at `dark-2` (darker green); hover/focus should go LIGHTER toward fluorescent. Use `dark-1` (between dark-2 and primary).
+- **Light theme**: links rest at `dark-2` (medium ink green #6FA118 on cream); hover/focus should go DARKER toward black. Use `dark-3` (#5A8413) — same as PR #84's existing direction, which was correct.
 
 ```css
-/* Hover lifts to dark-1 (still distinct, no strobe) */
+/* DARK theme */
 a:hover, a.muted:hover, a.suppressed:hover {
-    color: var(--color-primary-dark-1);   /* dark: #A8E632 ; light: also #A8E632 ish */
+    color: var(--color-primary-dark-1);   /* lighter on dark = more attention */
+}
+a:focus-visible, button:focus-visible, ... {
+    outline: 2px solid var(--color-primary-dark-1);
+    outline-offset: 3px;
 }
 
-/* Focus ring is dark-1 with offset for readability */
-a:focus-visible, button:focus-visible, input:focus-visible,
-textarea:focus-visible, select:focus-visible,
-.ui.button:focus-visible, .ui.dropdown:focus-visible {
-    outline: 2px solid var(--color-primary-dark-1);
+/* LIGHT theme */
+a:hover, a.muted:hover, a.suppressed:hover {
+    color: var(--color-primary-dark-3);   /* darker on paper = more attention (ink-on-paper) */
+}
+a:focus-visible, button:focus-visible, ... {
+    outline: 2px solid var(--color-primary-dark-3);
     outline-offset: 3px;
 }
 ```
 
 Reserves raw `--color-primary` (#BBFD3B) for `:active` and current-tab states only.
+
+**The fix relative to PR #84:**
+- Dark theme: hover was `--color-primary` (raw fluorescent) → strobe; now `dark-1` (still bright, no strobe).
+- Dark theme: focus was `--color-primary` (raw fluorescent) → blinding; now `dark-1`.
+- Light theme: hover stays at `dark-3` (already correct). Focus was `dark-2` → was identical to link resting; now `dark-3` to give clear distinction without going too light.
 
 ### 3.6 Dark surface lift (DESIGN.md §4)
 
@@ -208,7 +220,7 @@ Switch theme in user prefs and confirm: the logo changes **on the next page navi
 
 ### 5.4 Accessibility
 - **Screen reader announcement**: VoiceOver (Cmd+F5 on macOS) on the home page logo — should announce "logo" (or the localized translation). The header logo has `aria-hidden="true"` so should be skipped — verify it IS skipped.
-- **WCAG AA contrast** between `--color-text` (resolved value: check `getComputedStyle`) and the new light surface tokens `#efece1` / `#e7e3d4` / `#ddd8c5` / `#e3decd` / `#f6f3e9`. Use a contrast checker; document the actual ratios as a CSS comment block. Minimum 4.5:1 for `--color-text` body, 3:1 for `--color-text-light` (large or non-essential text).
+- **WCAG AA contrast** between `--color-text` (#1a1a1a per PR #84) and the new light surface tokens `#efece1` / `#e7e3d4` / `#ddd8c5` / `#e3decd` / `#f6f3e9`. Use a contrast checker; minimum 4.5:1 for `--color-text` body, 3:1 for `--color-text-light` against any surface where it appears. Manual user check during PR test plan; if any combination fails, revert that specific surface to a lighter value in a follow-up commit before merge.
 - **Color-only meaning**: confirm the logo swap doesn't lose information for monochrome users (the brand mark is icon + word; both variants encode "HackForger" in the wordmark).
 
 ### 5.5 Browser support smoke test

@@ -51,13 +51,17 @@ Expected: HEAD = `43e6b08` (PR #84 merge) or later.
 - Create: `custom/public/assets/img/logo-dark.svg`
 - Modify: `custom/public/assets/img/logo.svg` (default fallback = light variant content)
 
-- [ ] **Step 1: Copy source SVGs to target paths**
+- [ ] **Step 1: Verify source SVGs exist + copy to target paths**
 
 ```bash
 cd /Users/h2oslabs/.config/superpowers/worktrees/hackforger/theme-q1-followup
+test -s /tmp/issue70/logo-1.bin || { echo "FATAL: /tmp/issue70/logo-1.bin missing or empty"; exit 1; }
+test -s /tmp/issue70/logo-2.bin || { echo "FATAL: /tmp/issue70/logo-2.bin missing or empty"; exit 1; }
 cp /tmp/issue70/logo-1.bin custom/public/assets/img/logo-light.svg
 cp /tmp/issue70/logo-2.bin custom/public/assets/img/logo-dark.svg
 ```
+
+If `/tmp/issue70/` is gone (volatile across sessions), STOP and ask user to re-place the source SVGs.
 
 - [ ] **Step 2: Verify no `<style>` or `@media` blocks remain**
 
@@ -157,27 +161,13 @@ Replace with:
     --color-secondary: #c8c2ab;
 ```
 
-- [ ] **Step 3: Replace `a:hover` color**
+- [ ] **Step 3: KEEP light `a:hover` at dark-3** (no change needed)
 
-Find:
-```css
-a:hover, a.muted:hover, a.suppressed:hover {
-    color: var(--color-primary-dark-3);
-}
-```
+The light theme's existing PR #84 hover at `--color-primary-dark-3` is in the correct direction (DARKER on cream paper = more attention; "ink-on-paper" semantic). Per revised spec §3.5: light hover stays at `dark-3`, only dark theme hover changes.
 
-Replace with:
-```css
-/* /quieter pass 2 — hover lifts to dark-1, not raw fluorescent.
- * Stops the dense-page strobe on issue lists / file trees. */
-a:hover, a.muted:hover, a.suppressed:hover {
-    color: var(--color-primary-dark-1);
-}
-```
+**No edit.** Proceed to Step 4.
 
-(Note: light theme uses `dark-3` because the existing primary on light is already shifted, but the principle matches dark — one step lighter than resting. Per spec §3.5 the value is dark-1 for both themes.)
-
-- [ ] **Step 4: Replace focus-visible outline**
+- [ ] **Step 4: Replace focus-visible outline (light: dark-2 → dark-3)**
 
 Find:
 ```css
@@ -195,8 +185,10 @@ select:focus-visible,
 
 Replace with:
 ```css
-/* /quieter — focus ring uses dark-1 with 3px offset for AA visibility
- * without competing with hover/active for attention. */
+/* /quieter — focus ring uses dark-3 (one step darker than link rest at
+ * dark-2) so it's visibly distinct without going into the lighter zone
+ * where AA contrast against #efece1 cream paper would fail. 3px offset
+ * for AA visibility. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -204,7 +196,7 @@ textarea:focus-visible,
 select:focus-visible,
 .ui.button:focus-visible,
 .ui.dropdown:focus-visible {
-    outline: 2px solid var(--color-primary-dark-1);
+    outline: 2px solid var(--color-primary-dark-3);
     outline-offset: 3px;
 }
 ```
@@ -302,14 +294,13 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `custom/public/assets/css/theme-hackforger-dark.css` (the override block at the END of the file)
 
-- [ ] **Step 1: Replace `a:hover` color**
+- [ ] **Step 1a: Replace generic `a:hover` color (first occurrence in dark theme)**
+
+The two hover rules in the dark theme are NOT contiguous — they're separated by `a:visited` and `.ui.menu a, .ui.dropdown .menu > .item` blocks. Edit each separately.
 
 Find:
 ```css
 a:hover, a.muted:hover, a.suppressed:hover {
-    color: var(--color-primary);
-}
-.ui.menu a:hover, .ui.dropdown .menu > .item:hover {
     color: var(--color-primary);
 }
 ```
@@ -321,6 +312,19 @@ Replace with:
 a:hover, a.muted:hover, a.suppressed:hover {
     color: var(--color-primary-dark-1);
 }
+```
+
+- [ ] **Step 1b: Replace `.ui.menu a:hover` color (second occurrence)**
+
+Find:
+```css
+.ui.menu a:hover, .ui.dropdown .menu > .item:hover {
+    color: var(--color-primary);
+}
+```
+
+Replace with:
+```css
 .ui.menu a:hover, .ui.dropdown .menu > .item:hover {
     color: var(--color-primary-dark-1);
 }
@@ -423,12 +427,7 @@ Expected: completes without error. CSS in `public/assets/css/` updated.
 
 - [ ] **Step 2: Verify no syntax errors in the CSS**
 
-```bash
-tail -150 custom/public/assets/css/theme-hackforger-light.css | head -150
-tail -150 custom/public/assets/css/theme-hackforger-dark.css | head -150
-```
-
-Visually scan: balanced `{` and `}`, no duplicate `:root` openings without proper close, attribute selector `img[src$="/img/logo.svg"]` quoted correctly.
+Use the Read tool on the last ~200 lines of each CSS file (read with offset = total-200). Visually scan: balanced `{` and `}`, no duplicate `:root` openings without proper close, attribute selector `img[src$="/img/logo.svg"]` quoted correctly, expected new comment markers present (`/* /quieter pass 2 */`, `/* /polish — DESIGN.md §4 */`, `/* Logo theme swap */`).
 
 - [ ] **Step 3: Push branch + open PR**
 
@@ -469,41 +468,59 @@ EOF
 
 ---
 
-### Task 6: Admin merge + restart instance
+### Task 6: Hand off to user for merge + restart
 
 **Files:**
 - No file changes.
 
-- [ ] **Step 1: Admin merge** (user has authorized in advance)
+The user explicitly authorized admin-merge + instance restart in advance for THIS plan. Execute, but with care: confirm the PR diff is what we expect before merging, and tell the user immediately after restart so they can browser-verify.
+
+- [ ] **Step 1: Print PR diff summary for sanity check**
+
+```bash
+gh pr diff <PR-NUMBER> --repo HackForger/hackforger | head -100
+```
+
+Expected to show: 2 new SVG files, 1 modified SVG (logo.svg), changes in 2 CSS files. If anything else appears, STOP.
+
+- [ ] **Step 2: Admin merge** (user authorized)
 
 ```bash
 gh pr merge <PR-NUMBER> --repo HackForger/hackforger --merge --admin --delete-branch
 ```
 
-- [ ] **Step 2: Pull main + restart gitea**
+If hook denies: tell user, ask for explicit re-authorization before retry.
+
+- [ ] **Step 3: Pull main**
 
 ```bash
 cd /Users/h2oslabs/Workspace/hackforger
 git pull origin v0.1-dev/hackforger
 ```
 
-- [ ] **Step 3: Find + kill running gitea, then restart**
+- [ ] **Step 4: Identify running gitea PID** (do not kill — system blocks agent kills)
 
 ```bash
-ps aux | grep -E '[g]itea web' | awk '{print $2}'
-# User runs: ! kill <pid>   (system blocks agent kill)
+ps aux | grep -E '[g]itea web' | grep -v grep | awk '{print "PID: " $2}'
+```
+
+Print the PID and tell user:
+> "Found gitea PID: `<pid>`. Please run `! kill <pid>` in your shell to stop it; I'll restart immediately after."
+
+- [ ] **Step 5: After user kills, clean lock + restart**
+
+```bash
 rm -f data/queues/common/LOCK
 nohup ./gitea web > /tmp/gitea.log 2>&1 &
 disown
 sleep 5
-tail -10 /tmp/gitea.log
 ```
 
-Expected: log shows `Listen: http://0.0.0.0:3000`.
+Then read `/tmp/gitea.log` (use Read tool, not `tail`) and confirm `Listen: http://0.0.0.0:3000`.
 
-- [ ] **Step 4: Hand off to user for browser verification**
+- [ ] **Step 6: Hand off to user**
 
-Tell user: instance restarted on `localhost:3000`. Hard-refresh in browser, then run through test plan §5 manually.
+Tell user: "Instance restarted on `localhost:3000`. Hard-refresh (Cmd+Shift+R) in browser, then run through PR test plan checkboxes."
 
 ---
 
@@ -515,4 +532,14 @@ Tell user: instance restarted on `localhost:3000`. Hard-refresh in browser, then
 - [x] Verification steps after each file change.
 - [x] Frequent commits (per task, not at the end).
 - [x] Build verification before PR.
-- [x] Reviewer-flagged issues all addressed (`img[src$=...]` selector, dead colorize removal, no favicon work).
+- [x] Reviewer-flagged issues all addressed:
+  - `img[src$=...]` selector (covers all 4 call-sites)
+  - Dead colorize removal
+  - No favicon work
+  - Source SVG precondition check (Task 2 Step 1)
+  - Light hover stays at `dark-3` (correct ink-on-paper direction); only dark hover changes
+  - Light focus moves `dark-2` → `dark-3` (distinct from link rest, AA-safe on cream)
+  - Dark `a:hover` find-block split into two contiguous sub-rules (Task 4 Step 1a/1b)
+  - WCAG verification kept as PR test checkbox (no auto-injected CSS comment block — overreach removed from spec)
+  - Task 6 hand-off explicit (PID print → user `! kill` → restart, not unattended)
+  - Use Read not `tail | head` for CSS verification
