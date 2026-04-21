@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	auth_model "forgejo.org/models/auth"
 	hackforger_model "forgejo.org/models/hackforger"
@@ -17,6 +18,54 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// PhaseType IDs are deterministic from the v14b_hackforger-phase-tables seed.
+// Hackathon phases are inserted first (registration=1, development=2, judging=3, results=4),
+// then bounty (5..8), then grant (9..11). See models/forgejo_migrations/v14b_hackforger-phase-tables.go.
+const (
+	phaseTypeIDHackathonRegistration = 1
+	phaseTypeIDHackathonDevelopment  = 2
+	phaseTypeIDHackathonJudging      = 3
+	phaseTypeIDHackathonResults      = 4
+)
+
+// preparePublishableHackathon creates the phases + criterion that fix/27's
+// PublishHackathon validation requires. After this call, hackathonID can be
+// successfully published (assuming it already has at least one track).
+//
+// Phase windows are anchored at `now` so SyncStatusCache will report the
+// hackathon as Open (registration phase is currently active) immediately
+// after publish.
+func preparePublishableHackathon(t *testing.T, token string, hackathonID int64) {
+	t.Helper()
+	now := time.Now().Unix()
+
+	// Registration phase: active right now.
+	req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/hackforger/hackathons/%d/phases", hackathonID), map[string]any{
+		"phase_type_id": phaseTypeIDHackathonRegistration,
+		"start_time":    now - 60,
+		"end_time":      now + 7*86400,
+		"sort_order":    1,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	// Development phase: future.
+	req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/hackforger/hackathons/%d/phases", hackathonID), map[string]any{
+		"phase_type_id": phaseTypeIDHackathonDevelopment,
+		"start_time":    now + 7*86400,
+		"end_time":      now + 14*86400,
+		"sort_order":    2,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	// At least one criterion (publish requires it; effective rubric inherits to all tracks).
+	req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/hackforger/hackathons/%d/criteria", hackathonID), map[string]any{
+		"name":      "Quality",
+		"max_score": 10,
+		"weight":    100,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+}
 
 // --- Helper to get a token for a user by ID ---
 
@@ -47,7 +96,7 @@ func TestHackForgerHackathonCreate(t *testing.T) {
 	var h hackforger_model.Hackathon
 	DecodeJSON(t, resp, &h)
 	assert.Equal(t, "New Hackathon", h.Name, "hackathon name should match")
-	assert.Equal(t, hackforger_model.HackathonStatusDraft, h.Status, "new hackathon should be Draft")
+	assert.Equal(t, hackforger_model.HackathonStatusDraft, h.StatusCache, "new hackathon should be Draft")
 	assert.Equal(t, int64(2), h.OwnerID, "owner should be the doer")
 	assert.Equal(t, 6, h.MaxTeamSize, "max_team_size should be 6")
 	require.Greater(t, h.ID, int64(0), "hackathon ID should be assigned")
@@ -64,7 +113,7 @@ func TestHackForgerHackathonGet(t *testing.T) {
 	DecodeJSON(t, resp, &h)
 	assert.Equal(t, int64(1), h.ID, "should return hackathon 1")
 	assert.Equal(t, "Judging Hackathon", h.Name, "name should match fixture")
-	assert.Equal(t, hackforger_model.HackathonStatusJudging, h.Status, "status should be Judging")
+	assert.Equal(t, hackforger_model.HackathonStatusJudging, h.StatusCache, "status should be Judging")
 }
 
 func TestHackForgerHackathonList(t *testing.T) {
@@ -120,82 +169,56 @@ func TestHackForgerHackathonPublish(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	token := hackathonToken(t, 2)
 
-	// Draft hackathon (id=2) needs at least one track to publish.
-	// Create a track first.
+	// Draft hackathon (id=2) needs a track + criterion + registration/development
+	// phases to satisfy PublishHackathon's validation (added in fix/27).
 	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/hackathons/2/tracks", map[string]any{
 		"name":        "Web Track",
 		"description": "Build a web app",
 	}).AddTokenAuth(token)
 	MakeRequest(t, req, http.StatusCreated)
 
-	// Now publish.
+	preparePublishableHackathon(t, token, 2)
+
+	// Publish.
 	req = NewRequest(t, "POST", "/api/v1/hackforger/hackathons/2/publish").AddTokenAuth(token)
 	resp := MakeRequest(t, req, http.StatusOK)
 
 	var result map[string]string
 	DecodeJSON(t, resp, &result)
-	assert.Equal(t, "open", result["status"], "hackathon should transition to Open")
+	assert.Equal(t, "open", result["status"], "publish API hardcodes status=open in success response")
 
-	// Verify via GET.
+	// Verify persistence.
 	req = NewRequest(t, "GET", "/api/v1/hackforger/hackathons/2")
 	resp = MakeRequest(t, req, http.StatusOK)
 	var h hackforger_model.Hackathon
 	DecodeJSON(t, resp, &h)
-	assert.Equal(t, hackforger_model.HackathonStatusOpen, h.Status, "persisted status should be Open")
+	assert.True(t, h.IsPublished, "hackathon should be marked as published")
+	// StatusCache is phase-driven; since the registration phase started ≤ now,
+	// SyncStatusCache (called at the end of PublishHackathon) reports Open.
+	assert.Equal(t, hackforger_model.HackathonStatusOpen, h.StatusCache, "status_cache should reflect active registration phase")
 }
 
-func TestHackForgerHackathonStart(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-	token := hackathonToken(t, 2)
-
-	// Open hackathon (id=3) -> Start -> Hacking.
-	req := NewRequest(t, "POST", "/api/v1/hackforger/hackathons/3/start").AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
-
-	var result map[string]string
-	DecodeJSON(t, resp, &result)
-	assert.Equal(t, "hacking", result["status"], "hackathon should transition to Hacking")
-}
-
-func TestHackForgerHackathonJudgeEndpoint(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-	token := hackathonToken(t, 2)
-
-	// Hacking hackathon (id=4) -> Judge -> Judging.
-	// Needs criteria and submissions. Fixture already has submissions and criteria for hackathon 4?
-	// Actually hackathon 4 has track 5 with registrations and no criteria.
-	// Add criteria first.
-	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/hackathons/4/criteria", map[string]any{
-		"name":      "Quality",
-		"max_score": 10,
-		"weight":    50,
-	}).AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusCreated)
-
-	// Submit a submission (hacker1=user4 is registered for hackathon 4, reg id=1).
-	hacker1Token := hackathonToken(t, 4)
-	req = NewRequestWithJSON(t, "POST", "/api/v1/hackforger/hackathons/4/submissions", map[string]any{
-		"title":    "Test Submission",
-		"track_id": 5,
-	}).AddTokenAuth(hacker1Token)
-	MakeRequest(t, req, http.StatusCreated)
-
-	// Now transition to judging.
-	req = NewRequest(t, "POST", "/api/v1/hackforger/hackathons/4/judge").AddTokenAuth(token)
-	MakeRequest(t, req, http.StatusOK)
-}
+// Note: TestHackForgerHackathonStart and TestHackForgerHackathonJudgeEndpoint
+// were removed — the /hackathons/{id}/start and /judge API endpoints do not
+// exist. Phase advancement is time-driven by the hackforger_hackathon_status
+// cron + gocron's onPhaseEvent. See TestHackForgerHackathonStartJudgingRemoved
+// (below) which asserts the old /start-judging route also returns 404.
 
 func TestHackForgerHackathonFinalize(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	token := hackathonToken(t, 2)
 
 	// Judging hackathon (id=1) -> Finalize -> Finished.
+	// FinalizeConfirmAPI returns 200 with empty body (ctx.Status), not JSON.
 	req := NewRequest(t, "POST", "/api/v1/hackforger/hackathons/1/finalize").AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
+	MakeRequest(t, req, http.StatusOK)
 
-	var result map[string]string
-	DecodeJSON(t, resp, &result)
-	assert.Equal(t, "finished", result["status"], "hackathon should transition to Finished")
+	// Verify the hackathon's status_cache is now Finished via GET.
+	req = NewRequest(t, "GET", "/api/v1/hackforger/hackathons/1")
+	resp := MakeRequest(t, req, http.StatusOK)
+	var h hackforger_model.Hackathon
+	DecodeJSON(t, resp, &h)
+	assert.Equal(t, hackforger_model.HackathonStatusFinished, h.StatusCache, "status_cache should be Finished after finalize")
 }
 
 func TestHackForgerHackathonCancel(t *testing.T) {
@@ -559,13 +582,14 @@ func TestHackForgerPublishNonOwner(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// hacker1 (user 4) is not the hackathon owner (owner_id=2).
 	hacker1Token := hackathonToken(t, 4)
-
-	// First add a track so the only failure reason is permissions (not "no tracks").
 	ownerToken := hackathonToken(t, 2)
+
+	// Owner sets up everything publish needs (track + criterion + phases).
 	req := NewRequestWithJSON(t, "POST", "/api/v1/hackforger/hackathons/2/tracks", map[string]any{
 		"name": "Temp Track",
 	}).AddTokenAuth(ownerToken)
 	MakeRequest(t, req, http.StatusCreated)
+	preparePublishableHackathon(t, ownerToken, 2)
 
 	// hacker1 tries to publish Draft hackathon 2.
 	req = NewRequest(t, "POST", "/api/v1/hackforger/hackathons/2/publish").AddTokenAuth(hacker1Token)
@@ -588,6 +612,6 @@ func TestHackForgerScoreNonJudge(t *testing.T) {
 			{"criteria_id": 1, "score": 5.0, "comment": "unauthorized"},
 		},
 	}).AddTokenAuth(hacker1Token)
-	// The service layer checks IsJudge and returns ErrNotJudge -> 400 via ctx.Error.
-	MakeRequest(t, req, http.StatusBadRequest)
+	// Service rejects non-judge with ErrNotJudge → 403 Forbidden.
+	MakeRequest(t, req, http.StatusForbidden)
 }

@@ -1,0 +1,157 @@
+# Phase records for hackathon fixtures. Timestamps are chosen so the
+# active phase matches each hackathon's status_cache:
+#   hackathon 1 (Judging) → judging phase active
+#   hackathon 3 (Open)    → registration phase active
+#   hackathon 4 (Hacking) → development phase active
+#   hackathon 5 (Finished)→ results phase active (or all past)
+#   hackathon 7 (Draft, no criteria) → registration + development defined for publish-validation tests
+#   hackathon 8 (Judging-no-rubric) → judging phase active
+# Using start=1577836800 (2020-01-01) for "past" and end=4102444800 (2100-01-01) for "future".
+
+# --- hackathon 1 (Judging) ---
+-
+  id: 1
+  phase_type_id: 1   # registration
+  activity_kind: "hackathon"
+  activity_id: 1
+  sort_order: 1
+  start_time: 1577836800   # 2020-01-01 (past)
+  end_time:   1609459200   # 2021-01-01 (past)
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 2
+  phase_type_id: 2   # development
+  activity_kind: "hackathon"
+  activity_id: 1
+  sort_order: 2
+  start_time: 1609459200   # 2021-01-01 (past)
+  end_time:   1640995200   # 2022-01-01 (past)
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 3
+  phase_type_id: 3   # judging — currently active for hackathon 1
+  activity_kind: "hackathon"
+  activity_id: 1
+  sort_order: 3
+  start_time: 1640995200   # 2022-01-01 (past)
+  end_time:   4102444800   # 2100-01-01 (future)
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+# --- hackathon 3 (Open) ---
+-
+  id: 4
+  phase_type_id: 1   # registration — currently active
+  activity_kind: "hackathon"
+  activity_id: 3
+  sort_order: 1
+  start_time: 1577836800
+  end_time:   4102444800
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 5
+  phase_type_id: 2   # development — future (after registration ends, but here both span the same "active" range; SyncStatusCache picks the first one with start <= now < end via DB query — hackathon 3 should still report Open since registration is current)
+  activity_kind: "hackathon"
+  activity_id: 3
+  sort_order: 2
+  start_time: 4102444800   # 2100-01-01 (future)
+  end_time:   4133980800   # 2101-01-01 (future)
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+# --- hackathon 4 (Hacking) ---
+-
+  id: 6
+  phase_type_id: 1   # registration — past
+  activity_kind: "hackathon"
+  activity_id: 4
+  sort_order: 1
+  start_time: 1577836800
+  end_time:   1609459200
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 7
+  phase_type_id: 2   # development — currently active
+  activity_kind: "hackathon"
+  activity_id: 4
+  sort_order: 2
+  start_time: 1609459200
+  end_time:   4102444800
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+# --- hackathon 5 (Finished) — all phases past ---
+-
+  id: 8
+  phase_type_id: 1
+  activity_kind: "hackathon"
+  activity_id: 5
+  sort_order: 1
+  start_time: 1577836800
+  end_time:   1609459200
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 9
+  phase_type_id: 2
+  activity_kind: "hackathon"
+  activity_id: 5
+  sort_order: 2
+  start_time: 1609459200
+  end_time:   1640995200
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 10
+  phase_type_id: 3
+  activity_kind: "hackathon"
+  activity_id: 5
+  sort_order: 3
+  start_time: 1640995200
+  end_time:   1672531200   # 2023-01-01 (past)
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+# --- hackathon 8 (Judging-no-rubric) — same as 1 ---
+-
+  id: 11
+  phase_type_id: 1
+  activity_kind: "hackathon"
+  activity_id: 8
+  sort_order: 1
+  start_time: 1577836800
+  end_time:   1609459200
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 12
+  phase_type_id: 2
+  activity_kind: "hackathon"
+  activity_id: 8
+  sort_order: 2
+  start_time: 1609459200
+  end_time:   1640995200
+  created_unix: 1577836800
+  updated_unix: 1577836800
+
+-
+  id: 13
+  phase_type_id: 3
+  activity_kind: "hackathon"
+  activity_id: 8
+  sort_order: 3
+  start_time: 1640995200
+  end_time:   4102444800
+  created_unix: 1577836800
+  updated_unix: 1577836800

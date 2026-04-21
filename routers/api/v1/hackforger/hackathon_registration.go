@@ -65,6 +65,10 @@ func Register(ctx *context.APIContext) {
 		ctx.InternalServerError(err)
 		return
 	}
+	if !h.IsPublished {
+		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")
+		return
+	}
 	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
 	if !canRegister {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")

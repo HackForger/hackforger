@@ -31,7 +31,9 @@
   publisher_id: 2
   claimer_id: 4
   title: "Optimize database queries"
-  status: 1
+  # InReview (2) — TestHackForgerBountyComplete asserts /complete transitions
+  # InReview → Completed. fix/27 added the Claimed → InReview review step.
+  status: 2
   mode: 0
   deadline: 1735689600
   created_unix: 1672578200

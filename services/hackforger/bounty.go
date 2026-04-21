@@ -848,8 +848,10 @@ type LeaderboardEntry struct {
 }
 
 // GetBountyLeaderboard returns the top bounty hunters by win count.
+// Returns an empty (non-nil) slice when no rows match, so JSON serialises
+// to `[]` rather than `null` — clients can treat the response as iterable.
 func GetBountyLeaderboard(ctx context.Context, limit int) ([]*LeaderboardEntry, error) {
-	var entries []*LeaderboardEntry
+	entries := make([]*LeaderboardEntry, 0)
 	err := db.GetEngine(ctx).
 		Table("bounty_winner").
 		Select("user_id, COUNT(*) AS win_count, 0 AS total_credits").

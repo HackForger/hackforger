@@ -1,0 +1,112 @@
+# Phase type catalog — seeded by v14b_hackforger-phase-tables migration in
+# production. Tests need these rows so AddPhase / SyncStatusCache can resolve
+# phase_type_id → key. IDs match the migration's insertion order.
+-
+  id: 1
+  activity_kind: "hackathon"
+  key: "registration"
+  display_name_i18n: "hackforger.phase.hackathon.registration"
+  is_unique: true
+  allowed_actions: '["register","form_team"]'
+  default_order: 1
+  created_unix: 1609459200
+
+-
+  id: 2
+  activity_kind: "hackathon"
+  key: "development"
+  display_name_i18n: "hackforger.phase.hackathon.development"
+  is_unique: false
+  allowed_actions: '["submit_work"]'
+  default_order: 2
+  created_unix: 1609459200
+
+-
+  id: 3
+  activity_kind: "hackathon"
+  key: "judging"
+  display_name_i18n: "hackforger.phase.hackathon.judging"
+  is_unique: true
+  allowed_actions: '["score"]'
+  default_order: 3
+  created_unix: 1609459200
+
+-
+  id: 4
+  activity_kind: "hackathon"
+  key: "results"
+  display_name_i18n: "hackforger.phase.hackathon.results"
+  is_unique: true
+  allowed_actions: '["publish_results"]'
+  default_order: 4
+  created_unix: 1609459200
+
+-
+  id: 5
+  activity_kind: "bounty"
+  key: "open"
+  display_name_i18n: "hackforger.phase.bounty.open"
+  is_unique: true
+  allowed_actions: '["apply","claim"]'
+  default_order: 1
+  created_unix: 1609459200
+
+-
+  id: 6
+  activity_kind: "bounty"
+  key: "in_progress"
+  display_name_i18n: "hackforger.phase.bounty.in_progress"
+  is_unique: true
+  allowed_actions: '["submit_pr"]'
+  default_order: 2
+  created_unix: 1609459200
+
+-
+  id: 7
+  activity_kind: "bounty"
+  key: "review"
+  display_name_i18n: "hackforger.phase.bounty.review"
+  is_unique: true
+  allowed_actions: '["review"]'
+  default_order: 3
+  created_unix: 1609459200
+
+-
+  id: 8
+  activity_kind: "bounty"
+  key: "closed"
+  display_name_i18n: "hackforger.phase.bounty.closed"
+  is_unique: true
+  allowed_actions: '["settle"]'
+  default_order: 4
+  created_unix: 1609459200
+
+-
+  id: 9
+  activity_kind: "grant"
+  key: "application"
+  display_name_i18n: "hackforger.phase.grant.application"
+  is_unique: true
+  allowed_actions: '["apply"]'
+  default_order: 1
+  created_unix: 1609459200
+
+-
+  id: 10
+  activity_kind: "grant"
+  key: "review"
+  display_name_i18n: "hackforger.phase.grant.review"
+  is_unique: true
+  allowed_actions: '["review","approve"]'
+  default_order: 2
+  created_unix: 1609459200
+
+-
+  id: 11
+  activity_kind: "grant"
+  key: "disbursement"
+  display_name_i18n: "hackforger.phase.grant.disbursement"
+  is_unique: true
+  allowed_actions: '["disburse"]'
+  default_order: 3
+  created_unix: 1609459200

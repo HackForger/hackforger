@@ -13,6 +13,19 @@ func init() {
 	registerMigration(&Migration{
 		Description: "Rename hackathon.status to status_cache, add is_published, migrate time fields to phase records",
 		Upgrade: func(x *xorm.Engine) error {
+			// Old dumps pre-date the HackForger module; nothing to migrate. The
+			// `hackathon` table is created later by xorm.Sync() from the model
+			// definition, with the new schema (status_cache + is_published)
+			// already in place — so this rename + backfill only matters for
+			// instances upgrading from an earlier HackForger build.
+			exists, err := x.IsTableExist("hackathon")
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return nil
+			}
+
 			// 1. Rename status -> status_cache
 			if _, err := x.Exec("ALTER TABLE hackathon RENAME COLUMN status TO status_cache"); err != nil {
 				return err
