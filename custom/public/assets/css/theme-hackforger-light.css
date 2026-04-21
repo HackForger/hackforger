@@ -1,0 +1,257 @@
+/* HackForger Light Theme — DESIGN.md "High-Energy Kineticism" adapted for light surfaces.
+   Brand fluorescent green retained; surface ladder inverted from dark variant. */
+
+/* === Local fonts === */
+
+@font-face {
+  font-family: 'Poppins'; font-display: swap; font-weight: 400; font-style: normal;
+  src: url('../fonts/Poppins-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins'; font-display: swap; font-weight: 500; font-style: normal;
+  src: url('../fonts/Poppins-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins'; font-display: swap; font-weight: 600; font-style: normal;
+  src: url('../fonts/Poppins-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins'; font-display: swap; font-weight: 700; font-style: normal;
+  src: url('../fonts/Poppins-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope'; font-display: swap; font-weight: 400; font-style: normal;
+  src: url('../fonts/Manrope-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope'; font-display: swap; font-weight: 500; font-style: normal;
+  src: url('../fonts/Manrope-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope'; font-display: swap; font-weight: 600; font-style: normal;
+  src: url('../fonts/Manrope-SemiBold.woff2') format('woff2');
+}
+
+/* === Design tokens === */
+
+:root {
+  --color-primary: #BBFD3B;
+  --color-primary-dark-1: #A6E532;
+  --color-primary-dark-2: #91CD2A;
+  --color-primary-light-1: #C8FE5C;
+  --color-primary-light-2: #D5FE7E;
+  --color-primary-alpha-30: rgba(187, 253, 59, 0.30);
+  --color-primary-alpha-50: rgba(187, 253, 59, 0.50);
+
+  --color-secondary: #37f5ef;
+  --color-tertiary: #ff8db4;
+  --color-error: #ff7351;
+  --color-error-bg: rgba(255, 115, 81, 0.15);
+
+  /* Inverted surface ladder */
+  --color-body: #fafafa;
+  --color-box-body: #f4f4f5;
+  --color-box-body-highlight: #ececee;
+  --color-box-header: #ffffff;
+  --color-secondary-bg: #ffffff;
+  --color-menu: #ffffff;
+
+  /* Not pure black */
+  --color-text: #1a1a1a;
+  --color-text-light: #525252;
+  --color-text-light-2: #757575;
+  --color-text-light-3: #ababab;
+  --color-text-dark: #0e0e0e;
+
+  --color-border: rgba(60, 60, 60, 0.12);
+  --color-light-border: rgba(60, 60, 60, 0.08);
+
+  --border-radius: 4px;
+  --border-radius-medium: 8px;
+  --border-radius-large: 20px;
+  --border-radius-full: 9999px;
+
+  --fonts-regular: 'Manrope', 'OPPOSans', 'PingFang SC', system-ui, sans-serif;
+  --fonts-display: 'Poppins', 'Epilogue', 'PingFang SC', system-ui, sans-serif;
+  --fonts-monospace: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+}
+
+/* === Body & headlines === */
+
+body {
+  background: var(--color-body);
+  color: var(--color-text);
+  font-family: var(--fonts-regular);
+  line-height: 1.6;
+}
+
+h1, h2, h3, .ui.header, .display-lg, .display-md {
+  font-family: var(--fonts-display);
+  letter-spacing: -0.02em;
+  color: var(--color-text-dark);
+}
+
+.ui.label, .label-md {
+  font-family: var(--fonts-regular);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* === Buttons === */
+
+.ui.button {
+  border-radius: var(--border-radius-full);
+  font-family: var(--fonts-regular);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  box-shadow: none;
+  transition: background 0.15s ease, box-shadow 0.2s ease;
+}
+.ui.primary.button {
+  background: var(--color-primary);
+  color: #0e0e0e;
+}
+.ui.primary.button:hover, .ui.primary.button:focus {
+  background: var(--color-primary-dark-1);
+  box-shadow: 0 0 24px var(--color-primary-alpha-30);
+}
+.ui.secondary.button {
+  background: transparent;
+  border: 1px solid rgba(60, 60, 60, 0.18);
+  color: var(--color-text);
+}
+.ui.secondary.button:hover {
+  background: var(--color-box-body-highlight);
+}
+.ui.basic.button, .ui.tertiary.button {
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text);
+}
+.ui.basic.button:hover, .ui.tertiary.button:hover {
+  background: transparent !important;
+  border-bottom: 2px solid var(--color-primary-dark-1);
+  color: var(--color-text-dark);
+}
+
+/* === Cards === */
+
+.ui.card, .ui.cards > .card {
+  border-radius: var(--border-radius-medium);
+  border: none !important;
+  background: var(--color-box-header);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ui.card:hover, .ui.cards > .card:hover {
+  background: var(--color-box-header);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* === Inputs === */
+
+.ui.input input,
+.ui.form input[type=text],
+.ui.form input[type=email],
+.ui.form input[type=password],
+.ui.form input[type=search],
+.ui.form input[type=number],
+.ui.form input[type=url],
+.ui.form textarea,
+.ui.dropdown {
+  background: var(--color-box-body);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  color: var(--color-text);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ui.input input:focus,
+.ui.form input[type=text]:focus,
+.ui.form input[type=email]:focus,
+.ui.form input[type=password]:focus,
+.ui.form input[type=search]:focus,
+.ui.form input[type=number]:focus,
+.ui.form input[type=url]:focus,
+.ui.form textarea:focus {
+  background: var(--color-box-body-highlight);
+  border-bottom-color: var(--color-primary-dark-1);
+  outline: none;
+}
+.ui.form .error.field input,
+.ui.form .error.field textarea {
+  border-bottom-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* === Modals === */
+
+.ui.modal {
+  border-radius: var(--border-radius-large);
+  background: var(--color-box-header);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12);
+}
+.ui.modal > .header {
+  background: var(--color-box-header);
+  border-bottom: none;
+  border-top-left-radius: var(--border-radius-large);
+  border-top-right-radius: var(--border-radius-large);
+  font-family: var(--fonts-display);
+  letter-spacing: -0.01em;
+}
+.ui.modal > .actions {
+  background: var(--color-box-header);
+  border-top: none;
+  border-bottom-left-radius: var(--border-radius-large);
+  border-bottom-right-radius: var(--border-radius-large);
+}
+.ui.dimmer.modals, .ui.dimmer {
+  background: rgba(14, 14, 14, 0.40);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* === Chips & tags === */
+
+.ui.tag.label, .ui.basic.label {
+  border-radius: var(--border-radius-full);
+}
+.ui.label.green   { background: rgba(187, 253, 59, 0.15); color: var(--color-primary-dark-2); }
+.ui.label.cyan    { background: rgba(55, 245, 239, 0.15); color: #1cb2ad; }
+.ui.label.pink    { background: rgba(255, 141, 180, 0.15); color: #d96b91; }
+.ui.label.orange  { background: rgba(255, 115, 81, 0.15);  color: var(--color-error); }
+
+/* === Dividers === */
+
+.ui.divider {
+  border: none;
+  height: 12px;
+  margin: 0;
+}
+.ui.horizontal.divider {
+  height: auto;
+  color: var(--color-text-light-2);
+}
+
+/* === Scrollbar === */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-body); }
+::-webkit-scrollbar-thumb { background: var(--color-box-body-highlight); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-light-3); }
+
+/* === Links === */
+
+a, a.muted { color: var(--color-primary-dark-2); }
+a:hover, a.muted:hover { color: var(--color-primary-dark-1); text-decoration: none; }
+
+/* === Code blocks === */
+
+code, pre, .CodeMirror {
+  font-family: var(--fonts-monospace);
+  background: var(--color-box-body);
+}
