@@ -232,7 +232,12 @@
 								{{ctx.Locale.Tr "help"}}
 							</a>
 						</li>
-						{{$showDevtest := not .RunModeIsProd}}
+						{{/* HackForger override (#49 UAT-3): also gate the menu entry on .IsAdmin
+						     so only admins see the "Development pages" link in the user dropdown.
+						     The /devtest URL itself is also adminReq-protected at the route level
+						     (web.go), but the menu entry needs its own gate or non-admins still
+						     see (and could click) the link to a 403 page. */}}
+						{{$showDevtest := and (not .RunModeIsProd) .IsAdmin}}
 						{{if or .IsAdmin $showDevtest}}
 							<hr>
 						{{end}}
