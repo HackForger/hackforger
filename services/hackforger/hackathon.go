@@ -244,11 +244,15 @@ jobs:
           echo "Pushed index update to main"
 `
 
-// trackRepoReadmeTemplate is bilingual (zh-CN + en-US) so it works regardless
-// of the platform's default locale. Forgejo renders README.md on the repo home,
-// so this is the first thing a contestant sees when they click the "赛道仓库"
-// (Track Repo) button from the hackathon view.
-const trackRepoReadmeTemplate = `# %s
+// trackRepoContributingTemplate is bilingual (zh-CN + en-US) so it works
+// regardless of the platform's default locale. We write to CONTRIBUTING.md
+// (NOT README.md) because the organizer may have provided their own
+// description that auto-init wrote into README.md — clobbering it would lose
+// their content, and trying to also create README.md would atomically fail
+// the entire ChangeRepoFiles batch (also losing SUBMISSIONS.md + workflow).
+// Forgejo highlights CONTRIBUTING.md prominently in the file list and on the
+// "open Pull Request" flow, so contestants will discover it.
+const trackRepoContributingTemplate = `# How to submit / 如何提交作品 — %s
 
 ## 中文
 
@@ -366,9 +370,11 @@ func CreateTrackWithRepo(ctx context.Context, doer *user_model.User, h *hackforg
 			Message:   "Initialize track repository",
 			Files: []*files_service.ChangeRepoFile{
 				{
+					// CONTRIBUTING.md (not README.md) — see comment on
+					// trackRepoContributingTemplate for why.
 					Operation:     "create",
-					TreePath:      "README.md",
-					ContentReader: strings.NewReader(fmt.Sprintf(trackRepoReadmeTemplate, track.Name, h.Name, h.Name)),
+					TreePath:      "CONTRIBUTING.md",
+					ContentReader: strings.NewReader(fmt.Sprintf(trackRepoContributingTemplate, track.Name, h.Name, h.Name)),
 				},
 				{
 					Operation:     "create",

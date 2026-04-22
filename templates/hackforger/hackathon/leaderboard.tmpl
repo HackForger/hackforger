@@ -4,12 +4,6 @@
 		{{template "base/alert" .}}
 		<h2>{{ctx.Locale.Tr "hackforger.hackathon.leaderboard"}} — {{.Hackathon.Name}}</h2>
 
-		{{if not .ShowScore}}
-		<div class="ui info message">
-			{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.score_hidden_until_finished"}}
-		</div>
-		{{end}}
-
 		{{if .Tracks}}
 		{{/* Tab menu -- kept as Fomantic (JS-dependent) */}}
 		<div class="ui top attached tabular menu">
@@ -34,7 +28,7 @@
 							<th>{{.Name}}</th>
 							{{end}}
 						{{end}}
-						{{if $.ShowScore}}<th>{{if $.ShowBreakdown}}{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.weighted_total"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.score"}}{{end}}</th>{{end}}
+						<th>{{if $.ShowBreakdown}}{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.weighted_total"}}{{else}}{{ctx.Locale.Tr "hackforger.hackathon.leaderboard.score"}}{{end}}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -47,7 +41,7 @@
 							<td>{{printf "%.1f" (index $sub.CriteriaScores $c.CriteriaID)}}</td>
 							{{end}}
 						{{end}}
-						{{if $.ShowScore}}<td>{{printf "%.1f" .WeightedTotal}}</td>{{end}}
+						<td>{{printf "%.1f" .WeightedTotal}}</td>
 					</tr>
 					{{end}}
 				</tbody>

@@ -1316,9 +1316,11 @@ func Leaderboard(ctx *context.Context) {
 		rubrics[t.ID] = r
 	}
 
-	// Score visibility (#65): organizers and judges always see scores.
-	// Contestants see scores only after the hackathon is Finished — until then
-	// only ranks are public, so judging stays uncontaminated by social dynamics.
+	// Visibility (#65): the leaderboard exists only for organizers, judges, or
+	// after the hackathon is Finished. Contestants and anonymous users get a
+	// hard 404 in non-Finished states — Cynthialime explicitly wants the page
+	// (and the concept of a leaderboard) to be invisible until the result-
+	// announcement phase, not just suppress the score column.
 	isOrganizer := false
 	isJudge := false
 	if ctx.Doer != nil {
@@ -1335,7 +1337,10 @@ func Leaderboard(ctx *context.Context) {
 			isJudge, _ = hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
 		}
 	}
-	showScore := isOrganizer || isJudge || finished
+	if !finished && !isOrganizer && !isJudge {
+		ctx.NotFound("hackathon leaderboard not available", nil)
+		return
+	}
 
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.leaderboard")
 	ctx.Data["Hackathon"] = h
@@ -1343,6 +1348,5 @@ func Leaderboard(ctx *context.Context) {
 	ctx.Data["Rankings"] = rankings
 	ctx.Data["Rubrics"] = rubrics
 	ctx.Data["ShowBreakdown"] = showBreakdown
-	ctx.Data["ShowScore"] = showScore
 	ctx.HTML(http.StatusOK, tplLeaderboard)
 }
