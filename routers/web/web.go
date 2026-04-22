@@ -1885,10 +1885,16 @@ func registerRoutes(m *web.Route) {
 	}
 
 	if !setting.IsProd {
-		m.Any("/devtest", devtest.List)
-		m.Any("/devtest/fetch-action-test", devtest.FetchActionTest)
-		m.Any("/devtest/{sub}", devtest.Tmpl)
-		m.Get("/devtest/error/{errcode}", devtest.ErrorPage)
+		// HackForger #49: gate /devtest behind site-admin. Per Cynthialime, the
+		// devtest pages should not be visible to ordinary contestants. Original
+		// gate was IsProd alone, which leaves them open in any non-prod build —
+		// which is what the HackForger inside instance runs.
+		m.Group("/devtest", func() {
+			m.Any("", devtest.List)
+			m.Any("/fetch-action-test", devtest.FetchActionTest)
+			m.Any("/{sub}", devtest.Tmpl)
+			m.Get("/error/{errcode}", devtest.ErrorPage)
+		}, adminReq)
 	}
 
 	m.NotFound(func(w http.ResponseWriter, req *http.Request) {
