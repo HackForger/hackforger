@@ -1304,7 +1304,8 @@ func Leaderboard(ctx *context.Context) {
 	}
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 
-	showBreakdown := h.StatusCache == hackforger_model.HackathonStatusFinished
+	finished := h.StatusCache == hackforger_model.HackathonStatusFinished
+	showBreakdown := finished
 
 	// Use CalculateRanks to get per-criteria scores for the breakdown view.
 	rankings, _ := hackforger_service.CalculateRanks(ctx, h.ID)
@@ -1314,11 +1315,34 @@ func Leaderboard(ctx *context.Context) {
 		r, _ := hackforger_service.GetEffectiveRubric(ctx, t.ID)
 		rubrics[t.ID] = r
 	}
+
+	// Score visibility (#65): organizers and judges always see scores.
+	// Contestants see scores only after the hackathon is Finished — until then
+	// only ranks are public, so judging stays uncontaminated by social dynamics.
+	isOrganizer := false
+	isJudge := false
+	if ctx.Doer != nil {
+		if h.OwnerID == ctx.Doer.ID {
+			isOrganizer = true
+		} else if h.LinkedOrgID > 0 {
+			if org, err := organization_model.GetOrgByID(ctx, h.LinkedOrgID); err == nil {
+				if isOwner, _ := org.IsOwnedBy(ctx, ctx.Doer.ID); isOwner {
+					isOrganizer = true
+				}
+			}
+		}
+		if !isOrganizer {
+			isJudge, _ = hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
+		}
+	}
+	showScore := isOrganizer || isJudge || finished
+
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.leaderboard")
 	ctx.Data["Hackathon"] = h
 	ctx.Data["Tracks"] = tracks
 	ctx.Data["Rankings"] = rankings
 	ctx.Data["Rubrics"] = rubrics
 	ctx.Data["ShowBreakdown"] = showBreakdown
+	ctx.Data["ShowScore"] = showScore
 	ctx.HTML(http.StatusOK, tplLeaderboard)
 }
