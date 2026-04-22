@@ -11,8 +11,8 @@
 					{{if .Owner}}
 					<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.hackathon.view.organizer"}}: <a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a></span>
 					{{end}}
-					{{if .LinkedOrg}}
-					<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.hackathon.view.org"}}: <a href="{{AppSubUrl}}/{{.LinkedOrg.Name}}">{{svg "octicon-organization" 14}} {{.LinkedOrg.Name}}</a></span>
+					{{if .Hackathon.Slug}}
+					<span class="tw-text-sm tw-text-gray">{{ctx.Locale.Tr "hackforger.hackathon.view.activity_id"}}: {{svg "octicon-tag" 14}} <code>{{.Hackathon.Slug}}</code></span>
 					{{end}}
 				</div>
 			</div>
