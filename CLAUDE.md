@@ -70,7 +70,8 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `go test ./models/hackforger/... -v` -- Run model tests
 - `go test ./services/hackforger/... -v` -- Run service tests
 - `./gitea web` -- Start server (http://localhost:3000)
-- Restart server: kill old process, remove LevelDB lock (`rm -f data/queues/common/LOCK`), then start
+- `bash scripts/restart-gitea.sh` -- **After merging a PR**: one-command atomic rebuild + restart of the main instance. Does: build → stop-if-binary-path-matches → start → verify HTTP 200. Refuses to kill port-3000 processes whose binary path isn't the main repo's `gitea`, so it's safe to automate.
+- Restart server manually (fallback): kill old process, remove LevelDB lock (`rm -f data/queues/common/LOCK`), then start
 
 ## Important Constraints
 - Use `gh` CLI for GitHub operations (not `tea` -- that's for Codeberg/Forgejo)
