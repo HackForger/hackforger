@@ -1304,7 +1304,8 @@ func Leaderboard(ctx *context.Context) {
 	}
 	tracks, _ := hackforger_model.ListTracksByHackathon(ctx, h.ID)
 
-	showBreakdown := h.StatusCache == hackforger_model.HackathonStatusFinished
+	finished := h.StatusCache == hackforger_model.HackathonStatusFinished
+	showBreakdown := finished
 
 	// Use CalculateRanks to get per-criteria scores for the breakdown view.
 	rankings, _ := hackforger_service.CalculateRanks(ctx, h.ID)
@@ -1314,6 +1315,33 @@ func Leaderboard(ctx *context.Context) {
 		r, _ := hackforger_service.GetEffectiveRubric(ctx, t.ID)
 		rubrics[t.ID] = r
 	}
+
+	// Visibility (#65): the leaderboard exists only for organizers, judges, or
+	// after the hackathon is Finished. Contestants and anonymous users get a
+	// hard 404 in non-Finished states — Cynthialime explicitly wants the page
+	// (and the concept of a leaderboard) to be invisible until the result-
+	// announcement phase, not just suppress the score column.
+	isOrganizer := false
+	isJudge := false
+	if ctx.Doer != nil {
+		if h.OwnerID == ctx.Doer.ID {
+			isOrganizer = true
+		} else if h.LinkedOrgID > 0 {
+			if org, err := organization_model.GetOrgByID(ctx, h.LinkedOrgID); err == nil {
+				if isOwner, _ := org.IsOwnedBy(ctx, ctx.Doer.ID); isOwner {
+					isOrganizer = true
+				}
+			}
+		}
+		if !isOrganizer {
+			isJudge, _ = hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
+		}
+	}
+	if !finished && !isOrganizer && !isJudge {
+		ctx.NotFound("hackathon leaderboard not available", nil)
+		return
+	}
+
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.leaderboard")
 	ctx.Data["Hackathon"] = h
 	ctx.Data["Tracks"] = tracks

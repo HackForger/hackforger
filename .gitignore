@@ -80,6 +80,10 @@ cpu.out
 !/custom/templates/
 /custom/templates/*
 !/custom/templates/base/
+!/custom/templates/hackforger/
+!/custom/options/
+/custom/options/*
+!/custom/options/hackforger-help/
 /data
 /indexers
 /log
