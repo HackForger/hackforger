@@ -39,7 +39,11 @@
 			{{$morePageActive := or .PageIsIssues .PageIsPulls .PageIsMilestonesDashboard}}
 			{{if $anyMore}}
 			<div class="ui dropdown item {{if $morePageActive}}active{{end}}">
-				{{ctx.Locale.Tr "hackforger.navbar.more"}}<span class="menu-arrow-icon">{{svg "octicon-triangle-down"}}</span>
+				{{/* Hardcoded "更多/More" instead of {{Tr "hackforger.navbar.more"}} —
+				     can't add new locale keys via custom/options/locale (Forgejo loader is
+				     file-level first-wins, would shadow ~20K bundled keys; see PR #97/#98).
+				     This avoids modifying upstream options/locale files. */}}
+				{{if eq ctx.Locale.Lang "zh-CN"}}更多{{else}}More{{end}}<span class="menu-arrow-icon">{{svg "octicon-triangle-down"}}</span>
 				<div class="menu">
 					{{if $showIssues}}
 						<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubUrl}}/issues">{{ctx.Locale.Tr "issues"}}</a>
