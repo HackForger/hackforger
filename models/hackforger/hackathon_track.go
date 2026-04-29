@@ -100,13 +100,14 @@ type PrizeDistRatio struct {
 
 // ParsePrizeDistRatios parses a JSON string into a slice of PrizeDistRatio.
 // An empty string returns nil (no ratios defined).
+// A malformed JSON string returns ErrInvalidDistRatios so callers can map it to a 400.
 func ParsePrizeDistRatios(s string) ([]PrizeDistRatio, error) {
 	if s == "" {
 		return nil, nil
 	}
 	var ratios []PrizeDistRatio
 	if err := json.Unmarshal([]byte(s), &ratios); err != nil {
-		return nil, fmt.Errorf("invalid prize distribution ratios JSON: %w", err)
+		return nil, ErrInvalidDistRatios{Reason: fmt.Sprintf("malformed JSON: %s", err.Error())}
 	}
 	return ratios, nil
 }
