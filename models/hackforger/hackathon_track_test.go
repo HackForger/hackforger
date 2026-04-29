@@ -95,7 +95,8 @@ func TestParsePrizeDistRatios(t *testing.T) {
 	t.Run("InvalidJSON", func(t *testing.T) {
 		_, err := hackforger_model.ParsePrizeDistRatios("not json")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid prize distribution ratios JSON")
+		assert.True(t, hackforger_model.IsErrInvalidDistRatios(err))
+		assert.Contains(t, err.Error(), "malformed JSON")
 	})
 
 	t.Run("RoundTrip", func(t *testing.T) {
@@ -109,5 +110,59 @@ func TestParsePrizeDistRatios(t *testing.T) {
 		parsed, err := hackforger_model.ParsePrizeDistRatios(string(data))
 		require.NoError(t, err)
 		assert.Equal(t, original, parsed)
+	})
+}
+
+func TestValidatePrizeDistConfig(t *testing.T) {
+	t.Run("WinnerTakesAll_NoRatios", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("winner_takes_all", "")
+		assert.NoError(t, err)
+	})
+
+	t.Run("Equal_NoRatios", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("equal", "")
+		assert.NoError(t, err)
+	})
+
+	t.Run("Tiered_ValidRatios", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("tiered", `[{"rank":1,"pct":60},{"rank":2,"pct":40}]`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("EmptyMode", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("", "")
+		require.Error(t, err)
+		assert.True(t, hackforger_model.IsErrInvalidPrizeDistMode(err))
+	})
+
+	t.Run("UnknownMode", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("custom", "")
+		require.Error(t, err)
+		assert.True(t, hackforger_model.IsErrInvalidPrizeDistMode(err))
+		assert.Contains(t, err.Error(), `"custom"`)
+	})
+
+	t.Run("Tiered_MissingRatios", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("tiered", "")
+		require.Error(t, err)
+		assert.True(t, hackforger_model.IsErrInvalidDistRatios(err))
+	})
+
+	t.Run("Tiered_MalformedJSON", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("tiered", "not json")
+		require.Error(t, err)
+		assert.True(t, hackforger_model.IsErrInvalidDistRatios(err))
+		assert.Contains(t, err.Error(), "malformed JSON")
+	})
+
+	t.Run("Tiered_RatiosSumNot100", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("tiered", `[{"rank":1,"pct":50},{"rank":2,"pct":40}]`)
+		require.Error(t, err)
+		assert.True(t, hackforger_model.IsErrInvalidDistRatios(err))
+	})
+
+	t.Run("WinnerTakesAll_RatiosIgnored", func(t *testing.T) {
+		err := hackforger_model.ValidatePrizeDistConfig("winner_takes_all", "garbage")
+		assert.NoError(t, err)
 	})
 }

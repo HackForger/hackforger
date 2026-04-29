@@ -950,7 +950,7 @@ func distributeHackathonCredits(ctx context.Context, hackathonID int64) error {
 			}
 
 		default:
-			log.Warn("distributeHackathonCredits: unknown dist mode %q for track %d, skipping", track.PrizeDistMode, track.ID)
+			return hackforger_model.ErrInvalidPrizeDistMode{Mode: track.PrizeDistMode}
 		}
 	}
 

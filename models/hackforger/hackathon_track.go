@@ -100,13 +100,14 @@ type PrizeDistRatio struct {
 
 // ParsePrizeDistRatios parses a JSON string into a slice of PrizeDistRatio.
 // An empty string returns nil (no ratios defined).
+// A malformed JSON string returns ErrInvalidDistRatios so callers can map it to a 400.
 func ParsePrizeDistRatios(s string) ([]PrizeDistRatio, error) {
 	if s == "" {
 		return nil, nil
 	}
 	var ratios []PrizeDistRatio
 	if err := json.Unmarshal([]byte(s), &ratios); err != nil {
-		return nil, fmt.Errorf("invalid prize distribution ratios JSON: %w", err)
+		return nil, ErrInvalidDistRatios{Reason: fmt.Sprintf("malformed JSON: %s", err.Error())}
 	}
 	return ratios, nil
 }
@@ -150,4 +151,43 @@ func ValidatePrizeDistRatios(ratios []PrizeDistRatio) error {
 		return ErrInvalidDistRatios{Reason: fmt.Sprintf("pct sum must be 100, got %d", sum)}
 	}
 	return nil
+}
+
+// ErrInvalidPrizeDistMode represents a validation error for prize distribution mode.
+type ErrInvalidPrizeDistMode struct {
+	Mode string
+}
+
+// IsErrInvalidPrizeDistMode checks if an error is a ErrInvalidPrizeDistMode.
+func IsErrInvalidPrizeDistMode(err error) bool {
+	_, ok := err.(ErrInvalidPrizeDistMode)
+	return ok
+}
+
+func (err ErrInvalidPrizeDistMode) Error() string {
+	return fmt.Sprintf("invalid prize_dist_mode %q (must be winner_takes_all, tiered, or equal)", err.Mode)
+}
+
+func (err ErrInvalidPrizeDistMode) Unwrap() error {
+	return util.ErrInvalidArgument
+}
+
+// ValidatePrizeDistConfig validates a prize distribution configuration.
+// mode must be one of: winner_takes_all, tiered, equal.
+// For tiered mode, ratiosJSON must parse to a valid PrizeDistRatio slice
+// (non-empty, contiguous ranks, percentages summing to 100).
+// For non-tiered modes, ratiosJSON is not inspected.
+func ValidatePrizeDistConfig(mode, ratiosJSON string) error {
+	switch mode {
+	case "winner_takes_all", "equal":
+		return nil
+	case "tiered":
+		ratios, err := ParsePrizeDistRatios(ratiosJSON)
+		if err != nil {
+			return err
+		}
+		return ValidatePrizeDistRatios(ratios)
+	default:
+		return ErrInvalidPrizeDistMode{Mode: mode}
+	}
 }
