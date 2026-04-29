@@ -151,3 +151,42 @@ func ValidatePrizeDistRatios(ratios []PrizeDistRatio) error {
 	}
 	return nil
 }
+
+// ErrInvalidPrizeDistMode represents a validation error for prize distribution mode.
+type ErrInvalidPrizeDistMode struct {
+	Mode string
+}
+
+// IsErrInvalidPrizeDistMode checks if an error is a ErrInvalidPrizeDistMode.
+func IsErrInvalidPrizeDistMode(err error) bool {
+	_, ok := err.(ErrInvalidPrizeDistMode)
+	return ok
+}
+
+func (err ErrInvalidPrizeDistMode) Error() string {
+	return fmt.Sprintf("invalid prize_dist_mode %q (must be winner_takes_all, tiered, or equal)", err.Mode)
+}
+
+func (err ErrInvalidPrizeDistMode) Unwrap() error {
+	return util.ErrInvalidArgument
+}
+
+// ValidatePrizeDistConfig validates a prize distribution configuration.
+// mode must be one of: winner_takes_all, tiered, equal.
+// For tiered mode, ratiosJSON must parse to a valid PrizeDistRatio slice
+// (non-empty, contiguous ranks, percentages summing to 100).
+// For non-tiered modes, ratiosJSON is not inspected.
+func ValidatePrizeDistConfig(mode, ratiosJSON string) error {
+	switch mode {
+	case "winner_takes_all", "equal":
+		return nil
+	case "tiered":
+		ratios, err := ParsePrizeDistRatios(ratiosJSON)
+		if err != nil {
+			return err
+		}
+		return ValidatePrizeDistRatios(ratios)
+	default:
+		return ErrInvalidPrizeDistMode{Mode: mode}
+	}
+}
