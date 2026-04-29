@@ -38,5 +38,5 @@ HackForger 落地页第一版 (PR TBD, spec 见 `docs/superpowers/specs/2026-04-
 ## 相关
 
 - Spec: `docs/superpowers/specs/2026-04-29-hackforger-landing-page-design.md`
-- Implementation PR: TBD（合并后回填）
-- 关联：Issue #KPI（KPI 统计接入）+ Issue #STAGES（赛项&命题预览同步 + 运营绑定 UI）
+- Implementation PR: #108
+- 关联 issue: #109 (KPI 统计接入) + #110 (赛项&命题预览同步 + 运营绑定 UI)

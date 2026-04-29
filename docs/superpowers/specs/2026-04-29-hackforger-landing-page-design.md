@@ -28,10 +28,10 @@
 - Fallback 安全网：custom 文件不存在时退回原 splash
 
 **Out of scope**:
-- KPI 统计（"算力消耗/总计发放/正在进行"）→ Issue #KPI
-- 赛项&命题预览深度同步（Wave 名称/日期/状态从 hackathon DB 拉取）→ Issue #STAGES
-- 模板化生成器（DESIGN.md + assets → 自动生成）→ Issue #TMPL
-- Hackathon 数据模型扩展（League 概念是否需要新建）→ 由 Issue #STAGES 引导讨论
+- KPI 统计（"算力消耗/总计发放/正在进行"）→ Issue #109
+- 赛项&命题预览深度同步（Wave 名称/日期/状态从 hackathon DB 拉取）→ Issue #110
+- 模板化生成器（DESIGN.md + assets → 自动生成）→ Issue #111
+- Hackathon 数据模型扩展（League 概念是否需要新建）→ 由 Issue #110 引导讨论
 - 修改 `templates/home.tmpl`（保留作为 fallback）
 - 修改 `home_forgejo.tmpl`、navbar/footer、theme/logo 等其他 custom 资产
 
@@ -137,7 +137,7 @@ ctx.HTML(http.StatusOK, tplHome)
 | 3 | 已登录用户菜单（约 line 726-745，以 `<!-- 已登录 -->` 注释为锚点） | 头像菜单 + 退出登录按钮 | **删除整段**（约 20 行）——这页只对未登录显示 |
 | 4 | Hero "立即报名" 三个大按钮 | scroll 到 `#opc-stage-register` | **保留**原行为不变 |
 | 5 | 12 张 Wave 卡片"立即报名"按钮 | 1 个 active（无 onclick）+ 11 个 disabled | 12 个按钮**统一**加 `data-stage="s{N}-w{M}"`；通过 event delegation 触发，**不**用 inline onclick |
-| 6 | KPI 卡片（约 line 1346, 1355, 1363） | `<p>即将发送</p>` | **保留**——本期不接（Issue #KPI 跟进） |
+| 6 | KPI 卡片（约 line 1346, 1355, 1363） | `<p>即将发送</p>` | **保留**——本期不接（Issue #109 跟进） |
 | 7 | `<head>` 内（在 `<base>` 之后、CDN 之前）| 无 | **新增** `<script id="hackforger-landing-config">` 配置块 |
 | 8 | `<head>` 内（紧跟配置块之后）| 无 | **新增** `<script id="hackforger-landing-behavior">` 行为块（含 event delegation listener） |
 
@@ -273,9 +273,9 @@ function showLandingInfoModal(title, body) {
 - ❌ 不修改 `setting.LandingPageURL` 枚举
 - ❌ 不引入 Go template 渲染落地页（保持纯静态 HTML）
 - ❌ 不动落地页的 Tailwind CDN / Google Fonts CDN（与 Forgejo 编译版样式不共存）
-- ❌ 不接 KPI 统计（"即将发送"保留占位 → Issue #KPI）
-- ❌ 不接 Wave 详情数据（赛项预览硬编码 → Issue #STAGES）
-- ❌ 不做模板化生成器（→ Issue #TMPL）
+- ❌ 不接 KPI 统计（"即将发送"保留占位 → Issue #109）
+- ❌ 不接 Wave 详情数据（赛项预览硬编码 → Issue #110）
+- ❌ 不做模板化生成器（→ Issue #111）
 - ❌ 不动 Forgejo 上游文件（除 `routers/web/home.go::Home()` 内部一段未登录分支扩展）
 
 ## 风险与权衡
@@ -331,15 +331,15 @@ function showLandingInfoModal(title, body) {
 
 报告位置：`docs/tests/e2e/reports/2026-04-29-landing-page-impl.md`
 
-### Phase 2：QA 期（合并后由测试员执行，依赖 Issue #KPI / #STAGES 的决议）
+### Phase 2：QA 期（合并后由测试员执行，依赖 Issue #109 / #STAGES 的决议）
 
 测试员收到的交付：
 - ✅ 已合并的 PR + 本 spec
-- ✅ Issue #KPI（KPI 数据语义文档）+ Issue #STAGES（Wave 同步约定）
+- ✅ Issue #109（KPI 数据语义文档）+ Issue #110（Wave 同步约定）
 - ✅ "按届编辑 checklist"（见下）
 
 测试员动作：
-1. 按 Issue #STAGES 的约定（slug 命名、League 关联）创建测试用 hackathon
+1. 按 Issue #110 的约定（slug 命名、League 关联）创建测试用 hackathon
 2. 编辑 `custom/public/assets/landing/index.html` 的 `HACKFORGER_LANDING_CONFIG`，把 `s1-w1.slug` 填成新建赛事
 3. 跑完整 E2E：点击 → 跳详情 → 点报名 → 登录回跳 → 完成报名
 
@@ -378,8 +378,8 @@ function showLandingInfoModal(title, body) {
 
 本 spec 的合并 PR 之后会创建以下 issue 跟进：
 
-- **Issue #KPI** — `[landing] Define & connect KPI stats on home landing page`
-- **Issue #STAGES** — `[landing] Auto-sync 「赛项&命题预览」section from hackathon DB`
-- **Issue #TMPL** — `[landing] (Backlog) Templatize landing page generation for future events`
+- **Issue #109** — `[landing] Define & connect KPI stats on home landing page`
+- **Issue #110** — `[landing] Auto-sync 「赛项&命题预览」section from hackathon DB`
+- **Issue #111** — `[landing] (Backlog) Templatize landing page generation for future events`
 
 issue body 草稿见 `docs/landing-page/issue-*.md`（在实现 PR 中一并 commit）。

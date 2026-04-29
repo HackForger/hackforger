@@ -68,5 +68,6 @@
 ## 相关
 
 - Spec: `docs/superpowers/specs/2026-04-29-hackforger-landing-page-design.md`
-- Implementation PR: TBD（合并后回填）
+- Implementation PR: #108
+- 关联 issue: #109 (KPI stats), #111 (templatization backlog)
 - 落地页 stages 区段位置: `custom/public/assets/landing/index.html` 中 `<section id="schedule">`

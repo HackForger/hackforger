@@ -695,7 +695,7 @@ File these issues (draft bodies committed under docs/landing-page/):
 
 ## Test plan
 - [ ] Phase 1 (impl, no hackathon dependency): 17 cases at docs/tests/e2e/reports/2026-04-29-landing-page-impl.md
-- [ ] Phase 2 (QA, post-merge): tester creates real hackathon per Issue #STAGES, runs full register flow
+- [ ] Phase 2 (QA, post-merge): tester creates real hackathon per Issue #110, runs full register flow
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

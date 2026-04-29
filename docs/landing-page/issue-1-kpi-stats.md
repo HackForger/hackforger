@@ -49,5 +49,5 @@
 ## 相关
 
 - Spec: `docs/superpowers/specs/2026-04-29-hackforger-landing-page-design.md`
-- Implementation PR: TBD（合并后回填）
-- 跟进 issue: 「赛项&命题预览」自动同步
+- Implementation PR: #108
+- 跟进 issue: #110 (Auto-sync stages from hackathon DB), #111 (Backlog: templatization)
