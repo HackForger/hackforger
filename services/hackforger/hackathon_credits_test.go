@@ -139,3 +139,32 @@ func TestDistributeHackathonCredits_ZeroPrize(t *testing.T) {
 	tx := findTxByRef(t, "hackathon:1/track:4:rank:1")
 	assert.Nil(t, tx, "zero-prize track should produce no transactions")
 }
+
+func TestDistributeHackathonCredits_RejectsUnknownMode(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	tainted := &hackforger_model.HackathonTrack{
+		HackathonID:     1,
+		Name:            "Tainted Track",
+		PrizeCredits:    100,
+		PrizeDistMode:   "",
+		PrizeDistRatios: "",
+	}
+	_, err := db.GetEngine(db.DefaultContext).Insert(tainted)
+	require.NoError(t, err)
+	require.NotZero(t, tainted.ID)
+
+	sub := &hackforger_model.HackathonSubmission{
+		HackathonID: 1,
+		TrackID:     tainted.ID,
+		UserID:      2,
+		TotalScore:  90.0,
+	}
+	_, err = db.GetEngine(db.DefaultContext).Insert(sub)
+	require.NoError(t, err)
+
+	err = distributeHackathonCredits(db.DefaultContext, 1)
+	require.Error(t, err)
+	assert.True(t, hackforger_model.IsErrInvalidPrizeDistMode(err),
+		"expected ErrInvalidPrizeDistMode, got %T: %v", err, err)
+}

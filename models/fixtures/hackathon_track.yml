@@ -50,8 +50,8 @@
   prize_currency: "USD"
   repo_id: 1
   prize_credits: 500
-  prize_dist_mode: "custom"
-  prize_dist_ratios: "50,30,20"
+  prize_dist_mode: "winner_takes_all"
+  prize_dist_ratios: ""
   created_unix: 1672578000
 
 -
@@ -63,8 +63,8 @@
   prize_currency: "USD"
   repo_id: 2
   prize_credits: 1000
-  prize_dist_mode: "custom"
-  prize_dist_ratios: "60,40"
+  prize_dist_mode: "winner_takes_all"
+  prize_dist_ratios: ""
   created_unix: 1672578000
 
 -
