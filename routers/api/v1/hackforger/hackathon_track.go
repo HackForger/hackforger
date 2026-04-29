@@ -14,20 +14,24 @@ import (
 
 // CreateTrackForm is the form for creating a hackathon track.
 type CreateTrackForm struct {
-	Name          string  `json:"name" binding:"Required"`
-	Description   string  `json:"description"`
-	PrizeAmount   float64 `json:"prize_amount"`
-	PrizeCurrency string  `json:"prize_currency"`
-	PrizeCredits  int64   `json:"prize_credits"`
+	Name            string  `json:"name" binding:"Required"`
+	Description     string  `json:"description"`
+	PrizeAmount     float64 `json:"prize_amount"`
+	PrizeCurrency   string  `json:"prize_currency"`
+	PrizeCredits    int64   `json:"prize_credits"`
+	PrizeDistMode   string  `json:"prize_dist_mode"`
+	PrizeDistRatios string  `json:"prize_dist_ratios"`
 }
 
 // UpdateTrackForm is the form for updating a hackathon track.
 type UpdateTrackForm struct {
-	Name          *string  `json:"name"`
-	Description   *string  `json:"description"`
-	PrizeAmount   *float64 `json:"prize_amount"`
-	PrizeCurrency *string  `json:"prize_currency"`
-	PrizeCredits  *int64   `json:"prize_credits"`
+	Name            *string  `json:"name"`
+	Description     *string  `json:"description"`
+	PrizeAmount     *float64 `json:"prize_amount"`
+	PrizeCurrency   *string  `json:"prize_currency"`
+	PrizeCredits    *int64   `json:"prize_credits"`
+	PrizeDistMode   *string  `json:"prize_dist_mode"`
+	PrizeDistRatios *string  `json:"prize_dist_ratios"`
 }
 
 // ListTracks returns all tracks for a hackathon.
@@ -93,13 +97,30 @@ func CreateTrack(ctx *context.APIContext) {
 		}
 		return
 	}
+
+	// API parity with web: empty mode defaults to winner_takes_all.
+	mode := f.PrizeDistMode
+	if mode == "" {
+		mode = "winner_takes_all"
+	}
+	if err := hackforger_model.ValidatePrizeDistConfig(mode, f.PrizeDistRatios); err != nil {
+		if hackforger_model.IsErrInvalidPrizeDistMode(err) || hackforger_model.IsErrInvalidDistRatios(err) {
+			ctx.Error(http.StatusBadRequest, "ValidatePrizeDistConfig", err)
+			return
+		}
+		ctx.InternalServerError(err)
+		return
+	}
+
 	t := &hackforger_model.HackathonTrack{
-		HackathonID:   h.ID,
-		Name:          f.Name,
-		Description:   f.Description,
-		PrizeAmount:   f.PrizeAmount,
-		PrizeCurrency: f.PrizeCurrency,
-		PrizeCredits:  f.PrizeCredits,
+		HackathonID:     h.ID,
+		Name:            f.Name,
+		Description:     f.Description,
+		PrizeAmount:     f.PrizeAmount,
+		PrizeCurrency:   f.PrizeCurrency,
+		PrizeCredits:    f.PrizeCredits,
+		PrizeDistMode:   mode,
+		PrizeDistRatios: f.PrizeDistRatios,
 	}
 	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
 		ctx.InternalServerError(err)
@@ -166,6 +187,27 @@ func UpdateTrack(ctx *context.APIContext) {
 	if f.PrizeCredits != nil {
 		t.PrizeCredits = *f.PrizeCredits
 	}
+	if f.PrizeDistMode != nil {
+		mode := *f.PrizeDistMode
+		if mode == "" {
+			mode = "winner_takes_all"
+		}
+		t.PrizeDistMode = mode
+	}
+	if f.PrizeDistRatios != nil {
+		t.PrizeDistRatios = *f.PrizeDistRatios
+	}
+
+	// Validate the resulting state (after merging request into stored).
+	if err := hackforger_model.ValidatePrizeDistConfig(t.PrizeDistMode, t.PrizeDistRatios); err != nil {
+		if hackforger_model.IsErrInvalidPrizeDistMode(err) || hackforger_model.IsErrInvalidDistRatios(err) {
+			ctx.Error(http.StatusBadRequest, "ValidatePrizeDistConfig", err)
+			return
+		}
+		ctx.InternalServerError(err)
+		return
+	}
+
 	if err := hackforger_model.UpdateTrack(ctx, t); err != nil {
 		ctx.InternalServerError(err)
 		return
