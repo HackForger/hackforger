@@ -58,6 +58,19 @@ func GetRevision(ctx context.Context) int {
 	return revision.Version
 }
 
+// GetSettingByKey returns the value for a single setting key, or empty string if not present.
+// Mirrors the single-row lookup pattern in GetRevision but for arbitrary keys.
+func GetSettingByKey(ctx context.Context, key string) (string, error) {
+	setting, exist, err := db.Get[Setting](ctx, builder.Eq{"setting_key": key})
+	if err != nil {
+		return "", err
+	}
+	if !exist {
+		return "", nil
+	}
+	return setting.SettingValue, nil
+}
+
 func GetAllSettings(ctx context.Context) (revision int, res map[string]string, err error) {
 	_ = GetRevision(ctx) // prepare the "revision" key ahead
 	var settings []*Setting
