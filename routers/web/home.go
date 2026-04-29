@@ -7,6 +7,8 @@ package web
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	auth_model "forgejo.org/models/auth"
@@ -78,6 +80,22 @@ func Home(ctx *context.Context) {
 	if ctx.GetSiteCookie(setting.CookieRememberName) != "" {
 		ctx.Redirect(setting.AppSubURL + "/user/login")
 		return
+	}
+
+	// HackForger: serve custom landing page for unsigned visitors when present.
+	// Falls back to default Forgejo splash if file is missing.
+	// We use stdlib http.ServeContent (not httpcache.ServeContentWithCacheControl)
+	// because the latter calls SetCacheControlInHeader which would overwrite the
+	// "private, no-store" directive we explicitly set below.
+	landingPath := filepath.Join(setting.CustomPath, "public", "assets", "landing", "index.html")
+	if f, err := os.Open(landingPath); err == nil {
+		defer f.Close()
+		if fi, err := f.Stat(); err == nil && !fi.IsDir() {
+			ctx.Resp.Header().Set("Cache-Control", "private, no-store")
+			ctx.Resp.Header().Set("Vary", "Cookie")
+			http.ServeContent(ctx.Resp, ctx.Req, "index.html", fi.ModTime(), f)
+			return
+		}
 	}
 
 	ctx.Data["PageIsHome"] = true
