@@ -77,6 +77,8 @@ cpu.out
 !/custom/public/assets/img/
 !/custom/public/assets/css/
 !/custom/public/assets/fonts/
+!/custom/public/assets/landing/
+!/custom/public/assets/landing/**
 !/custom/templates/
 /custom/templates/*
 !/custom/templates/base/
