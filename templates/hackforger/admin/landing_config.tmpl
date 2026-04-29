@@ -1,0 +1,27 @@
+{{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin hackforger landing-config")}}
+	<div class="admin-setting-content">
+		<h2>{{ctx.Locale.Tr "hackforger.landing.config.title"}}</h2>
+		<p class="tw-text-sm tw-text-on-surface-variant tw-mb-4">{{ctx.Locale.Tr "hackforger.landing.config.description"}}</p>
+
+		{{template "base/alert" .}}
+
+		<div class="hf-card">
+			<div class="hf-card-body">
+				<form method="POST" action="{{AppSubUrl}}/admin/hackforger/landing-config" class="ui form">
+					<div class="field">
+						<label for="league_prefix">{{ctx.Locale.Tr "hackforger.landing.config.prefix_label"}}</label>
+						<input id="league_prefix" name="league_prefix" type="text"
+							value="{{.LandingLeaguePrefix}}"
+							placeholder="league-2"
+							pattern="^$|^[a-z0-9][a-z0-9\-]*[a-z0-9]$"
+							autocomplete="off">
+						<p class="help tw-text-xs tw-text-on-surface-variant tw-mt-1">{{ctx.Locale.Tr "hackforger.landing.config.prefix_help"}}</p>
+					</div>
+					<button type="submit" class="hf-btn hf-btn-primary">
+						{{ctx.Locale.Tr "save"}}
+					</button>
+				</form>
+			</div>
+		</div>
+	</div>
+{{template "admin/layout_footer" .}}

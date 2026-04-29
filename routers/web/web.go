@@ -967,6 +967,13 @@ func registerRoutes(m *web.Route) {
 			m.Post("/{id}/delete", hackforger_web.AdminPhaseTypeDelete)
 		})
 		// ***** END: HackForger Admin Phase Types *****
+
+		// ***** START: HackForger Admin Landing Config *****
+		m.Group("/hackforger/landing-config", func() {
+			m.Get("", hackforger_web.AdminLandingConfig)
+			m.Post("", hackforger_web.AdminLandingConfigPost)
+		})
+		// ***** END: HackForger Admin Landing Config *****
 	}, adminReq, ctxDataSet("EnableOAuth2", setting.OAuth2.Enabled, "EnablePackages", setting.Packages.Enabled, "EnableModeration", setting.Moderation.Enabled))
 	// ***** END: Admin *****
 
