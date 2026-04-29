@@ -708,6 +708,21 @@
             }
         }
 
+        /* HackForger Issue #110: equalize stage card heights so different badge counts don't stagger them */
+        .tone-card {
+            display: flex;
+            flex-direction: column;
+        }
+        /* Badge container — give it a min-height so cards with fewer badges don't collapse */
+        .tone-card .mb-6.flex.items-center.flex-wrap {
+            min-height: 56px;
+            align-content: flex-start;
+        }
+        /* CTA pinned to bottom of card */
+        .tone-card button[data-stage] {
+            margin-top: auto;
+        }
+
     </style>
 <script id="hackforger-landing-config">
 window.HACKFORGER_LANDING_CONFIG = {
@@ -780,6 +795,118 @@ window.HACKFORGER_LANDING_CONFIG = {
     var stageId = btn.getAttribute('data-stage');
     if (stageId) handleRegisterClick(stageId);
   });
+})();
+</script>
+<script id="hackforger-landing-hydrate">
+(function() {
+  // i18n key → display label mapping (Chinese only for now; extend per Issue #110 spec).
+  var PHASE_LABELS = {
+    'hackforger.phase.registration': '#报名',
+    'hackforger.phase.development':  '#开发',
+    'hackforger.phase.peer_review':  '#互评',
+    'hackforger.phase.results':      '#公布晋级',
+    'hackforger.phase.judging':      '#评审',
+    'hackforger.phase.finished':     '#已结束'
+  };
+
+  function phaseLabel(i18nKey) {
+    if (!i18nKey) return '';
+    return PHASE_LABELS[i18nKey] || ('#' + i18nKey.split('.').pop());
+  }
+
+  function formatRange(window) {
+    if (!window || !window.start || !window.end) return '';
+    var s = new Date(window.start), e = new Date(window.end);
+    return (s.getMonth()+1) + '.' + s.getDate() + '-' + (e.getMonth()+1) + '.' + e.getDate();
+  }
+
+  function findBadgeByPrefix(card, prefix) {
+    var spans = card.querySelectorAll('span');
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i].textContent.indexOf(prefix) === 0) return spans[i];
+    }
+    return null;
+  }
+
+  function hydrateCard(slot, data) {
+    var btn = document.querySelector('[data-stage="' + slot + '"]');
+    if (!btn) return;
+    var card = btn.closest('.tone-card');
+    if (!card) return;
+
+    // Wave name (the only <h5> in each card)
+    if (data.name) {
+      var h5 = card.querySelector('h5');
+      if (h5) h5.textContent = data.name;
+    }
+
+    // Registration window badge
+    if (data.registration_window) {
+      var regBadge = findBadgeByPrefix(card, '#报名');
+      if (regBadge) regBadge.textContent = '#报名 ' + formatRange(data.registration_window);
+    }
+
+    // Current phase: emphasize matching badge with primary color (best-effort visual hint)
+    if (data.current_phase && data.current_phase.display_name_i18n) {
+      var label = phaseLabel(data.current_phase.display_name_i18n);
+      var phaseBadge = findBadgeByPrefix(card, label);
+      if (phaseBadge) {
+        phaseBadge.classList.remove('bg-[#FFA526]', 'text-black');
+        phaseBadge.classList.add('bg-primary', 'text-on-primary', 'ring-2', 'ring-primary');
+      }
+    }
+
+    // Toggle CTA enabled/disabled
+    if (data.enabled) {
+      btn.removeAttribute('disabled');
+      btn.removeAttribute('aria-disabled');
+      btn.classList.remove('cursor-not-allowed', 'bg-[#9CA3AF]', 'text-[#4B5563]');
+      btn.classList.add('bg-primary', 'text-black');
+      btn.textContent = '立即报名';
+    } else {
+      btn.setAttribute('disabled', '');
+      btn.setAttribute('aria-disabled', 'true');
+      btn.classList.add('cursor-not-allowed', 'bg-[#9CA3AF]', 'text-[#4B5563]');
+      btn.classList.remove('bg-primary', 'text-black');
+    }
+  }
+
+  function hydrateLanding() {
+    fetch('/api/v1/hackforger/landing/stages')
+      .then(function(r) {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then(function(json) {
+        if (!json || !json.stages) return;
+        var stages = json.stages;
+        Object.keys(stages).forEach(function(slot) {
+          var data = stages[slot];
+          // Patch semantic: skip slots without slug — keep HTML defaults.
+          // Note: this means once a slot is hydrated, unbinding the hackathon
+          // will not revert the DOM until the user reloads the page.
+          if (!data.slug) return;
+          hydrateCard(slot, data);
+
+          // Sync click handler to live data
+          if (window.HACKFORGER_LANDING_CONFIG && window.HACKFORGER_LANDING_CONFIG.stages[slot]) {
+            window.HACKFORGER_LANDING_CONFIG.stages[slot] = {
+              slug: data.slug,
+              enabled: data.enabled
+            };
+          }
+        });
+      })
+      .catch(function(e) {
+        if (window.console) console.warn('[hackforger-landing] hydrate failed:', e);
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hydrateLanding);
+  } else {
+    hydrateLanding();
+  }
 })();
 </script>
 </head>
@@ -887,7 +1014,7 @@ window.HACKFORGER_LANDING_CONFIG = {
   <li class="li5"><b>指导单位：</b>中共上海市委宣传部、上海市经济和信息化委员会、上海市数据局、上海市人才工作局、上海市科学技术委员会、共青团上海市委员会、中国（上海）自由贸易试验区临港新片区管理委员会</li>
   <li class="li5"><b>主办单位：</b>上海临港北京大学国际科技创新中心、南汇新城镇人民政府、临港新片区团工委</li>
   <li class="li5"><b>承办单位：</b>智道元生（上海）技术有限公司、中国电信股份有限公司上海分公司</li>
-  <li class="li5"><b>协办单位：</b>青年报社、上海临港科技创新城经济发展有限公司、上海市学生事务中心、上海市数字企业出海服务协会、上海临港新片区数字基建投资发展有限公司、上海智慧城市发展研究院、燕缘孵化器等</li>
+  <li class="li5"><b>协办单位：</b>青年报社、上海临港科技创新城经济发展有限公司、上海市数字企业出海服务协会、上海临港新片区数字基建投资发展有限公司、上海智慧城市发展研究院、燕缘孵化器等</li>
   <li class="li5"><b>创投支持单位：</b>上海国投科创、上海国投未来、上海国投赋能、临港集团、临港青年创业基金、燕缘创投等</li>
 </ul>
 <p class="p6"><br></p>
@@ -947,7 +1074,7 @@ window.HACKFORGER_LANDING_CONFIG = {
       <td valign="middle" class="td1">
         <p class="p10">AI实战训练营（线上&amp;线下）：7月27日</p>
         <p class="p10">协创松年度总决赛（线下）：7月28日至7月30日</p>
-        <p class="p10">颁奖典礼&amp;嘉年华（线下）：7月31日</p>
+        <p class="p10">颁奖活动&amp;嘉年华（线下）：7月31日</p>
       </td>
     </tr>
   </tbody>
@@ -1850,7 +1977,6 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="text-[10px] md:text-xs font-black tracking-[0.28em] uppercase opacity-70 font-oppo">01 / GUIDANCE</div>
 <h3 class="text-xl md:text-2xl font-black tracking-tight font-oppo mt-1">指导单位</h3>
 </div>
-<div class="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase opacity-60 font-oppo">Directing Authorities · 7</div>
 </div>
 <div class="flex flex-wrap gap-2 md:gap-2.5">
 <span class="org-chip"><span class="org-chip-dot"></span>中共上海市委宣传部</span>
@@ -1870,7 +1996,6 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="text-[10px] md:text-xs font-black tracking-[0.28em] uppercase org-accent-text font-oppo">02 / HOSTS</div>
 <h3 class="text-xl md:text-2xl font-black tracking-tight text-on-surface font-oppo mt-1">主办单位</h3>
 </div>
-<div class="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant opacity-60 font-oppo">Hosts · 3</div>
 </div>
 <div class="flex flex-wrap gap-2 md:gap-2.5">
 <span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>上海临港北京大学国际科技创新中心</span>
@@ -1885,7 +2010,6 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="text-[10px] md:text-xs font-black tracking-[0.28em] uppercase org-accent-text font-oppo">03 / ORGANIZERS</div>
 <h3 class="text-xl md:text-2xl font-black tracking-tight font-oppo mt-1 text-white">承办单位</h3>
 </div>
-<div class="text-[10px] font-bold tracking-[0.2em] uppercase opacity-70 font-oppo text-white">Organizers · 2</div>
 </div>
 <div class="flex flex-wrap gap-2 md:gap-2.5">
 <span class="org-chip org-chip-onDark"><span class="org-chip-dot"></span>智道元生（上海）技术有限公司</span>
@@ -1900,12 +2024,10 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="text-[10px] md:text-xs font-black tracking-[0.28em] uppercase text-on-surface-variant font-oppo">04 / CO-ORGANIZERS</div>
 <h3 class="text-xl md:text-2xl font-black tracking-tight text-on-surface font-oppo mt-1">协办单位</h3>
 </div>
-<div class="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant opacity-60 font-oppo">Co-organizers · 7+</div>
 </div>
 <div class="flex flex-wrap gap-2 md:gap-2.5">
 <span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>青年报社</span>
 <span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>上海临港科技创新城经济发展有限公司</span>
-<span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>上海市学生事务中心</span>
 <span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>上海市数字企业出海服务协会</span>
 <span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>上海临港新片区数字基建投资发展有限公司</span>
 <span class="org-chip org-chip-soft"><span class="org-chip-dot"></span>上海智慧城市发展研究院</span>
@@ -1919,7 +2041,6 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="mb-5">
 <div class="text-[10px] md:text-xs font-black tracking-[0.28em] uppercase opacity-70 font-oppo">05 / VC SUPPORT</div>
 <h3 class="text-xl md:text-2xl font-black tracking-tight font-oppo mt-1">创投支持</h3>
-<div class="text-[10px] font-bold tracking-[0.2em] uppercase opacity-60 font-oppo mt-1">Venture Capital · 4+</div>
 </div>
 <div class="flex flex-wrap gap-2 md:gap-2.5">
 <span class="org-chip"><span class="org-chip-dot"></span>上海国投</span>
@@ -2531,7 +2652,7 @@ window.HACKFORGER_LANDING_CONFIG = {
         },
         "rule-stage-04": {
                 "title": "Season 04 年度总决赛",
-                "md": "## 协创松 Buildathon 年度总决赛\n\n- 参赛人群：S1、S2、S3 联赛晋级团队（共60个团队），以及经官方评审具备同等产品能力的 AI+OPC 创业者，总共不超100个团队。\n- AI实战训练营：7月27日。\n- 协创松年度总决赛：7月28日至7月30日。\n- 颁奖典礼 & 嘉年华：7月31日。\n- 比赛形式：线下72小时协创马拉松 Buildathon，集中冲刺产品迭代、部署上线或服务交付。"
+                "md": "## 协创松 Buildathon 年度总决赛\n\n- 参赛人群：S1、S2、S3 联赛晋级团队（共60个团队），以及经官方评审具备同等产品能力的 AI+OPC 创业者，总共不超100个团队。\n- AI实战训练营：7月27日。\n- 协创松年度总决赛：7月28日至7月30日。\n- 颁奖活动 & 嘉年华：7月31日。\n- 比赛形式：线下72小时协创马拉松 Buildathon，集中冲刺产品迭代、部署上线或服务交付。"
         },
         "card-stage01-culture": {
                 "title": "企业出题 - 数字文化",
@@ -3487,8 +3608,8 @@ body.lang-en #share-modal p { line-height: 1.55; font-size: 14px; }
         "AI实战训练营（线上&线下）：7月27日": "AI Bootcamp (online & offline): Jul 27",
         "AI实战训练营（线上&amp;线下）：7月27日": "AI Bootcamp (online & offline): Jul 27",
         "协创松年度总决赛（线下）：7月28日至7月30日": "Annual Buildathon Final (offline): Jul 28 – Jul 30",
-        "颁奖典礼&嘉年华（线下）：7月31日": "Awards & Carnival (offline): Jul 31",
-        "颁奖典礼&amp;嘉年华（线下）：7月31日": "Awards & Carnival (offline): Jul 31",
+        "颁奖活动&嘉年华（线下）：7月31日": "Awards & Carnival (offline): Jul 31",
+        "颁奖活动&amp;嘉年华（线下）：7月31日": "Awards & Carnival (offline): Jul 31",
         // ---- Awards rows ----
         "一等奖1支团队/3万元": "1st Prize · 1 team · ¥30,000",
         "二等奖1支团队/1万元": "2nd Prize · 1 team · ¥10,000",
