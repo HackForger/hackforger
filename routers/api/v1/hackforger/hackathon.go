@@ -332,39 +332,6 @@ func PublishHackathon(ctx *context.APIContext) {
 	}
 }
 
-// StartHackathon transitions a hackathon from Open to Hacking.
-//
-// FinalizeHackathon transitions a hackathon from Judging to Finished and computes ranks.
-//
-// swagger:operation POST /hackforger/hackathons/{id}/finalize hackforger hackforgerFinalizeHackathon
-// ---
-// summary: Finalize hackathon (judging to finished)
-// parameters:
-// - name: id
-//   in: path
-//   description: ID of the hackathon
-//   type: integer
-//   format: int64
-//   required: true
-// responses:
-//   "200":
-//     description: Hackathon finalized
-//   "400":
-//     description: Invalid state transition
-//   "404":
-//     "$ref": "#/responses/notFound"
-func FinalizeHackathon(ctx *context.APIContext) {
-	h := getHackathonFromPath(ctx)
-	if h == nil {
-		return
-	}
-	if err := hackforger_service.ConfirmFinalize(ctx, ctx.Doer.ID, h); err != nil {
-		ctx.Error(http.StatusBadRequest, "FinalizeHackathon", err)
-		return
-	}
-	ctx.JSON(http.StatusOK, map[string]string{"status": "finished"})
-}
-
 // CancelHackathon cancels a hackathon (allowed in any non-Finished status).
 //
 // swagger:operation POST /hackforger/hackathons/{id}/cancel hackforger hackforgerCancelHackathon

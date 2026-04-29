@@ -565,9 +565,12 @@ func FinalizeConfirmAPI(ctx *context.APIContext) {
 		return
 	}
 	if err := hackforger_service.ConfirmFinalize(ctx, ctx.Doer.ID, h); err != nil {
-		if hackforger_model.IsErrInvalidHackathonPhase(err) {
+		switch {
+		case hackforger_model.IsErrInvalidHackathonPhase(err):
 			ctx.Error(http.StatusConflict, "InvalidPhase", err)
-		} else {
+		case hackforger_model.IsErrInvalidPrizeDistMode(err):
+			ctx.Error(http.StatusUnprocessableEntity, "InvalidPrizeDistMode", err)
+		default:
 			ctx.InternalServerError(err)
 		}
 		return
