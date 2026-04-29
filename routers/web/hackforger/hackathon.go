@@ -765,35 +765,32 @@ func ManageTrackPost(ctx *context.Context) {
 		prizeDistMode = "winner_takes_all"
 	}
 
-	t := &hackforger_model.HackathonTrack{
-		HackathonID:   h.ID,
-		Name:          ctx.FormString("name"),
-		Description:   ctx.FormString("description"),
-		PrizeCredits:  prizeCredits,
-		PrizeDistMode: prizeDistMode,
+	var ratiosJSON string
+	if prizeDistMode == "tiered" {
+		ratiosJSON = strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
 	}
 
-	// Validate and set ratios only for tiered mode
-	if prizeDistMode == "tiered" {
-		ratiosJSON := strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
-		if ratiosJSON != "" {
-			ratios, err := hackforger_model.ParsePrizeDistRatios(ratiosJSON)
-			if err != nil {
-				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
-				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
-				return
-			}
-			if err := hackforger_model.ValidatePrizeDistRatios(ratios); err != nil {
-				if hackforger_model.IsErrInvalidDistRatios(err) {
-					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
-				} else {
-					ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
-				}
-				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
-				return
-			}
-			t.PrizeDistRatios = ratiosJSON
+	if err := hackforger_model.ValidatePrizeDistConfig(prizeDistMode, ratiosJSON); err != nil {
+		switch {
+		case hackforger_model.IsErrInvalidPrizeDistMode(err):
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_prize_dist_mode"))
+		case hackforger_model.IsErrInvalidDistRatios(err):
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+		default:
+			log.Error("ValidatePrizeDistConfig: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 		}
+		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+		return
+	}
+
+	t := &hackforger_model.HackathonTrack{
+		HackathonID:     h.ID,
+		Name:            ctx.FormString("name"),
+		Description:     ctx.FormString("description"),
+		PrizeCredits:    prizeCredits,
+		PrizeDistMode:   prizeDistMode,
+		PrizeDistRatios: ratiosJSON,
 	}
 
 	if err := hackforger_service.CreateTrackWithRepo(ctx, ctx.Doer, h, t); err != nil {
@@ -824,24 +821,25 @@ func ManageTrackUpdatePost(ctx *context.Context) {
 		track.PrizeDistMode = "winner_takes_all"
 	}
 
-	// Validate tiered ratios
+	var ratiosJSON string
 	if track.PrizeDistMode == "tiered" {
-		ratiosJSON := strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
-		if ratiosJSON != "" {
-			ratios, err := hackforger_model.ParsePrizeDistRatios(ratiosJSON)
-			if err != nil {
-				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
-				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
-				return
-			}
-			if err := hackforger_model.ValidatePrizeDistRatios(ratios); err != nil {
-				ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
-				ctx.Redirect("/hackathon/" + h.Slug + "/manage")
-				return
-			}
-			track.PrizeDistRatios = ratiosJSON
-		}
+		ratiosJSON = strings.TrimSpace(ctx.FormString("prize_dist_ratios"))
 	}
+
+	if err := hackforger_model.ValidatePrizeDistConfig(track.PrizeDistMode, ratiosJSON); err != nil {
+		switch {
+		case hackforger_model.IsErrInvalidPrizeDistMode(err):
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_prize_dist_mode"))
+		case hackforger_model.IsErrInvalidDistRatios(err):
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.invalid_ratios"))
+		default:
+			log.Error("ValidatePrizeDistConfig: %v", err)
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
+		}
+		ctx.Redirect("/hackathon/" + h.Slug + "/manage")
+		return
+	}
+	track.PrizeDistRatios = ratiosJSON
 
 	if err := hackforger_model.UpdateTrack(ctx, track); err != nil {
 		log.Error("UpdateTrack: %v", err)
@@ -1114,9 +1112,12 @@ func FinalizeConfirm(ctx *context.Context) {
 	}
 	h, _ = hackforger_model.GetHackathonByID(ctx, h.ID)
 	if err := hackforger_service.ConfirmFinalize(ctx, ctx.Doer.ID, h); err != nil {
-		if hackforger_model.IsErrInvalidHackathonPhase(err) {
+		switch {
+		case hackforger_model.IsErrInvalidHackathonPhase(err):
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_phase"))
-		} else {
+		case hackforger_model.IsErrInvalidPrizeDistMode(err):
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.invalid_prize_dist_mode"))
+		default:
 			log.Error("ConfirmFinalize: %v", err)
 			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 		}
