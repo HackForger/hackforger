@@ -95,7 +95,8 @@ func TestParsePrizeDistRatios(t *testing.T) {
 	t.Run("InvalidJSON", func(t *testing.T) {
 		_, err := hackforger_model.ParsePrizeDistRatios("not json")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid prize distribution ratios JSON")
+		assert.True(t, hackforger_model.IsErrInvalidDistRatios(err))
+		assert.Contains(t, err.Error(), "malformed JSON")
 	})
 
 	t.Run("RoundTrip", func(t *testing.T) {
@@ -150,7 +151,8 @@ func TestValidatePrizeDistConfig(t *testing.T) {
 	t.Run("Tiered_MalformedJSON", func(t *testing.T) {
 		err := hackforger_model.ValidatePrizeDistConfig("tiered", "not json")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid prize distribution ratios JSON")
+		assert.True(t, hackforger_model.IsErrInvalidDistRatios(err))
+		assert.Contains(t, err.Error(), "malformed JSON")
 	})
 
 	t.Run("Tiered_RatiosSumNot100", func(t *testing.T) {
