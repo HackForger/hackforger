@@ -47,6 +47,9 @@ func SyncStatusCache(ctx context.Context, hackathonID int64, doerID int64) error
 	}
 	publishPhaseChange(ctx, eventDoerID, h, oldStatus, newStatus)
 
+	// Invalidate landing-page cache so the new phase shows up immediately on the public landing.
+	InvalidateLandingCache()
+
 	return nil
 }
 

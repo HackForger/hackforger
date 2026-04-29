@@ -486,6 +486,11 @@ func PublishHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hac
 	}
 	h.IsPublished = true
 
+	// Invalidate landing cache: published-flag change affects landing API filter.
+	// (SyncStatusCache below also invalidates if status changes; this catches
+	// the case where status stays the same — e.g. Draft → Draft when no phases active yet.)
+	InvalidateLandingCache()
+
 	// Sync status (may transition if first phase already started)
 	return SyncStatusCache(ctx, h.ID, doerID)
 }
@@ -586,6 +591,8 @@ func CancelHackathon(ctx context.Context, doerID int64, h *hackforger_model.Hack
 		}
 	}
 	publishPhaseChange(ctx, doerID, h, oldStatus, hackforger_model.HackathonStatusCancelled)
+	// Invalidate landing cache so the cancelled hackathon's slot becomes disabled on the landing page.
+	InvalidateLandingCache()
 	return nil
 }
 
