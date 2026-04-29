@@ -84,12 +84,12 @@ func Home(ctx *context.Context) {
 	}
 
 	// HackForger: serve custom landing page only if admin has configured
-	// hackforger.landing.league_prefix AND the file exists. Without prefix,
+	// hackforger.landing.hackathon_prefix AND the file exists. Without prefix,
 	// fall through to Forgejo's default splash (opt-in semantic).
 	// We use stdlib http.ServeContent (not httpcache.ServeContentWithCacheControl)
 	// because the latter calls SetCacheControlInHeader which would overwrite the
 	// "private, no-store" directive we explicitly set below.
-	prefix, _ := system_model.GetSettingByKey(ctx, "hackforger.landing.league_prefix")
+	prefix, _ := system_model.GetSettingByKey(ctx, "hackforger.landing.hackathon_prefix")
 	if prefix != "" {
 		landingPath := filepath.Join(setting.CustomPath, "public", "assets", "landing", "index.html")
 		if f, err := os.Open(landingPath); err == nil {

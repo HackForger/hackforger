@@ -790,13 +790,14 @@ Expected: 0 occurrences after replacement.
 
 ### Task 9: Build, run, and Phase 1 E2E
 
-- [ ] **Step 1: Build (no `make frontend` needed — `custom/public/` is not bundled by webpack)**
+- [ ] **Step 1: Build (frontend + backend both required)**
 
 ```bash
+make frontend 2>&1 | tail -3
 TAGS="bindata sqlite sqlite_unlock_notify" make backend 2>&1 | tail -3
 ```
 
-> Note: `make frontend` writes to `public/assets/`, not `custom/public/assets/`. Our edits in `custom/public/assets/landing/` don't go through Vite/webpack — direct served by `public.FileHandlerFunc`. Skip frontend build.
+> **Important**: `make frontend` IS required even though our changes are in `custom/public/`. The backend's `bindata` tag embeds `public/assets/*` (webpack output, gitignored) at build time. A fresh worktree has empty `public/assets/js/` etc. — without `make frontend`, the binary starts but `/assets/js/index.js` returns 404 and Forgejo's UI is broken (this caught us once). The earlier note saying "skip frontend" was wrong for worktree binaries.
 
 - [ ] **Step 2: Stop main gitea, start worktree binary**
 

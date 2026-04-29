@@ -17,13 +17,16 @@ import (
 
 const landingCacheTTL = 5 * time.Minute
 
-// landingSlotOrder defines the 12 stage slots that appear on the landing page.
-// MUST match the data-stage attributes in custom/public/assets/landing/index.html.
-// If the landing HTML changes the slot list, update this array (and slot count).
-var landingSlotOrder = []string{
-	"s1-w1", "s1-w2", "s1-w3", "s1-w4",
-	"s2-w1", "s2-w2", "s2-w3", "s2-w4",
-	"s3-w1", "s3-w2", "s3-w3", "s3-w4",
+// landingCardSlots defines the 12 card slot identifiers shown on the landing page.
+// MUST match the data-card attributes in custom/public/assets/landing/index.html.
+// Slot identifiers are deliberately neutral numeric strings — HackForger has no
+// "stage" or "wave" concept; the visual grouping (S1/S2/S3 etc) is purely
+// design-level CSS, not a data concept.
+// If the landing HTML changes the card count, update this array.
+var landingCardSlots = []string{
+	"1", "2", "3", "4",
+	"5", "6", "7", "8",
+	"9", "10", "11", "12",
 }
 
 var landingCache struct {
@@ -68,34 +71,35 @@ func GetLandingPayload(ctx context.Context) ([]byte, error) {
 }
 
 // buildLandingPayload assembles the JSON response from DB data.
-// Slots without a matching published hackathon return {slug:null, enabled:false}.
+// Cards without a matching published hackathon return {slug:null, enabled:false}.
 func buildLandingPayload(ctx context.Context) ([]byte, error) {
-	prefix, _ := system_model.GetSettingByKey(ctx, "hackforger.landing.league_prefix")
+	prefix, _ := system_model.GetSettingByKey(ctx, "hackforger.landing.hackathon_prefix")
 
 	response := map[string]interface{}{
-		"league_prefix": prefix,
-		"stages":        map[string]interface{}{},
-		"fetched_at":    time.Now().UTC().Format(time.RFC3339),
+		"hackathon_prefix": prefix,
+		"cards":            map[string]interface{}{},
+		"fetched_at":       time.Now().UTC().Format(time.RFC3339),
 	}
-	stages := response["stages"].(map[string]interface{})
-	// Initialize all 12 slots empty by default.
-	for _, slot := range landingSlotOrder {
-		stages[slot] = map[string]interface{}{"slug": nil, "enabled": false}
+	cards := response["cards"].(map[string]interface{})
+	// Initialize all 12 card slots empty by default.
+	for _, slot := range landingCardSlots {
+		cards[slot] = map[string]interface{}{"slug": nil, "enabled": false}
 	}
 
 	if prefix == "" {
 		return json.Marshal(response)
 	}
 	// Defense-in-depth: validate prefix on read in case DB was tampered.
-	if !validation.IsValidUsername(prefix + "-s1-w1") {
+	if !validation.IsValidUsername(prefix + "-h1") {
 		log.Warn("Invalid landing prefix in DB: %q", prefix)
 		return json.Marshal(response)
 	}
 
-	expectedSlugs := make([]string, 0, len(landingSlotOrder))
-	slugToSlot := make(map[string]string, len(landingSlotOrder))
-	for _, slot := range landingSlotOrder {
-		s := prefix + "-" + slot
+	// Slug pattern: <prefix>-h{N} for N=1..12. The "h" prefix maps to "hackathon".
+	expectedSlugs := make([]string, 0, len(landingCardSlots))
+	slugToSlot := make(map[string]string, len(landingCardSlots))
+	for _, slot := range landingCardSlots {
+		s := prefix + "-h" + slot
 		expectedSlugs = append(expectedSlugs, s)
 		slugToSlot[s] = slot
 	}
@@ -119,27 +123,51 @@ func buildLandingPayload(ctx context.Context) ([]byte, error) {
 		if slot == "" {
 			continue
 		}
-		// GetCurrentPhase eager-loads phase.PhaseType — no separate fetch.
-		phase, _ := hackforger_model.GetCurrentPhase(ctx, "hackathon", h.ID)
+		// Pre-fetch all phases for this hackathon once (PhaseType eager-loaded).
+		// Avoids repeated round-trips for each phase-key window query.
+		allPhases, _ := hackforger_model.GetPhasesByActivity(ctx, "hackathon", h.ID)
 
-		slotData := map[string]interface{}{
+		// Find the currently active phase from the pre-fetched list.
+		var currentPhase *hackforger_model.Phase
+		nowUnix := time.Now().Unix()
+		for _, p := range allPhases {
+			if p.StartTime <= nowUnix && p.EndTime > nowUnix {
+				currentPhase = p
+				break
+			}
+		}
+
+		cardData := map[string]interface{}{
 			"slug":    h.Slug,
 			"name":    h.Name,
-			"enabled": determineEnabled(h, phase),
+			"enabled": determineEnabled(h, currentPhase),
 		}
-		if phase != nil && phase.PhaseType != nil {
-			slotData["current_phase"] = map[string]interface{}{
-				"key":               phase.PhaseType.Key,
-				"display_name_i18n": phase.PhaseType.DisplayNameI18n,
-				"ends_at":           time.Unix(phase.EndTime, 0).UTC().Format(time.RFC3339),
+		if currentPhase != nil && currentPhase.PhaseType != nil {
+			cardData["current_phase"] = map[string]interface{}{
+				"key":               currentPhase.PhaseType.Key,
+				"display_name_i18n": currentPhase.PhaseType.DisplayNameI18n,
+				"ends_at":           time.Unix(currentPhase.EndTime, 0).UTC().Format(time.RFC3339),
 			}
 		}
-		// registration_window: query the registration phase specifically.
-		if regPhase := findPhaseByKey(ctx, h.ID, "registration"); regPhase != nil {
-			slotData["registration_window"] = map[string]string{
-				"start": time.Unix(regPhase.StartTime, 0).UTC().Format(time.RFC3339),
-				"end":   time.Unix(regPhase.EndTime, 0).UTC().Format(time.RFC3339),
+
+		// All 4 phase windows hydrated for badge updates (D1).
+		// Phase keys match HackForger's phase_type catalog (activity_kind='hackathon'):
+		//   registration, development, judging, results
+		// JS maps these keys to badge prefixes via PHASE_LABELS dictionary.
+		windows := map[string]map[string]string{}
+		for _, key := range []string{"registration", "development", "judging", "results"} {
+			for _, p := range allPhases {
+				if p.PhaseType != nil && p.PhaseType.Key == key {
+					windows[key+"_window"] = map[string]string{
+						"start": time.Unix(p.StartTime, 0).UTC().Format(time.RFC3339),
+						"end":   time.Unix(p.EndTime, 0).UTC().Format(time.RFC3339),
+					}
+					break
+				}
 			}
+		}
+		for k, v := range windows {
+			cardData[k] = v
 		}
 
 		names := []string{}
@@ -148,9 +176,9 @@ func buildLandingPayload(ctx context.Context) ([]byte, error) {
 				names = append(names, t.Name)
 			}
 		}
-		slotData["tracks"] = names
+		cardData["tracks"] = names
 
-		stages[slot] = slotData
+		cards[slot] = cardData
 	}
 
 	return json.Marshal(response)
@@ -162,17 +190,4 @@ func determineEnabled(h *hackforger_model.Hackathon, phase *hackforger_model.Pha
 		return true
 	}
 	return h.StatusCache == hackforger_model.HackathonStatusOpen
-}
-
-func findPhaseByKey(ctx context.Context, hackathonID int64, key string) *hackforger_model.Phase {
-	phases, err := hackforger_model.GetPhasesByActivity(ctx, "hackathon", hackathonID)
-	if err != nil {
-		return nil
-	}
-	for _, p := range phases {
-		if p.PhaseType != nil && p.PhaseType.Key == key {
-			return p
-		}
-	}
-	return nil
 }

@@ -1762,8 +1762,8 @@ func Routes() *web.Route {
 
 		// HackForger API routes
 		m.Group("/hackforger", func() {
-			// Landing page (public, no auth) — DB-driven hydration of stage cards
-			m.Get("/landing/stages", hackforger_api.GetLandingStagesAPI)
+			// Landing page (public, no auth) — DB-driven hydration of 12 numbered card slots
+			m.Get("/landing/cards", hackforger_api.GetLandingCardsAPI)
 
 			// Hackathon routes
 			m.Get("/hackathons", hackforger_api.ListHackathons)

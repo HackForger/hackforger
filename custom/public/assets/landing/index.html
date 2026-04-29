@@ -719,26 +719,28 @@
             align-content: flex-start;
         }
         /* CTA pinned to bottom of card */
-        .tone-card button[data-stage] {
+        .tone-card button[data-card] {
             margin-top: auto;
         }
 
     </style>
 <script id="hackforger-landing-config">
 window.HACKFORGER_LANDING_CONFIG = {
-  stages: {
-    's1-w1': { slug: 'tbd', enabled: true  },
-    's1-w2': { slug: 'tbd', enabled: false },
-    's1-w3': { slug: 'tbd', enabled: false },
-    's1-w4': { slug: 'tbd', enabled: false },
-    's2-w1': { slug: 'tbd', enabled: false },
-    's2-w2': { slug: 'tbd', enabled: false },
-    's2-w3': { slug: 'tbd', enabled: false },
-    's2-w4': { slug: 'tbd', enabled: false },
-    's3-w1': { slug: 'tbd', enabled: false },
-    's3-w2': { slug: 'tbd', enabled: false },
-    's3-w3': { slug: 'tbd', enabled: false },
-    's3-w4': { slug: 'tbd', enabled: false }
+  // 12 numbered card slots — visual grouping (S1/S2/S3 etc) is design-level only.
+  // Slug pattern: <admin-configured prefix>-h{N} for N=1..12.
+  cards: {
+    '1':  { slug: 'tbd', enabled: true  },
+    '2':  { slug: 'tbd', enabled: false },
+    '3':  { slug: 'tbd', enabled: false },
+    '4':  { slug: 'tbd', enabled: false },
+    '5':  { slug: 'tbd', enabled: false },
+    '6':  { slug: 'tbd', enabled: false },
+    '7':  { slug: 'tbd', enabled: false },
+    '8':  { slug: 'tbd', enabled: false },
+    '9':  { slug: 'tbd', enabled: false },
+    '10': { slug: 'tbd', enabled: false },
+    '11': { slug: 'tbd', enabled: false },
+    '12': { slug: 'tbd', enabled: false }
   }
 };
 </script>
@@ -755,11 +757,11 @@ window.HACKFORGER_LANDING_CONFIG = {
     modal.setAttribute('aria-hidden', 'false');
   }
 
-  function handleRegisterClick(stageId) {
+  function handleRegisterClick(cardId) {
     try {
       var cfg = window.HACKFORGER_LANDING_CONFIG &&
-                window.HACKFORGER_LANDING_CONFIG.stages &&
-                window.HACKFORGER_LANDING_CONFIG.stages[stageId];
+                window.HACKFORGER_LANDING_CONFIG.cards &&
+                window.HACKFORGER_LANDING_CONFIG.cards[cardId];
       if (!cfg || !cfg.enabled) return;
 
       if (!cfg.slug || cfg.slug === 'tbd') {
@@ -787,31 +789,32 @@ window.HACKFORGER_LANDING_CONFIG = {
     }
   }
 
-  // Event delegation: single listener captures all [data-stage] button clicks
+  // Event delegation: single listener captures all [data-card] button clicks
   document.addEventListener('click', function(e) {
-    var btn = e.target.closest && e.target.closest('[data-stage]');
+    var btn = e.target.closest && e.target.closest('[data-card]');
     if (!btn) return;
     if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
-    var stageId = btn.getAttribute('data-stage');
-    if (stageId) handleRegisterClick(stageId);
+    var cardId = btn.getAttribute('data-card');
+    if (cardId) handleRegisterClick(cardId);
   });
 })();
 </script>
 <script id="hackforger-landing-hydrate">
 (function() {
-  // i18n key → display label mapping (Chinese only for now; extend per Issue #110 spec).
+  // Phase key → badge prefix. Uses HackForger phase_type.key (stable identifier).
+  // The actual phase_type keys for activity_kind='hackathon' are:
+  //   registration, development, judging, results
+  // Extend this map for more locales; default is Chinese.
   var PHASE_LABELS = {
-    'hackforger.phase.registration': '#报名',
-    'hackforger.phase.development':  '#开发',
-    'hackforger.phase.peer_review':  '#互评',
-    'hackforger.phase.results':      '#公布晋级',
-    'hackforger.phase.judging':      '#评审',
-    'hackforger.phase.finished':     '#已结束'
+    'registration': '#报名',
+    'development':  '#开发',
+    'judging':      '#互评',
+    'results':      '#公布晋级'
   };
 
-  function phaseLabel(i18nKey) {
-    if (!i18nKey) return '';
-    return PHASE_LABELS[i18nKey] || ('#' + i18nKey.split('.').pop());
+  function phaseLabel(key) {
+    if (!key) return '';
+    return PHASE_LABELS[key] || ('#' + key);
   }
 
   function formatRange(window) {
@@ -829,7 +832,7 @@ window.HACKFORGER_LANDING_CONFIG = {
   }
 
   function hydrateCard(slot, data) {
-    var btn = document.querySelector('[data-stage="' + slot + '"]');
+    var btn = document.querySelector('[data-card="' + slot + '"]');
     if (!btn) return;
     var card = btn.closest('.tone-card');
     if (!card) return;
@@ -840,19 +843,51 @@ window.HACKFORGER_LANDING_CONFIG = {
       if (h5) h5.textContent = data.name;
     }
 
-    // Registration window badge
-    if (data.registration_window) {
-      var regBadge = findBadgeByPrefix(card, '#报名');
-      if (regBadge) regBadge.textContent = '#报名 ' + formatRange(data.registration_window);
-    }
+    // Phase window badges — replace text for all 4 phases when API returns them.
+    // Map of API field → badge prefix (matches both Chinese-only and final-Wave variants).
+    var WINDOW_BADGES = [
+      { field: 'registration_window', prefix: '#报名' },
+      { field: 'development_window',  prefix: '#开发' },
+      { field: 'judging_window',      prefix: '#互评' },
+      { field: 'results_window',      prefix: '#公布晋级' }
+    ];
+    WINDOW_BADGES.forEach(function(spec) {
+      var win = data[spec.field];
+      if (!win) return;
+      var badge = findBadgeByPrefix(card, spec.prefix);
+      if (!badge) return;
+      // Note: 公布晋级 phase typically has end_time≈start_time (single day);
+      // formatRange returns "5.9-5.9" — fine for display.
+      var range = formatRange(win);
+      badge.textContent = spec.prefix + ' ' + range;
+    });
 
-    // Current phase: emphasize matching badge with primary color (best-effort visual hint)
-    if (data.current_phase && data.current_phase.display_name_i18n) {
-      var label = phaseLabel(data.current_phase.display_name_i18n);
+    // Current phase: emphasize matching badge with primary color (best-effort visual hint).
+    // Use stable phase key (not display_name_i18n which is the Forgejo translation key).
+    if (data.current_phase && data.current_phase.key) {
+      var label = phaseLabel(data.current_phase.key);
       var phaseBadge = findBadgeByPrefix(card, label);
       if (phaseBadge) {
         phaseBadge.classList.remove('bg-[#FFA526]', 'text-black');
         phaseBadge.classList.add('bg-primary', 'text-on-primary', 'ring-2', 'ring-primary');
+      }
+    }
+
+    // Tracks list — render as compact text below badges (D1.5)
+    if (data.tracks && data.tracks.length > 0) {
+      var existing = card.querySelector('[data-hydrate="tracks"]');
+      if (!existing) {
+        // Create tracks element if missing in template; insert before button.
+        var btnEl = card.querySelector('button[data-card]');
+        if (btnEl) {
+          existing = document.createElement('p');
+          existing.setAttribute('data-hydrate', 'tracks');
+          existing.className = 'mb-4 text-[10px] text-on-surface-variant font-oppo leading-snug';
+          btnEl.parentNode.insertBefore(existing, btnEl);
+        }
+      }
+      if (existing) {
+        existing.textContent = '赛道：' + data.tracks.join(' · ');
       }
     }
 
@@ -872,25 +907,25 @@ window.HACKFORGER_LANDING_CONFIG = {
   }
 
   function hydrateLanding() {
-    fetch('/api/v1/hackforger/landing/stages')
+    fetch('/api/v1/hackforger/landing/cards')
       .then(function(r) {
         if (!r.ok) return null;
         return r.json();
       })
       .then(function(json) {
-        if (!json || !json.stages) return;
-        var stages = json.stages;
-        Object.keys(stages).forEach(function(slot) {
-          var data = stages[slot];
-          // Patch semantic: skip slots without slug — keep HTML defaults.
-          // Note: this means once a slot is hydrated, unbinding the hackathon
+        if (!json || !json.cards) return;
+        var cards = json.cards;
+        Object.keys(cards).forEach(function(slot) {
+          var data = cards[slot];
+          // Patch semantic: skip cards without slug — keep HTML defaults.
+          // Note: this means once a card is hydrated, unbinding the hackathon
           // will not revert the DOM until the user reloads the page.
           if (!data.slug) return;
           hydrateCard(slot, data);
 
           // Sync click handler to live data
-          if (window.HACKFORGER_LANDING_CONFIG && window.HACKFORGER_LANDING_CONFIG.stages[slot]) {
-            window.HACKFORGER_LANDING_CONFIG.stages[slot] = {
+          if (window.HACKFORGER_LANDING_CONFIG && window.HACKFORGER_LANDING_CONFIG.cards[slot]) {
+            window.HACKFORGER_LANDING_CONFIG.cards[slot] = {
               slug: data.slug,
               enabled: data.enabled
             };
@@ -914,7 +949,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <header class="header-shell fixed top-0 w-full z-50 h-[52px]">
 <div class="desktop-container mx-auto flex h-full w-full items-center justify-between px-4 sm:px-6">
 <div class="relative z-[1] flex items-center">
-<img id="brand-logo" alt="SYNNOVATOR" class="h-6 md:h-7 w-auto select-none cursor-pointer" src="assets/images/深色.svg" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"/>
+<img id="brand-logo" alt="HackForger" class="h-6 md:h-7 w-auto select-none cursor-pointer" src="/assets/img/logo-dark.svg" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"/>
 </div>
 <div class="relative z-[1] flex items-center gap-1.5 sm:gap-2 md:gap-2.5">
 <button type="button" id="theme-toggle-btn" class="inline-flex items-center justify-center rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors h-9 w-9 sm:h-10 sm:w-10 md:h-8 md:w-8" aria-label="切换到浅色模式" title="切换到浅色模式">
@@ -1712,10 +1747,10 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="flex items-start gap-4 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 1" class="w-full h-full object-cover" src="assets/images/S1-1.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 1" class="w-full h-full object-cover" src="assets/images/S1-1.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">初赛/Wave 1</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 1</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 4.29-5.5</span>
@@ -1723,15 +1758,15 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 5.8</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 5.9</span>
 </div>
-<button data-stage="s1-w1" class="w-full py-3 bg-primary text-black text-xs md:text-sm font-black rounded-full uppercase tracking-widest hover:scale-[0.98] transition-transform font-oppo mt-auto">立即报名</button>
+<button data-card="1" class="w-full py-3 bg-primary text-black text-xs md:text-sm font-black rounded-full uppercase tracking-widest hover:scale-[0.98] transition-transform font-oppo mt-auto">立即报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 2" class="w-full h-full object-cover" src="assets/images/S1-2.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 2" class="w-full h-full object-cover" src="assets/images/S1-2.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">复赛/Wave 2</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 2</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 5.7-5.9</span>
@@ -1739,15 +1774,15 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 5.15</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 5.16</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s1-w2" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.7-5.9报名</button>
+<button disabled aria-disabled="true" data-card="2" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.7-5.9报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 3" class="w-full h-full object-cover" src="assets/images/S1-3.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 3" class="w-full h-full object-cover" src="assets/images/S1-3.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">半决赛/Wave 3</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 3</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 5.14-5.16</span>
@@ -1755,20 +1790,20 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 5.24</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 5.25</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s1-w3" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.14-5.16报名</button>
+<button disabled aria-disabled="true" data-card="3" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.14-5.16报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 4" class="w-full h-full object-cover" src="assets/images/S1-4.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 4" class="w-full h-full object-cover" src="assets/images/S1-4.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">决赛/Wave 4</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 4</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#决赛 6.17-6.18</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s1-w4" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">6.17-6.18决赛</button>
+<button disabled aria-disabled="true" data-card="4" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">6.17-6.18决赛</button>
 </div>
 </div>
 </div>
@@ -1789,10 +1824,10 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="flex items-start gap-4 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 1" class="w-full h-full object-cover" src="assets/images/S2-1.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 5" class="w-full h-full object-cover" src="assets/images/S2-1.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">初赛/Wave 1</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 5</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 5.11-5.26</span>
@@ -1800,15 +1835,15 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 5.29</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 5.30</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s2-w1" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.11-5.26报名</button>
+<button disabled aria-disabled="true" data-card="5" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.11-5.26报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 2" class="w-full h-full object-cover" src="assets/images/S2-2.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 6" class="w-full h-full object-cover" src="assets/images/S2-2.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">复赛/Wave 2</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 6</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 5.28-5.30</span>
@@ -1816,15 +1851,15 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 6.5</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 6.6</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s2-w2" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.28-5.30报名</button>
+<button disabled aria-disabled="true" data-card="6" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.28-5.30报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 3" class="w-full h-full object-cover" src="assets/images/S2-3.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 7" class="w-full h-full object-cover" src="assets/images/S2-3.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">半决赛/Wave 3</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 7</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 6.4-6.6</span>
@@ -1832,20 +1867,20 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 6.14</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 6.15</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s2-w3" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">6.4-6.6报名</button>
+<button disabled aria-disabled="true" data-card="7" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">6.4-6.6报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 4" class="w-full h-full object-cover" src="assets/images/S2-4.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 8" class="w-full h-full object-cover" src="assets/images/S2-4.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">决赛/Wave 4</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 8</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#决赛 6.17-6.18</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s2-w4" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">6.17-6.18决赛</button>
+<button disabled aria-disabled="true" data-card="8" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">6.17-6.18决赛</button>
 </div>
 </div>
 </div>
@@ -1869,10 +1904,10 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="flex items-start gap-4 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 1" class="w-full h-full object-cover" src="assets/images/S3-1.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 9" class="w-full h-full object-cover" src="assets/images/S3-1.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">初赛/Wave 1</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 9</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 5.11-6.24</span>
@@ -1880,15 +1915,15 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 7.2</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 7.3</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s3-w1" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.11-6.24报名</button>
+<button disabled aria-disabled="true" data-card="9" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5.11-6.24报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 2" class="w-full h-full object-cover" src="assets/images/S3-2.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 10" class="w-full h-full object-cover" src="assets/images/S3-2.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">复赛/Wave 2</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 10</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 7.1-7.3</span>
@@ -1896,15 +1931,15 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 7.11</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 7.12</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s3-w2" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">7.1-7.3报名</button>
+<button disabled aria-disabled="true" data-card="10" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">7.1-7.3报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 3" class="w-full h-full object-cover" src="assets/images/S3-3.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 11" class="w-full h-full object-cover" src="assets/images/S3-3.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">半决赛/Wave 3</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 11</h5>
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#报名 7.10-7.12</span>
@@ -1912,20 +1947,20 @@ window.HACKFORGER_LANDING_CONFIG = {
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#互评 7.20</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#公布晋级 7.21</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s3-w3" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">7.10-7.12报名</button>
+<button disabled aria-disabled="true" data-card="11" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">7.10-7.12报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
 <div class="w-full overflow-hidden" style="aspect-ratio: 3 / 2;">
-<img loading="lazy" decoding="async" alt="Wave 4" class="w-full h-full object-cover" src="assets/images/S3-4.webp"/>
+<img loading="lazy" decoding="async" alt="Hackathon 12" class="w-full h-full object-cover" src="assets/images/S3-4.webp"/>
 </div>
 <div class="p-6 pt-5 flex flex-col flex-1">
-<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">决赛/Wave 4</h5>
+<h5 class="text-lg font-bold text-on-surface font-oppo mb-2">Hackathon 12</h5>
 <div class="mb-6 flex items-center gap-2">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#41FAF4] text-black text-[8px] font-black rounded-[2px] font-oppo">官方命题</span>
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">#6月-7月</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s3-w4" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">立即报名</button>
+<button disabled aria-disabled="true" data-card="12" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">立即报名</button>
 </div>
 </div>
 </div>
@@ -2089,8 +2124,8 @@ window.HACKFORGER_LANDING_CONFIG = {
 <footer class="py-12">
 <div class="px-6 desktop-container flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
 <div>
-<img id="footer-wordmark-img" class="footer-wordmark-img h-7 md:h-8 w-auto max-w-[min(100%,220px)] object-contain object-left select-none" src="assets/images/深色模式.svg" alt="SYNNOVATOR" width="180" height="32" loading="lazy"/>
-<p class="text-on-surface-variant text-xs mt-2 font-oppo">© 2026 SYNNOVATOR AI Global League. All rights reserved.</p>
+<img id="footer-wordmark-img" class="footer-wordmark-img h-7 md:h-8 w-auto max-w-[min(100%,220px)] object-contain object-left select-none" src="/assets/img/logo-dark.svg" alt="HackForger" width="180" height="32" loading="lazy"/>
+<p class="text-on-surface-variant text-xs mt-2 font-oppo">© 2026 HackForger. All rights reserved.</p>
 <button type="button" data-info-id="disclaimer" class="footer-disclaimer-btn mt-3 inline-flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer text-sm font-extrabold font-oppo text-on-surface-variant hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary/50 rounded" aria-label="查看免责申明">免责申明</button>
 </div>
 <div class="flex gap-6">
@@ -2180,8 +2215,8 @@ window.HACKFORGER_LANDING_CONFIG = {
     </script>
 <script>
 (function () {
-    var STORAGE_KEY = 'league_auth_session';
-    var THEME_KEY = 'league_theme_mode';
+    var STORAGE_KEY = 'hackforger_landing_session';
+    var THEME_KEY = 'hackforger_landing_theme';
 
     /** 可配置：在其它脚本中先赋值 window.LEAGUE_AUTH 再加载本页，或在本 script 前插入一行 script 配置。
      *  loginUrl: 登录 API 完整地址；留空则本地演示（不请求网络）。
@@ -2218,10 +2253,12 @@ window.HACKFORGER_LANDING_CONFIG = {
     var brandLogo = document.getElementById('brand-logo');
     var footerWordmarkImg = document.getElementById('footer-wordmark-img');
     var systemThemeQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-    var LOGO_LIGHT = 'assets/images/浅色.svg';
-    var LOGO_DARK = 'assets/images/深色.svg';
-    var FOOTER_WORDMARK_LIGHT = 'assets/images/浅色模式.svg';
-    var FOOTER_WORDMARK_DARK = 'assets/images/深色模式.svg';
+    // HackForger logos — absolute paths bypass <base href="/assets/landing/">.
+    // Source files: custom/public/assets/img/logo-{light,dark}.svg
+    var LOGO_LIGHT = '/assets/img/logo-light.svg';
+    var LOGO_DARK = '/assets/img/logo-dark.svg';
+    var FOOTER_WORDMARK_LIGHT = '/assets/img/logo-light.svg';
+    var FOOTER_WORDMARK_DARK = '/assets/img/logo-dark.svg';
 
     /** 与页面赛道色一致的亮色，用于已登录头像底（随机一次后写入 session，刷新不变） */
     var AVATAR_ACCENT_COLORS = ['#BBFD3B', '#FB7A38', '#FF74A7', '#4CF0F0', '#FFA526', '#F0F03A'];
@@ -3038,7 +3075,7 @@ window.HACKFORGER_LANDING_CONFIG = {
     var helperFallback = document.getElementById('floating-qr-helper-fallback');
     var feishuImg = document.getElementById('floating-qr-feishu-img');
     var feishuFallback = document.getElementById('floating-qr-feishu-fallback');
-    var STORAGE_KEY = 'league_floating_qr_collapsed';
+    var STORAGE_KEY = 'hackforger_landing_floating_qr_collapsed';
     if (!root || !panel || !handle || !closeBtn) return;
 
     var cfg = window.LEAGUE_FLOAT_QR || {};
@@ -3363,7 +3400,7 @@ body.lang-en #share-modal p { line-height: 1.55; font-size: 14px; }
 <script>
 /* ============ i18n engine: ZH <-> EN ============ */
 (function () {
-    var STORAGE_KEY = 'league_lang';
+    var STORAGE_KEY = 'hackforger_landing_lang';
     // Translation dictionary: key = exact trimmed Chinese text, value = English
     var DICT = {
         // ---- Document title & meta ----

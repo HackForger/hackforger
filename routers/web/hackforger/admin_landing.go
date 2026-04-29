@@ -18,7 +18,7 @@ import (
 const (
 	tplAdminLandingConfig base.TplName = "hackforger/admin/landing_config"
 
-	settingKeyLandingPrefix = "hackforger.landing.league_prefix"
+	settingKeyLandingPrefix = "hackforger.landing.hackathon_prefix"
 )
 
 // AdminLandingConfig renders the landing-page configuration admin form.
@@ -42,8 +42,8 @@ func AdminLandingConfigPost(ctx *context.Context) {
 	// Empty prefix is allowed — it disables the landing page.
 	if prefix != "" {
 		// Validate by attempting Forgejo's username/org-name check on a synthesized slug.
-		// If "<prefix>-s1-w1" wouldn't be a valid org name, the prefix is unusable.
-		if !validation.IsValidUsername(prefix + "-s1-w1") {
+		// If "<prefix>-h1" wouldn't be a valid org name, the prefix is unusable.
+		if !validation.IsValidUsername(prefix + "-h1") {
 			ctx.Flash.Error(ctx.Tr("hackforger.landing.invalid_prefix"))
 			ctx.Redirect(setting.AppSubURL + "/admin/hackforger/landing-config")
 			return

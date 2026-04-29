@@ -10,13 +10,15 @@ import (
 	"forgejo.org/services/context"
 )
 
-// GetLandingStagesAPI serves the landing-page stage data.
+// GetLandingCardsAPI serves the landing-page card data.
 // Public endpoint, no authentication required.
 //
-// GET /api/v1/hackforger/landing/stages
+// GET /api/v1/hackforger/landing/cards
 //
 // Cached 5 minutes server-side via services/hackforger/landing_cache.go.
-func GetLandingStagesAPI(ctx *context.APIContext) {
+// Returns 12 numbered card slots; each slot has either a hydrated hackathon
+// (slug + name + phases + tracks) or empty defaults (slug=null, enabled=false).
+func GetLandingCardsAPI(ctx *context.APIContext) {
 	payload, err := hackforger_service.GetLandingPayload(ctx)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetLandingPayload", err)
