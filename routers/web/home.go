@@ -14,6 +14,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
+	system_model "forgejo.org/models/system"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/log"
@@ -82,19 +83,23 @@ func Home(ctx *context.Context) {
 		return
 	}
 
-	// HackForger: serve custom landing page for unsigned visitors when present.
-	// Falls back to default Forgejo splash if file is missing.
+	// HackForger: serve custom landing page only if admin has configured
+	// hackforger.landing.league_prefix AND the file exists. Without prefix,
+	// fall through to Forgejo's default splash (opt-in semantic).
 	// We use stdlib http.ServeContent (not httpcache.ServeContentWithCacheControl)
 	// because the latter calls SetCacheControlInHeader which would overwrite the
 	// "private, no-store" directive we explicitly set below.
-	landingPath := filepath.Join(setting.CustomPath, "public", "assets", "landing", "index.html")
-	if f, err := os.Open(landingPath); err == nil {
-		defer f.Close()
-		if fi, err := f.Stat(); err == nil && !fi.IsDir() {
-			ctx.Resp.Header().Set("Cache-Control", "private, no-store")
-			ctx.Resp.Header().Set("Vary", "Cookie")
-			http.ServeContent(ctx.Resp, ctx.Req, "index.html", fi.ModTime(), f)
-			return
+	prefix, _ := system_model.GetSettingByKey(ctx, "hackforger.landing.league_prefix")
+	if prefix != "" {
+		landingPath := filepath.Join(setting.CustomPath, "public", "assets", "landing", "index.html")
+		if f, err := os.Open(landingPath); err == nil {
+			defer f.Close()
+			if fi, err := f.Stat(); err == nil && !fi.IsDir() {
+				ctx.Resp.Header().Set("Cache-Control", "private, no-store")
+				ctx.Resp.Header().Set("Vary", "Cookie")
+				http.ServeContent(ctx.Resp, ctx.Req, "index.html", fi.ModTime(), f)
+				return
+			}
 		}
 	}
 
