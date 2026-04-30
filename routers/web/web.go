@@ -486,6 +486,11 @@ func registerRoutes(m *web.Route) {
 	// Especially some AJAX requests, we can reduce middleware number to improve performance.
 
 	m.Get("/", Home)
+	// HackForger: permanent permalink for the 2026 Lingang event landing.
+	// Reuses Home handler so anonymous visitors see the landing page; signed
+	// users still go to dashboard. Future events get their own /lingang-YYYY
+	// route while / always reflects the current default.
+	m.Get("/lingang-2026", Home)
 	m.Get("/sitemap.xml", sitemapEnabled, ignExploreSignIn, HomeSitemap)
 	m.Group("/.well-known", func() {
 		m.Get("/openid-configuration", auth.OIDCWellKnown)
