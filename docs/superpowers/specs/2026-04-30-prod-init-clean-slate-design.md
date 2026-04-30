@@ -79,12 +79,19 @@ A new git worktree on branch `dev/test-data-backup-2026-04-30`. Holds the backup
 ├── forgejo.db.sql              # Full SQL dump of pre-wipe DB (committed)
 ├── forgejo-repositories.tar.gz # All test repos (gitignored, ~20MB)
 ├── attachments.tar.gz          # User attachments (gitignored, ~11MB)
-├── avatars.tar.gz              # All avatars (gitignored, ~700KB)
+├── avatars.tar.gz              # User avatars (gitignored, ~700KB)
+├── repo-avatars.tar.gz         # Repo avatars (gitignored)
+├── jwt-private.pem.snapshot    # OAuth2 JWT signing key — preserved across wipe (gitignored, sensitive)
+├── action-runners.sql          # Backup of action_runner rows (committed) — needed if runners re-register manually
 ├── app.ini.snapshot            # Server config snapshot (committed)
 ├── landing-index.html.snapshot # Landing page snapshot (committed)
 ├── essentials.sql              # Re-insert script for Logto + system_setting (committed)
 └── RESTORE.md                  # Step-by-step rollback instructions (committed)
 ```
+
+**Indexer dirs (`data/indexers/*.bleve`) are NOT backed up** — they're stale references after wipe and Forgejo rebuilds them on next startup. Delete during wipe.
+
+**`data/jwt/private.pem` is preserved across wipe** (copied to dev worktree for backup, but the original at `data/jwt/private.pem` stays in place). This keeps any in-flight OAuth2 access tokens valid; cleaner than forcing all OAuth2 reauth.
 
 ### `.env` (in main repo, gitignored)
 
@@ -97,7 +104,9 @@ This file lives at the main repo root. The user views it manually after the wipe
 
 ### 12 Hackathon entities (created via REST API)
 
-Each hackathon is created via `POST /api/v1/hackforger/hackathons` with the slug + name from #122. The system auto-creates a dedicated org for each hackathon (existing 1:1 pattern observed in current data, e.g. hackathon `2nd-dishui-opc-w1` → org `2nd-dishui-opc-w1`).
+Each hackathon is created via `POST /api/v1/hackforger/hackathons` with the slug + name from #122.
+
+**API contract gotcha (verified in `routers/api/v1/hackforger/hackathon.go:24` and `services/hackforger/hackathon.go:124-141`)**: The API form requires `org_id` (`binding:"Required"`), but the service layer **always creates a new org for the hackathon and overwrites `h.OrgID`**. So we MUST send a non-zero `org_id` to pass binding validation, but its value doesn't matter functionally. We'll send `org_id: 1` (the admin user's id — since users and orgs share an ID space in Forgejo's `user` table) to satisfy validation. The resulting hackathon's actual `org_id` will be the new auto-created org.
 
 Slug mapping (per [#122](https://github.com/HackForger/hackforger/issues/122)):
 
@@ -144,9 +153,16 @@ We chose **approach C — full reset + re-insert essentials**, after considering
 - **A · surgical SQL DELETE**: rejected because the schema has 50+ tables related to hackforger entities (hackathon, bounty, grant, credit, feed, etc.) plus many Forgejo core tables; risk of leaving orphan rows is high.
 - **B · pure full reset**: rejected because we'd lose the Logto OAuth config (already documented and in production use, regenerating it requires recreating the OAuth app on Logto's side which we want to avoid).
 - **C · full reset + re-insert essentials** (chosen): wipe forgejo.db entirely, let migrations recreate empty schema, then re-INSERT only:
-  - The hackforger admin user (via `gitea admin user create` CLI)
-  - The Logto `login_source` row (via SQL INSERT from saved cfg)
-  - 4 curated system_setting rows (`revision`, `picture.disable_gravatar`, `repository.open-with.editor-apps`, `hackforger.landing.hackathon_prefix`)
+  - The hackforger admin user (via `gitea admin user create` CLI; **new strong random password** stored in `.env`)
+  - The Logto `login_source` row (via SQL INSERT from saved cfg, **with explicit `id=3`** to preserve callback URL `/user/oauth2/Logto`)
+  - Curated `system_setting` rows: `revision`, `picture.disable_gravatar`, `repository.open-with.editor-apps`, `hackforger.landing.hackathon_prefix` (re-INSERT **without explicit `id`** — let AUTOINCREMENT assign; row identity is `setting_key` UNIQUE INDEX)
+
+**Operational details:**
+- Stop the instance with `pkill -TERM` and `sleep 2` before snapshotting `forgejo.db`, otherwise pending WAL writes can be lost.
+- Delete with **exact filenames** (`forgejo.db`, `forgejo.db-wal`, `forgejo.db-shm`) — never glob `forgejo.db*`, since `data/forgejo.db.bak.*` rotation backups live there.
+- Remove `data/queues/common/LOCK` between stop and restart (LevelDB lock — known restart pitfall, per CLAUDE.md).
+- Delete `data/indexers/*.bleve` (stale references after wipe; Forgejo rebuilds on startup).
+- **Keep** `data/jwt/private.pem` (preserves OAuth2 access token validity); back it up to dev worktree but don't rotate.
 
 The SQL dump from Phase 2 lets us recover the exact pre-wipe state if anything goes wrong.
 
@@ -168,18 +184,20 @@ The SQL dump from Phase 2 lets us recover the exact pre-wipe state if anything g
 | Stage                          | Test                                                                          |
 |--------------------------------|-------------------------------------------------------------------------------|
 | After Phase 2                  | Verify backup file sizes match pre-wipe state; SQL dump is valid (`sqlite3 :memory: < forgejo.db.sql` parses without error). |
-| After Phase 4                  | Instance returns HTTP 200 at `/`; `gitea admin user list` shows only `hackforger`; `SELECT * FROM login_source` returns Logto row. |
-| After Phase 5                  | `curl /hackathon/opc-2026-shuzhi-w1` ... × 12 all return HTTP 200 with the correct page title. |
+| After Phase 4                  | Instance returns HTTP 200 at `/`; `gitea admin user list \| wc -l == 2` (header + 1 user); `SELECT * FROM login_source` returns Logto row with id=3. |
+| After Phase 5                  | `curl /hackathon/opc-2026-shuzhi-w1` ... × 12 all return HTTP 200 with the correct page title; `SELECT count(*) FROM hackathon == 12`. |
 | After Phase 6                  | Landing page DOM contains 12 new slugs in `HACKFORGER_LANDING_CONFIG.stages`; clicking S1-W1 routes to `/hackathon/opc-2026-shuzhi-w1`. |
 | Final visual                   | Open landing in browser; all 12 cards show titles per #112 (already shipped); buttons reflect today's state per #112 (S1-W1 active, others disabled with date labels). |
 
 ## Security & Operational Notes
 
-- The `.env` file at main repo root contains the admin password. It is `.gitignore`'d. The user is responsible for relocating it to a proper secret store post-init.
-- The Logto OAuth row is re-inserted as-is (including ClientSecret in cfg JSON). The Logto app on the provider side is unchanged; only the local DB row is recreated.
-- Existing FORGEJO_TOKEN values held by ops/dev tooling become invalid after wipe. A new token is generated and saved to `.env`.
-- The instance is briefly down (~30s) during wipe + restart. Internal usage only; no public users affected.
+- The `.env` file at main repo root contains the admin password and new admin token. It is `.gitignore`'d, written with `umask 077` then `chmod 600`. The user is responsible for relocating it to a proper secret store post-init and deleting the local copy.
+- The Logto OAuth row is re-inserted with **explicit `id=3`** to preserve the callback URL `/user/oauth2/Logto` and any admin UI bookmarks at `/-/admin/auths/3`. The Logto app on the provider side is unchanged.
+- `data/jwt/private.pem` is preserved (not deleted during wipe) so existing OAuth2 access tokens stay valid for their TTL.
+- Existing FORGEJO_TOKEN values held by ops/dev tooling become invalid after wipe (rows in `access_token` table are dropped). A new token is generated and saved to `.env`.
+- The instance is briefly down (~30–60s) during wipe + restart. Internal usage only; no public users affected.
 - We do NOT change `INTERNAL_TOKEN` in app.ini; it stays the same so server-internal cron/auth keeps working.
+- **action_runner re-registration** (Phase 7 follow-up): if any GitHub-Actions-style runner is currently registered (used by hackathon submission workflows per `services/hackforger/hackathon.go:165-201`), it must be re-registered after the wipe. `action-runners.sql` in the backup captures pre-wipe runner rows for reference.
 
 ## Open Questions
 
