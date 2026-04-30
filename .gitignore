@@ -162,6 +162,10 @@ claude.local.sh
 
 # MCP server secrets (API keys, tokens)
 .mcp.env
+
+# Local environment / secret files (PG creds, admin password, etc.)
+/.env
+/.env.local
 docs/tests/e2e/*.pdf
 .claude/ralph-loop.local.md
 
