@@ -106,7 +106,12 @@ func ServeAttachment(ctx *context.Context, uuid string) {
 	}
 
 	if repository == nil { // If not linked
-		if !ctx.IsSigned || attach.UploaderID != ctx.Doer.ID { // We block if not the uploader
+		// HackForger platform-level attachments (RepoID=-1) are intended to be embedded
+		// in public hackathon descriptions, grant project pages, and submissions.
+		// They must be readable by anonymous viewers, not just the original uploader.
+		if attach.RepoID == -1 {
+			// Allow public access — these are platform/HackForger-managed assets.
+		} else if !ctx.IsSigned || attach.UploaderID != ctx.Doer.ID { // We block if not the uploader
 			ctx.Error(http.StatusNotFound)
 			return
 		}
