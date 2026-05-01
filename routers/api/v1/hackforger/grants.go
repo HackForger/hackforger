@@ -136,6 +136,10 @@ func CreateGrantRound(ctx *context.APIContext) {
 	//   "422":
 	//     "$ref": "#/responses/validationError"
 
+	if !ctx.Doer.IsAdmin {
+		ctx.Error(http.StatusForbidden, "AdminOnly", "only site administrators may create grant rounds")
+		return
+	}
 	form := web.GetForm(ctx).(*CreateGrantRoundForm)
 
 	round, err := hackforger_service.CreateGrantRound(ctx, ctx.Doer.ID, form.OrgID, hackforger_service.CreateGrantRoundOpts{

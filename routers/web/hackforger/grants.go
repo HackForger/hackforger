@@ -138,6 +138,10 @@ func ExploreGrants(ctx *context.Context) {
 
 // NewGrantRound renders the form to create a new grant round.
 func NewGrantRound(ctx *context.Context) {
+	if !ctx.Doer.IsAdmin {
+		ctx.NotFound("admin only", nil)
+		return
+	}
 	ctx.Data["Title"] = ctx.Tr("hackforger.grant.round.new")
 	ctx.Data["PageIsExploreGrants"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
@@ -152,6 +156,10 @@ func NewGrantRound(ctx *context.Context) {
 
 // NewGrantRoundPost handles the POST to create a new grant round.
 func NewGrantRoundPost(ctx *context.Context) {
+	if !ctx.Doer.IsAdmin {
+		ctx.NotFound("admin only", nil)
+		return
+	}
 	ctx.Data["Title"] = ctx.Tr("hackforger.grant.round.new")
 	ctx.Data["PageIsExploreGrants"] = true
 

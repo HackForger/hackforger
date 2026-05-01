@@ -147,9 +147,15 @@ func GetHackathon(ctx *context.APIContext) {
 // responses:
 //   "201":
 //     description: Hackathon created
+//   "403":
+//     description: Only site admins may create hackathons
 //   "409":
 //     description: Slug already exists
 func CreateHackathon(ctx *context.APIContext) {
+	if !ctx.Doer.IsAdmin {
+		ctx.Error(http.StatusForbidden, "AdminOnly", "only site administrators may create hackathons")
+		return
+	}
 	form := web.GetForm(ctx).(*CreateHackathonForm)
 	h := &hackforger_model.Hackathon{
 		OrgID:       form.OrgID,
