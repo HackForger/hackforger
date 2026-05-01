@@ -162,6 +162,12 @@ func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_m
 // submissionIndexWorkflow is the Forgejo Actions workflow committed into every
 // track repo. It is dispatched via workflow_dispatch whenever a new submission
 // is created, and regenerates SUBMISSIONS.md + submissions.json from the API.
+//
+// IMPORTANT: editing this string only affects tracks created AFTER the edit.
+// Existing tracks keep the YAML they were initialised with, because the file
+// lives in their git history. Read docs/notes/forgejo-actions-yaml-drift.md
+// before making behavior-changing edits — it covers when a backfill is
+// required and how to write one.
 const submissionIndexWorkflow = `name: Update Submission Index
 on:
   workflow_dispatch:
@@ -189,6 +195,11 @@ jobs:
     steps:
       - name: Checkout repo
         run: |
+          # Disable any system credential helper (e.g. macOS osxkeychain on
+          # host-mode runners) — it can't store creds in a non-interactive
+          # session and emits a noisy "failed to store: -25308" line. The
+          # token is embedded in the push URL below, so no helper is needed.
+          git config --global credential.helper ""
           git clone "${{ github.server_url }}/${{ github.repository }}.git" repo
           cd repo
           git config user.name "${{ github.actor }}"
@@ -220,7 +231,7 @@ jobs:
 
           echo "$TRACK_SUBS" | jq '[.[] | {id: .ID, title: .Title, description: .Description, user_id: .UserID, repo_id: .RepoID, demo_url: .DemoURL}]' > submissions.json
 
-      - name: Commit, push, create PR, and auto-merge
+      - name: Commit and push to main
         working-directory: repo
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -688,7 +699,9 @@ func DeleteSubmission(ctx context.Context, doer *user_model.User, submissionID i
 // triggerSubmissionIndexUpdate dispatches the update-submission-index workflow
 // in the track repo via the Forgejo Actions internal API. The workflow handles
 // fetching submissions, regenerating SUBMISSIONS.md + submissions.json, and
-// creating a PR -- all within the Actions runner, not in Go code.
+// pushing the update directly to main -- all within the Actions runner, not
+// in Go code. Existing track repos still carry the old workflow YAML; the new
+// version only ships with tracks created after this change.
 func triggerSubmissionIndexUpdate(ctx context.Context, doer *user_model.User, h *hackforger_model.Hackathon, track *hackforger_model.HackathonTrack) {
 	if track.RepoID == 0 {
 		return
