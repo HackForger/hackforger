@@ -71,6 +71,7 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `go test ./services/hackforger/... -v` -- Run service tests
 - `./gitea web` -- Start server (http://localhost:3000)
 - `bash scripts/restart-gitea.sh` -- **After merging a PR**: one-command atomic rebuild + restart of the main instance. Does: build → stop-if-binary-path-matches → start → verify HTTP 200. Refuses to kill port-3000 processes whose binary path isn't the main repo's `gitea`, so it's safe to automate.
+- `bash scripts/restart-gitea-test.sh` -- Same flow for the **test instance** (port 3001, `--custom-path /tmp/hackforger-test-custom`, log at `/tmp/gitea-test.log`). Use after editing test app.ini or rebuilding while it's up.
 - Restart server manually (fallback): kill old process, remove LevelDB lock (`rm -f data/queues/common/LOCK`), then start
 
 ## Important Constraints
@@ -91,14 +92,38 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `GITHUB_TOKEN` -- For gh CLI and GitHub API
 - `FORGEJO_TOKEN` -- For self-hosted HackForger instance API
 - `FORGEJO_URL` -- https://hackforger.inside.h2os.cloud
+- `HACKFORGER_ADMIN_PASSWORD` -- `hackforger` admin password on the **production** instance (port 3000)
+- `HACKFORGER_TEST_ADMIN_PASSWORD` -- `hackforger` admin password on the **test** instance (port 3001) — different from prod
+- `PGPASSWORD` -- Postgres password for the `hackforger` DB user (covers both `hackforger` and `hackforger_test` databases)
+- All of the above live in `.env` (gitignored). Source it with `set -a; . .env; set +a` if a tool needs them in the shell.
 
-## Internal Instance
-- Login: hackforger / admin1234
+## Internal Instance (Production)
+- URL: https://hackforger.inside.h2os.cloud (Caddy → localhost:3000)
+- Login: hackforger / `$HACKFORGER_ADMIN_PASSWORD`
+- DB: `hackforger` on Postgres
 - Caddy reverse proxy: managed by launchd (com.h2os.caddy), do NOT restart or unload
 - Check Caddy status: `launchctl list com.h2os.caddy`
 - Caddy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
 - ⚠️ If Caddy config reload is needed, MUST confirm with developer first: `caddy reload --config ~/.config/caddy/Caddyfile`
 - Default branch: v0.1-dev/hackforger
+
+## Test Instance
+- URL: http://localhost:3001 (no Caddy, direct)
+- Custom path: `/tmp/hackforger-test-custom` (contains `conf/app.ini`)
+- Work path: `/tmp/hackforger-test-data`
+- DB: `hackforger_test` on Postgres (separate from prod's `hackforger`)
+- Login: hackforger / `$HACKFORGER_TEST_ADMIN_PASSWORD` (**different from prod**)
+- Restart: `bash scripts/restart-gitea-test.sh` (rebuild + safe restart)
+- Use for: E2E tests, schema/migration experiments, anything you don't want hitting prod data
+- ⚠️ Do NOT share `WORK_PATH` with the prod instance (LevelDB lock conflict)
+- ⚠️ Action runners are bound to one instance via `.runner` file — a runner registered against port 3000 will NOT pick up jobs dispatched on 3001. For test E2E that involves Actions, register a separate runner with its own config dir.
+
+## Action Runners (local dev machine)
+- **Production runner**: `~/.config/forgejo-runner/` — daemon under launchd `com.h2os.forgejo-runner`, auto-starts at login
+- **Test runner**: `~/.config/forgejo-runner-test/` — registered against port 3001 but NOT under launchd; start manually only when running E2E
+  - Start:  `cd ~/.config/forgejo-runner-test && nohup ~/.local/bin/forgejo-runner daemon > runner.log 2>&1 & disown`
+  - Stop:   `pkill -f 'forgejo-runner daemon$'` (matches the no-flag invocation; spares the prod daemon which uses `--config config.yml`)
+- Both runners use `host` mode labels (`ubuntu-latest:host`, `macos-arm64:host`) — jobs run directly on the mac, no Docker required. Beware: `runs-on: ubuntu-latest` in YAML actually runs against macOS BSD shell tools.
 
 ## Git Remotes
 - `origin` -- git@github.com:HackForger/hackforger.git (our repo)
