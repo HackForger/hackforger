@@ -74,6 +74,16 @@ func Register(ctx *context.APIContext) {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")
 		return
 	}
+	// Judges cannot register as participants in their own hackathon (parity with web handler).
+	isJudge, err := hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+	if isJudge {
+		ctx.Error(http.StatusForbidden, "JudgeCannotRegister", "judges cannot register as participants in their own hackathon")
+		return
+	}
 	f := web.GetForm(ctx).(*RegisterForm)
 	r := &hackforger_model.HackathonRegistration{
 		HackathonID: h.ID,
