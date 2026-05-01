@@ -1,13 +1,13 @@
-# Prod Cloud Migration: Mac → Ubuntu ECS
+# Prod Cloud Migration: Mac → Ubuntu ECS (Binary Deployment, www.synnovator.com)
 
 **Date:** 2026-05-01
-**Predecessor:** [docs/superpowers/specs/2026-04-30-prod-init-clean-slate-design.md](../specs/2026-04-30-prod-init-clean-slate-design.md) — produced the clean post-init state that this migration moves to the cloud.
-
-> **Status: DRAFT awaiting user review.** The user requested a spec without iterative Q&A, so several decisions are baked in as defaults and listed under [§11 Open Questions](#11-open-questions). Read those first; everything else assumes those answers.
+**Predecessor:** [docs/superpowers/specs/2026-04-30-prod-init-clean-slate-design.md](2026-04-30-prod-init-clean-slate-design.md) — produced the clean post-init state on the Mac that this migration moves to the cloud.
 
 ## 1. Summary
 
-Move the live HackForger instance — currently running on a developer Mac at `localhost:3000`, exposed as `https://hackforger.inside.h2os.cloud` via local Caddy + Tailscale — to a dedicated Ubuntu 24.04 ECS at `218.91.114.178` (Tailscale IP TBD). The application stack (gitea binary, PostgreSQL 18, forgejo-runner, Caddy) is installed from scratch on the ECS using **binaries managed by systemd**, no Docker. Data is dumped from the Mac and restored on the ECS in a single maintenance window. After cutover the Mac becomes a warm standby and a daily rsync pulls fresh backups from the ECS for local-disk redundancy.
+Move the live HackForger instance — currently on a developer Mac at `localhost:3000`, exposed via local Caddy + Tailscale at `https://hackforger.inside.h2os.cloud` — to a dedicated **Huawei Cloud ECS at `218.91.114.178`** and re-front it under the **public domain `https://www.synnovator.com`**. The application stack (PostgreSQL 18, gitea binary, forgejo-runner, Caddy) is installed from scratch as **native binaries managed by systemd**; no containers in production. Data is dumped from the Mac and restored on the ECS in a single maintenance window. After cutover the Mac becomes warm standby and a daily rsync pulls fresh backups from the ECS.
+
+The other cloud box at `47.116.160.70` (Aliyun) is **unrelated to this migration** — it hosts shared synnovator infra (private docker registry, traefik, oneauth, etc.). HackForger does not run there. It does not run on it, but its existence is noted because it currently owns `synnovator.com` (the apex domain), and the DNS for `www.synnovator.com` will be flipped from Aliyun-side routing to the new ECS.
 
 ## 2. Goals & Non-Goals
 
@@ -15,18 +15,18 @@ Move the live HackForger instance — currently running on a developer Mac at `l
 
 - Stand up postgres + gitea + runner + caddy on the ECS as systemd services starting at boot.
 - One-shot data migration of the post-clean-slate state from Mac to ECS (DB + repos + attachments + custom assets), preserving identifiers (user IDs, hackathon IDs, repo IDs, OAuth source).
-- Same external URL `https://hackforger.inside.h2os.cloud` keeps working with no end-user-visible breaking change beyond a brief maintenance window.
-- Daily rsync from ECS back to Mac with N-day rotation, so the developer always has a recent local copy.
+- `https://www.synnovator.com` resolves to the ECS, terminates TLS via Caddy + Let's Encrypt, serves HackForger.
+- Daily rsync from ECS back to Mac with a 14-day rotation.
 - Idempotent install scripts checked into the repo (under `deploy/`), so a new operator can rebuild the box from this spec.
 
 **Non-Goals**
 
 - HA / multi-node failover (single-box deployment).
-- Containerization. We use raw binaries + systemd; revisit Docker only if scale or tenant-isolation demands it.
-- Decommissioning the Mac — it stays as warm standby for at least 30 days post-cutover, with the binary kept buildable but the gitea daemon stopped.
-- Migrating the OAuth provider (Logto). Existing `login_source` rows carry over verbatim; if the Logto callback URL ever needs to change we treat it as a separate change.
-- Setting up CI/CD that pushes new gitea builds to the ECS automatically. Initial deploys are manual `scp` + `systemctl restart`; automation can come later.
-- Public-internet exposure. The ECS is reached over Tailscale; there is no plan to put `hackforger.inside.h2os.cloud` on a public DNS.
+- Containerization of the app stack. Binary + systemd is intentional — see §11 Q1 for the reasoning.
+- Decommissioning the Mac — it stays as warm standby for at least 30 days post-cutover.
+- Migrating the OAuth provider (Logto). Existing `login_source` rows carry over verbatim. **Logto admin will need a new callback URL added: `https://www.synnovator.com/...`** — see §11 Q3.
+- Touching the Aliyun box at 47.116.160.70 (other than read-only inspection that already happened).
+- CI/CD that auto-deploys new gitea builds. Initial deploys are manual `scp` + `systemctl restart`.
 
 ## 3. Current State (Mac, the source)
 
@@ -34,7 +34,7 @@ Move the live HackForger instance — currently running on a developer Mac at `l
                                                   ┌──────────────────────────────────────┐
                                                   │ Mac (h2oslabs workstation)           │
                                                   │                                      │
-   tailnet: hackforger.inside.h2os.cloud  ──────► │  Caddy launchd  → reverse_proxy 3000 │
+   tailnet: hackforger.inside.h2os.cloud  ──────► │  Caddy (launchd)  → 127.0.0.1:3000   │
                                                   │  ./gitea web (port 3000)             │
                                                   │     ↕                                │
                                                   │  Postgres 18.3 (Homebrew, port 5432) │
@@ -47,72 +47,106 @@ Move the live HackForger instance — currently running on a developer Mac at `l
                                                   └──────────────────────────────────────┘
 ```
 
-Total payload ≈ 58 MB. Tiny, so rsync transfer time is not a constraint.
+Total payload ≈ 58 MB. rsync time over WAN is bounded by setup, not bytes.
 
-## 4. Target State (ECS, the destination)
+## 4. Target State (Huawei ECS, the destination)
 
 ```
-                                                ┌──────────────────────────────────────────┐
-                                                │ ecs-synnovator (Ubuntu 24.04, 2c/3.6GiB) │
-                                                │ public NAT 218.91.114.178                │
-                                                │ tailnet IP <reassigned to ECS>           │
-                                                │                                          │
-   tailnet: hackforger.inside.h2os.cloud  ────► │  caddy.service        :443 / :80         │
-                                                │     ↓ reverse_proxy 127.0.0.1:3000       │
-                                                │  gitea.service        :3000 (loopback)   │
-                                                │     ↕ TCP localhost                      │
-                                                │  postgresql.service   :5432 (loopback)   │
-                                                │     hackforger DB                        │
-                                                │  forgejo-runner.service                  │
-                                                │     registered against 127.0.0.1:3000    │
-                                                │                                          │
-                                                │  /var/lib/hackforger/                    │
-                                                │    ├── data/         (gitea WORK_PATH)   │
-                                                │    ├── custom/       (app.ini + assets)  │
-                                                │    └── pg-backups/   (nightly dumps)     │
-                                                │  /opt/hackforger/                        │
-                                                │    └── gitea         (binary)            │
-                                                └──────────────────────────────────────────┘
+                                              ┌────────────────────────────────────────────┐
+   public DNS:                                │ Huawei ECS 218.91.114.178                  │
+   www.synnovator.com  ─────────────────────► │ (Ubuntu 24.04, 2c/3.6GiB, 40GB)            │
+   (Aliyun DNS console flips A record)        │                                            │
+                                              │  caddy.service       :80 / :443            │
+                                              │     ↓ reverse_proxy 127.0.0.1:3000         │
+                                              │  gitea.service       :3000 (loopback only) │
+                                              │     ↕ TCP localhost                        │
+                                              │  postgresql.service  :5432 (loopback only) │
+                                              │     hackforger DB                          │
+                                              │  forgejo-runner.service                    │
+                                              │     registered against 127.0.0.1:3000      │
+                                              │     host mode (jobs run as runner user)    │
+                                              │                                            │
+                                              │  /var/lib/hackforger/                      │
+                                              │    ├── data/        (gitea WORK_PATH)      │
+                                              │    ├── custom/      (app.ini + assets)     │
+                                              │    └── pg-backups/  (nightly dumps)        │
+                                              │  /opt/hackforger/                          │
+                                              │    └── gitea        (binary, systemd's     │
+                                              │                      ExecStart points here)│
+                                              └────────────────────────────────────────────┘
 ```
 
-All four daemons run **on the same box, bound to loopback**, so internal traffic never leaves the host. Only Caddy listens on the Tailscale-facing IP (and on `:80` for HTTP→HTTPS redirect, if at all). SSH (22) remains the only other external port.
+All four daemons run on the same box. **Postgres, gitea, runner bind `127.0.0.1` only.** Only Caddy listens on the public IP (port 80 for the LE challenge + HTTP→HTTPS redirect, port 443 for serving). SSH (22) is the only other external port.
 
 ## 5. Components & Versions
 
-| Component        | Version                  | Source                                | Reason                                                                       |
-| ---------------- | ------------------------ | ------------------------------------- | ---------------------------------------------------------------------------- |
-| OS               | Ubuntu 24.04.2 LTS noble | preinstalled                          | Already there. LTS through 2029.                                             |
-| PostgreSQL       | **18.x**                 | PGDG apt repo (`apt.postgresql.org`)  | Mac runs 18.3; matching majors avoids `pg_dump` cross-version friction.      |
-| gitea (HackForger fork) | current `v0.1-dev/hackforger` HEAD | cross-compiled `GOOS=linux GOARCH=amd64`  on the Mac, scp'd | Binary mode per user direction. Avoids needing Go toolchain on the ECS. |
-| forgejo-runner   | v0.3.0 (matches local)   | downloaded from code.forgejo.org      | One process, host mode (no Docker initially — see §11 Q3).                   |
-| Caddy            | latest stable            | Cloudsmith repo (the official apt source) | Auto-HTTPS via Tailscale's `tailscale cert` (no public Let's Encrypt needed). |
-| Tailscale        | latest                   | tailscale.com apt repo                | Already required to make `inside.h2os.cloud` reachable.                      |
+| Component        | Version                  | Source                                 | Reason                                                                  |
+| ---------------- | ------------------------ | -------------------------------------- | ----------------------------------------------------------------------- |
+| OS               | Ubuntu 24.04.2 LTS noble | preinstalled                           | Already there. LTS through 2029.                                        |
+| PostgreSQL       | **18.x**                 | PGDG apt repo (`apt.postgresql.org`)   | Mac runs 18.3; matching majors avoids `pg_dump` cross-version friction. |
+| gitea (HackForger fork) | current `v0.1-dev/hackforger` HEAD | cross-compiled `GOOS=linux GOARCH=amd64` on the Mac, scp'd | Binary mode per user direction. Avoids needing Go toolchain on the ECS. |
+| forgejo-runner   | v0.3.0                   | downloaded from code.forgejo.org       | One process, **host mode** (no Docker initially — see §11 Q1).          |
+| Caddy            | latest stable (apt)      | Cloudsmith repo (`apt.fury.io/caddy`)  | Auto-HTTPS via Let's Encrypt HTTP-01 challenge.                         |
 
-Out of scope: anti-virus, fail2ban, monitoring beyond the existing telegraf/harvest agent that's already running.
+**Cross-compile recipe** (Mac, no Go toolchain mess):
+
+```bash
+# Run on the Mac. Output: ./gitea-linux-amd64
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/src -w /src \
+  golang:1.23-bookworm bash -c '
+    apt-get update -qq && apt-get install -y -qq build-essential nodejs npm git
+    TAGS="bindata pam sqlite sqlite_unlock_notify" \
+      GOOS=linux GOARCH=amd64 make build
+    mv gitea gitea-linux-amd64
+  '
+```
+
+The output is a static binary; scp it to `/opt/hackforger/gitea` on the ECS and `systemctl restart gitea`. The docker container is purely a clean build environment — production runs no docker. This keeps the dev-vs-prod story consistent ("everywhere it's just a binary") without polluting the Mac with Linux Go toolchain.
 
 ## 6. Network & TLS
 
-**DNS / hostname**:
-- `hackforger.inside.h2os.cloud` currently resolves to `100.64.0.27` (a Tailscale CGNAT IP, almost certainly the Mac's tailnet IP).
-- After cutover the same hostname must resolve to the ECS's tailnet IP.
-- **Mechanism (assumption):** Tailscale MagicDNS resolves machine-name → tailnet IP automatically; the `inside.h2os.cloud` zone is presumably a CNAME/manual A record managed in your DNS provider. We need to flip that one record at cutover time. (See §11 Q1.)
+**Public exposure**:
 
-**TLS termination**: Caddy on the ECS, using `tailscale cert` to obtain a certificate for `hackforger.inside.h2os.cloud`. No public Let's Encrypt challenge required since the host is not publicly addressable. This mirrors how the Mac Caddy works today.
+```
+Internet ──► Huawei ECS public IP 218.91.114.178
+              ├─ :22  SSH (already open, key-based only)
+              ├─ :80  Caddy (HTTP → HTTPS redirect + LE HTTP-01 challenge)
+              └─ :443 Caddy (TLS termination, reverse_proxy to gitea)
+```
 
-**Firewall**: Tailscale ACLs already restrict who can reach this hostname. On the OS we keep the default (no ufw), since SSH and Caddy ports already need to be open and there's nothing else listening externally. If you want defense-in-depth, ufw with `allow 22, 80, 443` is a one-liner and can be added.
+**Prerequisites that REQUIRE manual ops action** (called out in §11 Q4 as well):
 
-**Loopback binding**: gitea, postgres, runner all bind `127.0.0.1` only. Caddy is the only externally-bound process besides SSH.
+| Action | Where | Owner |
+| ------ | ----- | ----- |
+| Open inbound :80 + :443 in Huawei security group | Huawei Cloud console → ECS → security group | You |
+| Add A record `www.synnovator.com → 218.91.114.178`, TTL 60s | Aliyun DNS console (`hichina.com` zone) | You |
+| Drop TTL to 60s 24h before cutover (so rollback is fast) | Aliyun DNS console | You |
+
+**TLS**: Caddy automatically requests a Let's Encrypt cert for `www.synnovator.com` on first start. Requires `:80` reachable from the LE servers. The Caddyfile is two lines:
+
+```
+www.synnovator.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+(Caddy embeds ACMEv2 client. No `certbot` needed.)
+
+**Loopback binding** for non-Caddy services prevents accidental exposure if firewall rules ever loosen.
+
+**No Tailscale**: The Mac instance used Tailscale because the hostname was internal. The ECS instance is public-internet-facing under a real DNS name; Tailscale is not part of the prod path. (It can still be installed on the ECS for ops convenience, but that's optional and not part of this spec.)
 
 ## 7. Data Migration: Mac → ECS
 
-A single-shot copy executed during the maintenance window (§8). Total payload ~58 MB, transfer time over Tailscale ≈ seconds.
+A single-shot copy executed during the maintenance window (§8). Total payload ~58 MB.
 
 ```
-[Mac]                                          [ECS]
-─────                                          ─────
+[Mac]                                          [ECS 218.91.114.178]
+─────                                          ─────────────────────
 1. Stop ./gitea web (graceful)
-2. pg_dumpall -h 127.0.0.1 -U hackforger \
-     > /tmp/hackforger-prod.sql
+2. pg_dump -Fc -h 127.0.0.1 -U hackforger \
+     hackforger > /tmp/hackforger-prod.pgc
 3. tar czf /tmp/hackforger-data.tgz \
      -C /Users/h2oslabs/Workspace/hackforger \
      data/forgejo-repositories \
@@ -122,189 +156,225 @@ A single-shot copy executed during the maintenance window (§8). Total payload ~
      custom/conf/app.ini \
      custom/public \
      custom/templates
-4. rsync over Tailscale ───────────────────►  /tmp/hackforger-prod.sql
-                                              /tmp/hackforger-data.tgz
-                                          5. sudo -u postgres psql \
-                                                < /tmp/hackforger-prod.sql
-                                          6. tar xzf /tmp/hackforger-data.tgz \
-                                                -C /var/lib/hackforger
-                                          7. chown -R hackforger:hackforger \
-                                                /var/lib/hackforger
-                                          8. Adjust /var/lib/hackforger/custom/conf/app.ini:
+4. rsync over public internet (SSH) ────────►  /tmp/hackforger-prod.pgc
+                                                /tmp/hackforger-data.tgz
+                                            5. sudo -u postgres createdb hackforger -O hackforger
+                                            6. pg_restore -h 127.0.0.1 -U hackforger \
+                                                  -d hackforger /tmp/hackforger-prod.pgc
+                                            7. tar xzf /tmp/hackforger-data.tgz \
+                                                  -C /var/lib/hackforger
+                                            8. chown -R hackforger:hackforger \
+                                                  /var/lib/hackforger
+                                            9. Edit /var/lib/hackforger/custom/conf/app.ini:
                                                   ROOT       = /var/lib/hackforger/data/forgejo-repositories
                                                   WORK_PATH  = /var/lib/hackforger
-                                                  DOMAIN, ROOT_URL ← unchanged (same hostname)
+                                                  DOMAIN     = www.synnovator.com
+                                                  ROOT_URL   = https://www.synnovator.com/
                                                   HTTP_ADDR  = 127.0.0.1
                                                   HTTP_PORT  = 3000
-                                                  PG password ← regenerated, stored in .env
-                                          9. systemctl start postgresql gitea
-                                         10. Re-register forgejo-runner against
-                                                 http://127.0.0.1:3000 (token from
-                                                 admin UI; old runner record can be
-                                                 deleted via API).
+                                                  [database]
+                                                    HOST   = 127.0.0.1:5432
+                                                    PASSWD = <freshly generated, written to .env>
+                                           10. systemctl start postgresql gitea caddy
+                                           11. Re-register forgejo-runner against
+                                                  http://127.0.0.1:3000 (token from
+                                                  admin UI on the new instance).
 ```
 
-Identifiers (user IDs, hackathon IDs, repo IDs) are preserved verbatim by `pg_dumpall`. The 12 prod hackathons created during clean-slate keep the same slugs and numeric IDs, so any external links that already reference them stay valid.
+`pg_restore` preserves user IDs, hackathon IDs, repo IDs verbatim. The 12 prod hackathons created during clean-slate keep their slugs and IDs. Internal references (foreign keys, OAuth `login_source` row) survive intact.
 
-**Adjustments to app.ini that matter**: `ROOT` (repo storage path) and `WORK_PATH` change from the Mac's repo-relative paths to absolute `/var/lib/hackforger/...`. Postgres password rotates because the Mac one ends up in plain `.env` and shouldn't travel; we generate a fresh one on the ECS and write it both into `pg_hba`/`ALTER USER` and into the new `.env`.
+**Adjustments to app.ini that matter**:
 
-**Secrets that DO carry over**: `INTERNAL_TOKEN`, `JWT_SECRET`, `OAUTH2_JWT_SECRET`, OAuth `login_source` config in DB. Changing these would invalidate sessions, JWTs, and break Logto sign-in.
+- `ROOT` and `WORK_PATH` move to absolute `/var/lib/hackforger/...`.
+- `DOMAIN` and `ROOT_URL` change from `hackforger.inside.h2os.cloud` to `www.synnovator.com`.
+- `[database] PASSWD` rotates (we generate a new strong PG password during bootstrap; the Mac password should not travel across networks).
+
+**Secrets that DO carry over verbatim** (because changing them would break things):
+
+- `INTERNAL_TOKEN` (gitea ↔ runner internal API)
+- `JWT_SECRET`, `OAUTH2_JWT_SECRET` (would invalidate all sessions and JWTs)
+- OAuth `login_source` rows in DB (Logto config; new callback URL must be added on the Logto side, see §11 Q3)
 
 ## 8. Cutover Plan
 
-A maintenance window (target: 30 minutes, hard limit: 60 minutes). Announced in advance.
+A maintenance window: target 30 minutes, hard limit 60 minutes. Announced in advance.
 
 ```
-T-1d   Notify users, freeze any planned hackathon edits
+T-1d   Drop DNS TTL for www.synnovator.com to 60s (Aliyun console)
+       Notify users
 T-1h   Final dry-run rsync (no service stop) to warm caches and verify scripts
-T0     Begin window:
-       (a) Stop Mac ./gitea web → 503 from Caddy on Mac
-       (b) Run §7 steps 1-4 (dump + tar + rsync)
-       (c) Run §7 steps 5-9 on ECS
-       (d) Smoke test inside the ECS:
+T0     Begin maintenance window:
+       (a) Stop Mac ./gitea web → 503 from Mac Caddy
+       (b) Run §7 steps 1–4 (dump + tar + rsync)
+       (c) Run §7 steps 5–10 on ECS
+       (d) Smoke test inside the ECS (still pre-DNS-flip):
              curl -fsS http://127.0.0.1:3000/api/v1/version
-             curl -fsS http://127.0.0.1:3000/api/v1/admin/users -u hackforger:$PASS
-       (e) Flip DNS A-record for inside.h2os.cloud → ECS tailnet IP
-       (f) Wait for DNS propagation (TTL-dependent, target <2 min)
-       (g) Verify externally: curl -fsS https://hackforger.inside.h2os.cloud/
-       (h) Re-register runner + verify a test workflow_dispatch picks up
-T+30m  Window ends. If anything is wrong → rollback by flipping DNS back
-       and starting Mac gitea (data on Mac is unchanged).
-T+1d   Confirm no unexpected error logs on ECS, runner heartbeat steady,
-       backup rsync ran overnight (§9).
+             curl -fsS http://127.0.0.1:3000/api/v1/admin/users \
+                  -u hackforger:$NEW_PASS
+       (e) From outside, hit the bare IP to confirm Caddy is up:
+             curl -kfsS https://218.91.114.178/
+             (will fail TLS hostname check — that's fine, just confirming serve)
+       (f) Add/flip A record for www.synnovator.com → 218.91.114.178
+             (Aliyun DNS console)
+       (g) Wait for DNS propagation (TTL ≤60s):
+             dig @8.8.8.8 www.synnovator.com +short
+             dig @114.114.114.114 www.synnovator.com +short
+       (h) Verify externally (browser + curl):
+             curl -fsSL https://www.synnovator.com/
+             curl -fsSL https://www.synnovator.com/api/v1/version
+       (i) Caddy gets its first LE cert in this step; check journalctl:
+             journalctl -u caddy -n 50 | grep -i "obtained certificate"
+       (j) Add new callback URL in Logto admin, test login
+       (k) Re-register runner; verify a workflow_dispatch picks up
+T+30m  Window ends. If anything is wrong → rollback (next paragraph).
+T+1d   Confirm overnight backup ran (§9), no anomalous error logs
 T+30d  Decommission decision: keep Mac warm or wipe.
 ```
 
-**Rollback**: The Mac's data dir is untouched during cutover. If ECS bring-up fails for any reason, flipping DNS back + `./gitea web` on Mac restores the previous state in <2 minutes. The dump file on the Mac (`/tmp/hackforger-prod.sql`) is also retained as a tertiary fallback.
+**Rollback** (within the maintenance window):
+
+Mac data dir is untouched. To undo:
+1. Revert A record `www.synnovator.com` to its old value (or remove)
+2. Restart `./gitea web` on Mac
+3. (Old domain `hackforger.inside.h2os.cloud` was independent and still works for the dev's local Tailscale access)
+
+DNS rollback latency is bounded by the 60s TTL we lowered in T-1d. Total rollback: ~3 minutes.
 
 ## 9. Backup Pipeline (ECS → Mac)
 
-Daily rsync from ECS to a Mac directory, with a small retention rotation. This gives the developer a recent local copy in addition to whatever cloud snapshots Huawei ECS provides.
+Daily rsync from ECS to a Mac directory, with a 14-day retention rotation.
 
-**On the ECS** — a systemd timer + service that runs `pg_dump` every night at 04:00 China time:
+**On the ECS** — systemd timer + service runs nightly:
 
 ```
 /etc/systemd/system/hackforger-backup.service
-  ExecStart=/usr/local/bin/hackforger-backup.sh
+  Type=oneshot
   User=hackforger
+  ExecStart=/usr/local/bin/hackforger-backup.sh
 
 /etc/systemd/system/hackforger-backup.timer
   OnCalendar=*-*-* 04:00:00 Asia/Shanghai
   Persistent=true
 
 /usr/local/bin/hackforger-backup.sh:
+  #!/bin/bash
+  set -euo pipefail
+  STAMP=$(date +%Y%m%d)
   pg_dump -Fc -h 127.0.0.1 -U hackforger hackforger \
-      > /var/lib/hackforger/pg-backups/hackforger-$(date +%Y%m%d).pgc
-  find /var/lib/hackforger/pg-backups -name 'hackforger-*.pgc' \
+      > /var/lib/hackforger/pg-backups/hf-${STAMP}.pgc
+  find /var/lib/hackforger/pg-backups -name 'hf-*.pgc' \
       -mtime +14 -delete
 ```
 
-So the ECS itself keeps 14 days of compressed dumps locally.
+ECS keeps 14 days of compressed dumps locally (~15 MB × 14 ≈ 210 MB).
 
-**On the Mac** — a launchd job (matching the existing `com.h2os.*` pattern) that pulls from the ECS at 04:30 China time, half an hour after the dump finishes:
+**On the Mac** — launchd job pulls 30 minutes after the ECS dump finishes:
 
 ```
 ~/Library/LaunchAgents/com.h2os.hackforger-backup-pull.plist
-  StartCalendarInterval: hour=4, minute=30
+  StartCalendarInterval: hour=4, minute=30 (system local time)
 
 scripts/backup-pull.sh:
+  #!/bin/bash
   set -euo pipefail
   DEST="$HOME/Backups/hackforger"
-  mkdir -p "$DEST"/{db,data}
+  mkdir -p "$DEST"/{db,data,custom}
+
+  REMOTE=hackforger@218.91.114.178
+
   rsync -az --delete \
-      hackforger@hackforger.inside.h2os.cloud:/var/lib/hackforger/pg-backups/ \
-      "$DEST/db/"
+      "$REMOTE:/var/lib/hackforger/pg-backups/" "$DEST/db/"
   rsync -az --delete \
-      hackforger@hackforger.inside.h2os.cloud:/var/lib/hackforger/data/ \
-      "$DEST/data/"
+      "$REMOTE:/var/lib/hackforger/data/"        "$DEST/data/"
   rsync -az --delete \
-      hackforger@hackforger.inside.h2os.cloud:/var/lib/hackforger/custom/ \
-      "$DEST/custom/"
+      "$REMOTE:/var/lib/hackforger/custom/"      "$DEST/custom/"
+
   echo "$(date -Iseconds) backup-pull OK" >> "$DEST/backup.log"
 ```
 
-What this gives us on the Mac, every morning:
+What this gives the Mac, every morning:
 - `~/Backups/hackforger/db/` — last 14 daily PG dumps
-- `~/Backups/hackforger/data/` — current state of all repos, attachments, avatars (mirror)
+- `~/Backups/hackforger/data/` — current state of repos, attachments, avatars (mirror)
 - `~/Backups/hackforger/custom/` — current app.ini and custom assets
 
-Disk impact on Mac: <100 MB at current scale, trivially small.
+Disk impact on Mac: <300 MB at current scale.
 
-**Auth**: SSH key-based, same key already in `~/.ssh/` on the Mac that today reaches the ECS as `hackforger@218.91.114.178`. Tailscale guarantees the connection.
+**Auth**: SSH key-based, the `id_ed25519` key already authorized on `hackforger@218.91.114.178`.
 
-**Failure handling**: launchd restarts a failed run on the next scheduled trigger; `backup.log` records each attempt. If the user wants alerting, that's a follow-up.
+**Network**: Mac → ECS over public internet (DNS resolves to the public IP). Backup runs at off-peak China time, so ISP throttling is unlikely to bite.
 
-## 10. Repository Layout for the Migration
+**Failure handling**: launchd logs each run; missed runs reschedule on next trigger. `backup.log` is the audit trail. Alerting (email/IM on consecutive failures) is a follow-up task.
 
-New top-level `deploy/` directory in the project repo, checked in:
+## 10. Repo Layout for the Migration
+
+New top-level `deploy/` directory in the project repo:
 
 ```
 deploy/
-├── README.md                  # how to use this dir
-├── ecs-bootstrap.sh           # idempotent install: PG, runner, caddy, dirs, systemd units
+├── README.md                       # how to use this dir
+├── ecs-bootstrap.sh                # idempotent install: PG, runner, caddy, dirs
+├── build-linux.sh                  # docker-based cross-compile recipe (§5)
+├── migrate-data.sh                 # the §7 dump+rsync+restore one-shot
 ├── systemd/
 │   ├── gitea.service
 │   ├── forgejo-runner.service
-│   ├── caddy.service          (only if not from caddy package)
 │   ├── hackforger-backup.service
 │   └── hackforger-backup.timer
 ├── caddy/
-│   └── Caddyfile.tmpl
-├── app.ini.tmpl               # production app.ini template, env-substituted
-└── migrate-data.sh            # the §7 dump+rsync+restore one-shot
+│   └── Caddyfile.tmpl              # www.synnovator.com → :3000
+└── app.ini.tmpl                    # production app.ini template
 ```
 
-Plus a Mac-side script for the backup puller:
+Plus on the Mac side:
+
 ```
-scripts/backup-pull.sh         # runs on Mac via launchd
+scripts/backup-pull.sh                        # runs on Mac via launchd
+deploy/launchd/com.h2os.hackforger-backup-pull.plist  # checked in for reference
 ```
 
-And a launchd plist:
-```
-deploy/launchd/com.h2os.hackforger-backup-pull.plist
-```
-(checked in for reference; the install copies it to `~/Library/LaunchAgents/`).
+`ecs-bootstrap.sh` is **idempotent**: re-running it on a partially-installed box should converge to the desired state without harm. This is the safety net for when something fails mid-install.
 
 ## 11. Open Questions
 
-These are baked-in defaults you should confirm or override **before** writing the implementation plan.
-
-| # | Topic                                | Default I assumed                                                                                       | Why I picked it                                                                                                            |
-| - | ------------------------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1 | DNS flip mechanism                   | Manual A-record update at cutover (your DNS provider for `inside.h2os.cloud`)                           | Tailscale MagicDNS would auto-route by machine name, but `inside.h2os.cloud` is presumably a real DNS zone, so a flip is needed. **You confirm the zone owner / TTL.** |
-| 2 | Maintenance window length            | 30 min target, 60 min hard limit                                                                        | Data is 58 MB, so the bottleneck is humans not bytes. Confirm acceptable.                                                  |
-| 3 | Runner mode on Linux                 | **Host mode** initially (matches "binary deploy" intent), Docker mode deferred                          | No Docker dependency, simplest. Tradeoff: jobs run as the runner user, no isolation. Acceptable while only HackForger-authored workflows exist. Switch to docker when user-defined CI becomes a thing. |
-| 4 | Postgres major version on Linux      | **18.x** via PGDG repo (matches Mac 18.3)                                                               | Cross-version `pg_dump` is awkward; matching avoids it.                                                                    |
-| 5 | Backup retention                     | 14 days on ECS + same 14 days on Mac (delete older)                                                     | 14 daily dumps × ~5 MB ≈ 70 MB. Cheap. Adjust if you want monthly archives kept longer.                                    |
-| 6 | Backup time                          | 04:00 ECS dump, 04:30 Mac pull (Asia/Shanghai)                                                          | Off-peak, after midnight cron-y workloads. Pull lags dump by 30 min so the file exists.                                    |
-| 7 | Sudo password handling during install | Operator runs `ecs-bootstrap.sh` interactively, types sudo password when prompted                       | Avoids putting sudoers NOPASSWD in scope. Install is one-time.                                                             |
-| 8 | What to do with the test instance on Mac | Leave it (port 3001) untouched. Backup pipeline only covers prod, not test.                          | Test instance is local-only, ephemeral state.                                                                              |
-| 9 | OAuth callback URL                   | Unchanged — Logto already calls back to `https://hackforger.inside.h2os.cloud/...`                      | Hostname stays the same, so callback works. **Confirm Logto admin doesn't pin to an IP.**                                  |
-| 10 | First-deploy automation              | Manual `make build-linux` + `scp` + `systemctl restart gitea` for now                                  | Automation (CI build + deploy hook) is a future PR.                                                                        |
+| # | Topic | Default I assumed | Notes |
+| - | ----- | ----------------- | ----- |
+| 1 | Runner mode on Linux | **Host mode** (matches "binary deploy" intent), Docker mode deferred | No Docker dependency, simplest. Tradeoff: jobs run as the runner user, no kernel-level isolation. Acceptable while only HackForger-authored workflows exist. |
+| 2 | Postgres major version | **18.x** via PGDG repo (matches Mac 18.3) | Cross-version `pg_dump`/`restore` is risky; matching avoids it. |
+| 3 | Logto callback URL | **Add `https://www.synnovator.com/...` to Logto admin's allowed callbacks before cutover** | The DB row carries over but Logto won't accept the new origin until you whitelist it. **You confirm timing.** |
+| 4 | Manual ops actions | (see §6 prereqs table) | You do these. I'll have the spec / plan call them out as gates. |
+| 5 | Backup retention | 14 days on ECS + same 14 days on Mac (via `--delete`) | 14 × ~15 MB ≈ 210 MB. Cheap. Adjust if you want monthly archives kept longer. |
+| 6 | Backup time | 04:00 ECS dump, 04:30 Mac pull | Off-peak. Mac local time vs ECS Asia/Shanghai is the same time zone. |
+| 7 | Sudo on the ECS | Operator runs `ecs-bootstrap.sh` interactively, types sudo password when prompted | Avoids putting NOPASSWD in scope. One-time cost. |
+| 8 | Test instance | Mac test instance (port 3001) untouched. Backup pipeline only covers prod. | Test instance is local-only ephemeral state. |
+| 9 | First-deploy automation | Manual `build-linux.sh` + `scp` + `systemctl restart gitea` | CI-driven deploy is a future PR. |
+| 10 | What happens to `hackforger.inside.h2os.cloud` | Stays pointing to the Mac as long as the Mac instance is up (warm standby). After T+30d decommission, the DNS A record can be removed. | Old internal name still works as a fallback during the warm-standby window. |
 
 ## 12. Acceptance Criteria
 
 The migration is "done" when **all** of these hold:
 
-- `https://hackforger.inside.h2os.cloud/` returns HTTP 200 and renders the landing page, served by the ECS.
-- Login as `hackforger` admin succeeds (via Logto, on ECS).
+- `https://www.synnovator.com/` returns HTTP 200 and renders the HackForger landing page, served from the ECS.
+- TLS cert is a valid Let's Encrypt cert for `www.synnovator.com` (`openssl s_client` shows correct CN/SAN).
+- Login as `hackforger` admin succeeds (via Logto, with the new callback URL registered).
 - All 12 prod hackathons are present with correct slugs/IDs (matching the post-clean-slate state).
 - A test workflow_dispatch picks up on the ECS runner and pushes to its track repo.
 - Mac `./gitea web` is stopped (no port 3000 listener for >24h).
 - A nightly backup file appears in `~/Backups/hackforger/db/` on the Mac, ≤24h old, restorable via `pg_restore --list`.
-- Repository contains `deploy/` with all listed files; `ecs-bootstrap.sh` is idempotent (running twice is a no-op).
+- Repository contains `deploy/` with all listed files; `ecs-bootstrap.sh` is idempotent.
 
 ## 13. Risks
 
-| Risk                                            | Likelihood | Impact | Mitigation                                                          |
-| ----------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------- |
-| Cross-arch binary corruption during scp          | Low        | High   | `sha256sum` check after transfer; `gitea --version` smoke test       |
-| Postgres `pg_dumpall` from 18.3 → restore on 18.x has a syntax incompatibility | Low | Medium | We're matching majors; if any error, fall back to `--inserts` mode |
-| DNS flip slower than expected                    | Medium     | Medium | Lower TTL to 60 s 24h before cutover; have rollback ready           |
-| Tailscale auth on ECS expires/never set up       | Medium     | High   | Step 0 of `ecs-bootstrap.sh` is `tailscale up` + auth-key prompt    |
-| Mac launchd backup job silently fails            | Medium     | Low    | `backup.log` + a sanity check task: "no entry in last 26h → alert"  |
-| Runner can't reach gitea (loopback misconfigured) | Low        | Medium | Smoke test in cutover step (h)                                      |
-| 3.6 GiB RAM tight under load                    | Low (initial) | Medium | Monitor; PG `shared_buffers` tuned conservatively (256 MB).         |
+| Risk                                          | Likelihood | Impact | Mitigation                                                          |
+| --------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------- |
+| Cross-arch build mismatch (arm64 → amd64 oversight) | Medium | High | `file ./gitea-linux-amd64` check before scp; smoke `./gitea --version` on ECS |
+| Huawei security group not opened in time      | Medium | Critical (blocks LE + users) | Verify with `nc -z 218.91.114.178 80` from outside before T0 |
+| LE rate-limit hit during repeated test cert pulls | Low | Medium | Use Caddy staging endpoint for rehearsal, switch to prod endpoint for the real cutover |
+| PG `pg_dump 18 → restore 18` syntax issue | Low | Medium | Matching majors. If any error, fall back to `--inserts` mode.       |
+| DNS propagation slower than 60s TTL implies   | Medium | Medium | Lower TTL 24h before. Verify with multiple resolvers (`8.8.8.8`, `114.114.114.114`). |
+| Logto callback not whitelisted before cutover | Medium | High (login broken) | Q3 — do this in T-1h step.                                       |
+| Mac launchd backup silently stops working     | Medium | Low | `backup.log` checked weekly; no entry in 26h → manual probe        |
+| 3.6 GiB RAM tight under load                  | Low (initial) | Medium | Monitor; PG `shared_buffers` tuned conservatively (256 MB).         |
+| OAuth session-cookie domain mismatch (cookies set for old hostname) | Low | Low (users re-login) | Cutover will sign everyone out; this is acceptable. |
 
 ---
 
