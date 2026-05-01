@@ -135,6 +135,10 @@ func ExploreHackathons(ctx *context.Context) {
 }
 
 func NewHackathon(ctx *context.Context) {
+	if !ctx.Doer.IsAdmin {
+		ctx.NotFound("admin only", nil)
+		return
+	}
 	ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
 	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.Attachment.AllowedTypes
@@ -151,6 +155,10 @@ func NewHackathon(ctx *context.Context) {
 }
 
 func NewHackathonPost(ctx *context.Context) {
+	if !ctx.Doer.IsAdmin {
+		ctx.NotFound("admin only", nil)
+		return
+	}
 	maxTeamSize, _ := strconv.Atoi(ctx.FormString("max_team_size"))
 	if maxTeamSize <= 0 {
 		maxTeamSize = 5

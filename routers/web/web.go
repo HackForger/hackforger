@@ -327,6 +327,7 @@ var ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
 // registerRoutes register routes
 func registerRoutes(m *web.Route) {
 	reqSignIn := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true})
+	reqAdmin := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true, AdminRequired: true})
 	reqSignOut := verifyAuthWithOptions(&common.VerifyOptions{SignOutRequired: true})
 	// TODO: rename them to "optSignIn", which means that the "sign-in" could be optional, depends on the VerifyOptions (RequireSignInView)
 	ignSignIn := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView})
@@ -538,10 +539,14 @@ func registerRoutes(m *web.Route) {
 	m.Get("/hackathon/{slug}", hackforger_web.ViewHackathon)
 	m.Get("/hackathon/{slug}/leaderboard", hackforger_web.Leaderboard)
 
-	// HackForger: authenticated hackathon routes
+	// HackForger: admin-only creation routes (issue #118)
 	m.Group("", func() {
 		m.Get("/hackathons/new", hackforger_web.NewHackathon)
 		m.Post("/hackathons/new", hackforger_web.NewHackathonPost)
+	}, reqAdmin)
+
+	// HackForger: authenticated hackathon routes
+	m.Group("", func() {
 		m.Post("/hackforger/attachments", hackforger_web.UploadHackforgerAttachment)
 		m.Post("/hackforger/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
 		m.Post("/hackathon/{slug}/register", hackforger_web.RegisterPost)
@@ -577,8 +582,12 @@ func registerRoutes(m *web.Route) {
 	}, reqSignIn)
 
 	// ***** START: HackForger Grants *****
+	// Admin-only grant round creation (issue #118)
 	m.Group("/grants", func() {
 		m.Combo("/new").Get(hackforger_web.NewGrantRound).Post(hackforger_web.NewGrantRoundPost)
+	}, reqAdmin)
+
+	m.Group("/grants", func() {
 		m.Group("/{slug}", func() {
 			m.Get("", hackforger_web.GrantRoundDetail)
 			m.Get("/projects", hackforger_web.GrantRoundProjects)
@@ -820,7 +829,7 @@ func registerRoutes(m *web.Route) {
 
 	m.Get("/avatar/{hash}", user.AvatarByEmailHash)
 
-	adminReq := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true, AdminRequired: true})
+	adminReq := reqAdmin
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
