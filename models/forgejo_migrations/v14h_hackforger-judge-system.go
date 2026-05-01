@@ -4,6 +4,8 @@
 package forgejo_migrations
 
 import (
+	"context"
+
 	"forgejo.org/modules/timeutil"
 
 	"xorm.io/xorm"
@@ -78,17 +80,16 @@ func addJudgeSystemTables(x *xorm.Engine) error {
 	if _, err := x.Exec("DROP INDEX IF EXISTS IDX_hackathon_submission_fork_repo_id"); err != nil {
 		return err
 	}
-	// Check if column exists before dropping (idempotent)
-	tableInfo, err := x.QueryString("PRAGMA table_info(hackathon_submission)")
+	// Check if column exists before dropping (idempotent).
+	// PG-safe: PRAGMA is SQLite-only and would syntax-error in PG. Use XORM's
+	// dialect-agnostic IsColumnExist instead. See docs/notes/pg-migration-pitfalls.md.
+	hasCol, err := x.Dialect().IsColumnExist(x.DB(), context.Background(), "hackathon_submission", "fork_repo_id")
 	if err != nil {
 		return err
 	}
-	for _, col := range tableInfo {
-		if col["name"] == "fork_repo_id" {
-			if _, err := x.Exec("ALTER TABLE hackathon_submission DROP COLUMN fork_repo_id"); err != nil {
-				return err
-			}
-			break
+	if hasCol {
+		if _, err := x.Exec("ALTER TABLE hackathon_submission DROP COLUMN fork_repo_id"); err != nil {
+			return err
 		}
 	}
 

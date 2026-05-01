@@ -129,6 +129,51 @@ HackForger 历来用 SQLite 开发 + 内部测试。首次迁到 PG 是 2026-04-
 
 ---
 
+## ⚠ 关键发现：fresh DB 上 migrations 的 Upgrade 函数**永不执行**
+
+排查 phase_type seed bug 时调研 Forgejo migration runner 源码（`models/forgejo_migrations/migrate.go:151-179`），发现一个根本性机制：
+
+```go
+if len(inDBMigrationIDs) == 0 && freshDB {
+    // During startup on a new, empty database, and during integration tests, we rely
+    // only on `SyncAllTables` to create the DB schema. No migrations can be applied
+    // because `SyncAllTables` occurs later in the initialization cycle. We mark all
+    // migrations as complete up to this point and only run future migrations.
+    for _, migration := range orderedMigrations {
+        err := recordMigrationComplete(x, migration)  // ← only records, no Upgrade()
+        ...
+    }
+}
+```
+
+### 这意味着
+
+**任何 migration 的 `Upgrade` 函数对 fresh DB（空 `forgejo_version` 表）都不执行。** 所有 v14a~v14k 的 Upgrade 在新 PG / 新 SQLite 实例启动时都被**跳过**，但 `forgejo_migration` 表里却被 mark 成 complete。Schema 由 `SyncAllTables` 单独创建（仅建表，不运行 Upgrade 里的 seed/data 操作）。
+
+### 影响
+
+任何依赖 migration `Upgrade` 函数做 **seed 数据 / 反查初始化** 的场景，**对 fresh DB 都失效**：
+
+- v14b 的 11 行 phase_type seed inserts → fresh DB 上不跑 → 表空
+- v14g 的 2 行 hackforger_setting seed inserts → fresh DB 上不跑 → 表空
+- v14j 的 `UPDATE phase_type SET is_unique = 0 ...` → fresh DB 上不跑（且就算跑也是 PG 类型错）
+
+### 为什么之前 SQLite 上有 seed？
+
+历史原因——HackForger 早期开发实例可能在 fresh-DB-skip 逻辑被引入 Forgejo 之前就跑过 migration（那时 Upgrade 函数是会执行的）。或者旧版 Forgejo 没有 freshDB 短路。一旦 seed 被插入，后续所有 sync 都保留它，所以从来没暴露过。
+
+### 这对源码 fix 的实际意义
+
+本文档下面列出的 fix（v14g backtick → builder.Eq 等）**只能影响"已经有部分 migration 历史的 DB 升级"路径**——即从某版已有 v14a..v14k 但缺 v14g 的 DB upgrade 上来。
+
+**对 fresh PG / fresh SQLite，源码 fix 无效。** 真正的 fix 路径只有两种：
+1. **手工 seed**（`RESTORE.md` 的 Post-migrate manual seed 节）—— 当前生产用的
+2. **加 post-`SyncAllTables` 初始化 hook**（Forgejo 上游层面的改动，工作量大；目前不做）
+
+源码 fix 的价值是 **代码质量 / 上游正确性 / 防止未来 freshDB 行为改变后再踩**，不是实际解决 fresh DB 的 seed 问题。
+
+---
+
 ## 相关
 
 - `RESTORE.md` 的「Post-migrate manual seed」节（`.claude/worktrees/dev/data-snapshot/RESTORE.md`）
