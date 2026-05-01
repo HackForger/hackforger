@@ -162,6 +162,12 @@ func CreateHackathon(ctx context.Context, doer *user_model.User, h *hackforger_m
 // submissionIndexWorkflow is the Forgejo Actions workflow committed into every
 // track repo. It is dispatched via workflow_dispatch whenever a new submission
 // is created, and regenerates SUBMISSIONS.md + submissions.json from the API.
+//
+// IMPORTANT: editing this string only affects tracks created AFTER the edit.
+// Existing tracks keep the YAML they were initialised with, because the file
+// lives in their git history. Read docs/notes/forgejo-actions-yaml-drift.md
+// before making behavior-changing edits — it covers when a backfill is
+// required and how to write one.
 const submissionIndexWorkflow = `name: Update Submission Index
 on:
   workflow_dispatch:
