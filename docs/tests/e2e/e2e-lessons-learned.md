@@ -32,3 +32,15 @@
 - **Worktree needs `custom/conf/app.ini`** — Git worktrees don't include the gitignored `custom/` directory. Server shows install wizard without it. Copy from main repo before starting. See `docs/tests/local-testing-guide.md`.
 - **Shared SQLite database** — All worktrees point to the same DB at `/Users/h2oslabs/Workspace/hackforger/data/forgejo.db`. Clean test data between runs with targeted `DELETE FROM` statements, not by dropping the DB.
 - **E2E should cover both UI and API** — API-only testing misses auth/CSRF issues that only manifest in browser context. Every state-changing flow should be verified via UI button clicks, not just curl.
+
+## Agent-browser quirks
+
+- **`click <button[type=submit]>` does NOT trigger form submission.** This is a Chrome DevTools Protocol / Playwright behavior: programmatic `Element.click()` fires the click event but does not perform the implicit submit that a real mouse click would trigger (per [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Element/click)). Symptom: click reports `✓ Done`, but no POST hits the server, no DB row appears, page does not navigate. **Workaround**: use `agent-browser eval "var b = document.querySelector('button[type=submit]'); b.form.requestSubmit(b)"` instead. `requestSubmit()` walks the full submit event chain (jQuery AYS handlers, validation, etc.) and triggers the actual POST.
+  - This was originally misdiagnosed as CSRF (`CrossOriginProtection` rejection). It is NOT a CSRF/origin issue — the request never leaves the browser.
+- **Must accept dialog after click on submit (if AYS confirm fires).** `alert` and `beforeunload` are auto-accepted; `confirm` and `prompt` are not. Use `agent-browser dialog accept` after a click that may trigger AYS unsaved-changes confirmation.
+
+## Test instance setup (PostgreSQL)
+
+- **Cannot share `WORK_PATH` with prod instance** — queue/jwt/data subdirs cause LevelDB lock conflict (`[F] Unable to create notification-service queue`). Test instance must have its own `WORK_PATH` (e.g., `/tmp/hackforger-test-data`).
+- **Stale `forgejo_migration` rows block startup** — if a no-longer-existing migration ID is recorded in `forgejo_migration`, the new binary refuses to start with "newer database than this Forgejo release". Forgejo prints the exact `DELETE FROM forgejo_migration WHERE id IN (...)` SQL needed to recover. Common when developing migrations on the test DB and then rolling back the source code.
+- **Fresh PG DB has empty seed tables** — Forgejo's `Migrate(x, freshDB=true)` mark-completes all migrations without running their `Upgrade` functions, so any seed data inserted via migration `Upgrade` is missing on fresh DBs. See `docs/notes/pg-migration-pitfalls.md` and run the manual SQL in the dev backup's `RESTORE.md`.
