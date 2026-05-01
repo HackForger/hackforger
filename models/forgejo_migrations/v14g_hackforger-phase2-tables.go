@@ -6,6 +6,7 @@ package forgejo_migrations
 import (
 	"forgejo.org/modules/timeutil"
 
+	"xorm.io/builder"
 	"xorm.io/xorm"
 )
 
@@ -68,7 +69,10 @@ func addHackforgerPhase2Tables(x *xorm.Engine) error {
 		{Key: "reputation.tiers", Value: `[{"name":"Bronze","min":0},{"name":"Silver","min":50},{"name":"Gold","min":200},{"name":"Diamond","min":500}]`},
 	}
 	for _, s := range defaults {
-		has, err := x.Where("`key` = ?", s.Key).Exist(new(v14gHackforgerSetting))
+		// PG-safe: avoid backtick identifier quoting (PG requires double-quotes for
+		// identifiers; backticks are a SQL syntax error). Use builder.Eq for dialect-
+		// agnostic identifier handling. See docs/notes/pg-migration-pitfalls.md.
+		has, err := x.Where(builder.Eq{"key": s.Key}).Exist(new(v14gHackforgerSetting))
 		if err != nil {
 			return err
 		}
