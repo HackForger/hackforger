@@ -106,8 +106,53 @@ These configure the *schedule* the cron uses. Editing a phase reschedules the go
 2. POST `/hackforger/hackathons/{id}/tracks` (×N tracks)
 3. POST `/hackforger/hackathons/{id}/criteria` (×3+ criteria)
 4. POST `/hackforger/hackathons/{id}/judges` (assign judges)
-5. POST `/hackforger/hackathons/{id}/phases` (set schedule)
-6. POST `/hackforger/hackathons/{id}/publish`
+5. POST `/hackforger/hackathons/{id}/phases` (set schedule, ALL 4 phase types: registration → development → judging → results)
+6. POST `/hackforger/hackathons/{id}/publish` (requires at least 1 registration phase, otherwise 400)
+
+### Bulk-create request body examples
+
+```jsonc
+// 1. POST /hackforger/hackathons — create hackathon
+{"slug":"opc-2026-shuzhi-w1", "name":"【初赛W1】数智OPC加速赛", "org_id":1, "max_team_size":10, "description":"..."}
+// org_id is REQUIRED by binding but the service overwrites it — pass any non-zero
+// (admin user's id=1 is safe). Service auto-creates a dedicated org with the slug as name.
+
+// 2. POST /hackforger/hackathons/{id}/tracks — add a track (×N times for N tracks)
+{"name":"数字文化赛道", "slug":"digital-culture", "description":"AI+文娱、AI+教育等",
+ "prize_credits":300, "prize_dist_mode":"winner_takes_all"}
+// IMPORTANT: slug must be URL-safe (lowercase ASCII + hyphens). Chinese names
+// get auto-rejected if used directly as slug. Service auto-creates a Forgejo
+// repo `<hackathon-org>/<track-slug>` for the track.
+
+// 3. POST /hackforger/hackathons/{id}/criteria — add a criterion (×N for N criteria)
+{"name":"创新性与技术含量", "description":"项目是否具备核心技术或独特的创新理念",
+ "max_score":10, "weight":30}
+// max_score and weight are REQUIRED. Weights are summed across all criteria for
+// the final 100 % normalization (so 30/30/30/10 == 100 %).
+
+// 4. POST /hackforger/hackathons/{id}/judges — assign a judge (×N for N judges)
+{"user_id":5, "track_id":3}
+// BOTH user_id AND track_id REQUIRED. Judges are per-track, not global.
+// (Judge for track A cannot score submissions in track B.)
+
+// 5. POST /hackforger/hackathons/{id}/phases — add a phase (×4 for the 4 lifecycle phases)
+{"phase_type_id":1, "start_time":1777583399, "end_time":1778015999}
+// phase_type_id is the row id from the `phase_type` table — NOT a string key.
+// Look up via GET /hackforger/admin/phase-types or query DB:
+//   1=registration, 2=development, 3=judging, 4=results (default seeds)
+// start_time/end_time are Unix epoch seconds.
+
+// 6. POST /hackforger/hackathons/{id}/publish — no body
+// 200 OK + {"status":"open"} on success
+// 400 if no registration phase exists, or if already published
+```
+
+### Bulk-create gotchas
+
+- **Track auto-creates a Forgejo repo** under the hackathon's auto-org. Repo name = track slug. So slugs must be URL-safe.
+- **Submissions require user-owned repo, not track repo**. Hackers fork the track repo (or create their own), then POST submission with their `repo_id`. Submitting with the track's `repo_id` returns 500 "repo does not belong to user".
+- **Phase advancement is automatic** via gocron (`@every 5m`). No API to manually advance — set `start_time`/`end_time` correctly and let the scheduler do it. For E2E acceleration, write status_cache + phase times directly via SQL.
+- **Cover images / rich-text images**: upload via `POST /hackforger/attachments` (multipart), get `{uuid}`, embed in description as `![alt](/attachments/<uuid>)`. Public read of these requires the fix in PR #133 (RepoID=-1 attachments now publicly readable).
 
 **Hacker journey:**
 1. POST `/hackforger/hackathons/{id}/register` with body `{"team_name": "...", "track_id": N}` (NOT a query param; body fields required)
