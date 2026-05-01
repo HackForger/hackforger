@@ -44,6 +44,20 @@ Base path: `/api/v1/hackforger/hackathons`
 | GET  | `/hackforger/hackathons/{id}/registrations` | List registrations |
 | PUT  | `/hackforger/hackathons/{id}/registrations/{rid}` | Update (e.g. team, track) |
 
+### Register form (POST `/register`)
+
+```json
+{"team_name": "My Team", "track_id": 42}
+```
+
+`team_name` is required; `track_id` is optional (omit for hackathons without tracks).
+
+**403 cases:**
+- The user is a judge for any track in this hackathon (`JudgeCannotRegister`).
+- Judges and participants are mutually exclusive.
+
+**Other failure modes:** 400 (hackathon not in registration phase), 409 (already registered), 404 (hackathon not found).
+
 ## Submissions
 
 | Verb | Path |
@@ -96,7 +110,7 @@ These configure the *schedule* the cron uses. Editing a phase reschedules the go
 6. POST `/hackforger/hackathons/{id}/publish`
 
 **Hacker journey:**
-1. POST `/hackforger/hackathons/{id}/register?track={tid}`
+1. POST `/hackforger/hackathons/{id}/register` with body `{"team_name": "...", "track_id": N}` (NOT a query param; body fields required)
 2. (Wait for Hacking phase — automatic)
 3. POST `/hackforger/hackathons/{id}/submissions` (Fork+PR or Link Repo)
 4. (Wait for Judging → Finished — automatic)
