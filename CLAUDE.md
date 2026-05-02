@@ -101,17 +101,31 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `HACKFORGER_ADMIN_PASSWORD` -- `hackforger` admin password on the **production** instance (port 3000)
 - `HACKFORGER_TEST_ADMIN_PASSWORD` -- `hackforger` admin password on the **test** instance (port 3001) — different from prod
 - `PGPASSWORD` -- Postgres password for the `hackforger` DB user (covers both `hackforger` and `hackforger_test` databases)
+- `ECS_SUDO_PASS` -- Cloud ECS `hackforger` user's sudo password (used by `deploy/ecs/redeploy.sh` and `scripts/sync-from-prod.sh` for non-TTY ssh)
 - All of the above live in `.env` (gitignored). Source it with `set -a; . .env; set +a` if a tool needs them in the shell.
 
-## Internal Instance (Production)
-- URL: https://hackforger.inside.h2os.cloud (Caddy → localhost:3000)
-- Login: hackforger / `$HACKFORGER_ADMIN_PASSWORD`
-- DB: `hackforger` on Postgres
+## Cloud Production Instance (the live one users hit)
+- URL: https://www.synnovator.com (Caddy auto-HTTPS via Let's Encrypt)
+- Host: Huawei Cloud ECS at `203.119.115.130` (Ubuntu 24.04, 4c/15GiB)
+- SSH: `ssh hackforger@203.119.115.130` (key auth; sudo password in `.env` as `ECS_SUDO_PASS`)
+- Stack: native binaries (PG18 / gitea / forgejo-runner / Caddy), all systemd-managed
+- Layout: binary at `/opt/hackforger/gitea`, data at `/var/lib/hackforger/{data,custom,pg-backups}`
+- **Deploy:** `bash deploy/ecs/redeploy.sh` (the only blessed redeploy command — does build + custom/ rsync + binary swap + restart + .last-deploy marker)
+- **Pull prod DB to Mac:** `bash scripts/sync-from-prod.sh --confirm` (one-way; for reproducing prod state locally)
+- **Setup docs:** [`deploy/ecs/README.md`](deploy/ecs/README.md), [`deploy/ecs/cutover-runbook.md`](deploy/ecs/cutover-runbook.md), [`docs/superpowers/specs/2026-05-01-prod-cloud-migration-design.md`](docs/superpowers/specs/2026-05-01-prod-cloud-migration-design.md)
+
+## Mac Dev / Warm-Standby Instance
+- URL: https://hackforger.inside.h2os.cloud (Caddy → localhost:3000, Tailscale-only)
+- This is where Claude does E2E testing (gitflow stage 2) and admins do manual sign-off (stage 3)
+- Login: hackforger or `SynNovator` / `$HACKFORGER_ADMIN_PASSWORD` (whichever the latest prod sync brought in)
+- DB: `hackforger` on Postgres (gets overwritten by `sync-from-prod.sh` on demand)
 - Caddy reverse proxy: managed by launchd (com.h2os.caddy), do NOT restart or unload
 - Check Caddy status: `launchctl list com.h2os.caddy`
 - Caddy config: ~/.config/caddy/ (Caddyfile, env, run.sh)
 - ⚠️ If Caddy config reload is needed, MUST confirm with developer first: `caddy reload --config ~/.config/caddy/Caddyfile`
 - Default branch: v0.1-dev/hackforger
+- Restart: `bash scripts/restart-gitea.sh`
+- Nightly backup pull from cloud: launchd `com.h2os.hackforger-backup-pull` at 04:30 → `~/Backups/hackforger/`
 
 ## Test Instance
 - URL: http://localhost:3001 (no Caddy, direct)
