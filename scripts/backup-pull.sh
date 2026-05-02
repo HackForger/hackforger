@@ -7,7 +7,7 @@ set -euo pipefail
 DEST="${HOME}/Backups/hackforger"
 mkdir -p "$DEST"/{db,data,custom}
 
-REMOTE="hackforger@218.91.114.178"
+REMOTE="hackforger@203.119.115.130"
 LOG="$DEST/backup.log"
 
 log() {

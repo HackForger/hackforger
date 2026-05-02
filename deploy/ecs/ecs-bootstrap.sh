@@ -1,6 +1,6 @@
 #!/bin/bash
 # Idempotent bootstrap of HackForger on the Huawei ECS.
-# Run as the hackforger user on 218.91.114.178. Will prompt for sudo password.
+# Run as the hackforger user on 203.119.115.130. Will prompt for sudo password.
 #
 # Re-running is safe: each step checks state first.
 #
@@ -20,8 +20,13 @@
 
 set -euo pipefail
 
+# Avoid locale-not-found noise from non-interactive SSH sessions
+export LANG=C.UTF-8 LC_ALL=C.UTF-8
+
 ACME_EMAIL="${ACME_EMAIL:-ops@synnovator.com}"
-RUNNER_VERSION="${RUNNER_VERSION:-v0.3.0}"
+RUNNER_VERSION="${RUNNER_VERSION:-v12.9.0}"
+CADDY_VERSION="${CADDY_VERSION:-v2.8.4}"
+PREBUILT_DIR="${PREBUILT_DIR:-/tmp/binaries-prebuilt}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log() { printf "\n\033[1;34m▶ %s\033[0m\n" "$*"; }
@@ -33,12 +38,39 @@ if [ "$(id -un)" != "hackforger" ]; then
   exit 1
 fi
 
-# Cache sudo creds once at start so the rest is non-interactive
+# Cache sudo creds once at start so the rest is non-interactive.
+# Supports SUDO_PASS env var for non-TTY (SSH) invocation; falls back to
+# interactive `sudo -v` when run from a TTY.
 log "[0/9] Caching sudo credentials"
-sudo -v
+if [ -n "${SUDO_PASS:-}" ]; then
+  echo "$SUDO_PASS" | sudo -S -v
+else
+  sudo -v
+fi
 ( while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null ) &
 SUDO_KEEPER=$!
 trap 'kill $SUDO_KEEPER 2>/dev/null || true' EXIT
+
+# ---------------------------------------------------------------------------
+# Pre-flight fixups: silence sudo hostname warnings + ensure en_US.UTF-8 locale
+# is generated. Both prevent failures later (postgresql cluster init refuses
+# to bootstrap when LC_TIME is set to an ungenerated locale, e.g. Mac iTerm
+# leaks LC_TIME=en_DK.UTF-8 over SSH).
+log "[0.5/9] Pre-flight: hostname + locale"
+if ! grep -q "^127\.0\.1\.1\s\+$(hostname)" /etc/hosts; then
+  echo "127.0.1.1 $(hostname)" | sudo tee -a /etc/hosts >/dev/null
+  ok "added 127.0.1.1 $(hostname) to /etc/hosts"
+else
+  skip "hostname entry exists in /etc/hosts"
+fi
+if locale -a 2>/dev/null | grep -qi "en_US.utf8"; then
+  skip "en_US.UTF-8 locale already generated"
+else
+  sudo apt-get install -y -qq --no-install-recommends locales
+  sudo locale-gen en_US.UTF-8 C.UTF-8
+  sudo update-locale LANG=C.UTF-8 LC_ALL= 2>/dev/null || true
+  ok "en_US.UTF-8 + C.UTF-8 locales generated"
+fi
 
 # ---------------------------------------------------------------------------
 log "[1/9] Adding PostgreSQL 18 (PGDG) apt repository"
@@ -55,26 +87,48 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-log "[2/9] Adding Caddy apt repository"
-if [ -f /etc/apt/sources.list.d/caddy-stable.list ]; then
-  skip "caddy-stable.list present"
-else
-  sudo apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https
-  curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
-    | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
-    | sudo tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
-  sudo apt-get update -qq
-  ok "caddy repo added"
-fi
-
-# ---------------------------------------------------------------------------
-log "[3/9] apt install: postgresql-18, caddy, deps"
+log "[2/9] apt install: postgresql-18 + deps (caddy installed via binary, see step 3)"
 sudo apt-get install -y -qq \
   postgresql-18 postgresql-client-18 \
-  caddy \
   rsync curl jq
 ok "apt installs done"
+
+# ---------------------------------------------------------------------------
+log "[3/9] Installing Caddy binary"
+if command -v caddy >/dev/null 2>&1 && caddy version 2>/dev/null | grep -qF "${CADDY_VERSION#v}"; then
+  skip "caddy ${CADDY_VERSION} already installed"
+elif [ -x "$PREBUILT_DIR/caddy" ]; then
+  sudo install -m 755 "$PREBUILT_DIR/caddy" /usr/local/bin/caddy
+  ok "caddy installed from prebuilt: $(caddy version | head -1)"
+else
+  ARCH=$(dpkg --print-architecture)
+  TARBALL="caddy_${CADDY_VERSION#v}_linux_${ARCH}.tar.gz"
+  URL="https://github.com/caddyserver/caddy/releases/download/${CADDY_VERSION}/${TARBALL}"
+  TMP=$(mktemp -d)
+  echo "  downloading from $URL (this may be slow from CN; consider scp'ing the binary to $PREBUILT_DIR/caddy)"
+  curl -fsSL --connect-timeout 10 --max-time 600 "$URL" -o "$TMP/caddy.tgz"
+  tar xzf "$TMP/caddy.tgz" -C "$TMP" caddy
+  sudo install -m 755 "$TMP/caddy" /usr/local/bin/caddy
+  rm -rf "$TMP"
+  ok "caddy installed: $(caddy version | head -1)"
+fi
+
+if ! id caddy >/dev/null 2>&1; then
+  sudo groupadd --system caddy
+  sudo useradd --system --gid caddy \
+    --home-dir /var/lib/caddy --create-home \
+    --shell /usr/sbin/nologin caddy
+  ok "caddy user created"
+else
+  skip "caddy user exists"
+fi
+
+if [ ! -d /etc/caddy ]; then
+  sudo install -d -o root -g root -m 755 /etc/caddy
+  ok "/etc/caddy created"
+else
+  skip "/etc/caddy exists"
+fi
 
 # ---------------------------------------------------------------------------
 log "[4/9] Configuring postgres (loopback only, hackforger DB+role)"
@@ -131,12 +185,15 @@ sudo chown -R hackforger:hackforger /opt/hackforger /var/lib/hackforger /var/lib
 
 # ---------------------------------------------------------------------------
 log "[6/9] Installing forgejo-runner $RUNNER_VERSION"
-if command -v forgejo-runner >/dev/null && forgejo-runner --version 2>/dev/null | grep -qF "$RUNNER_VERSION"; then
+if command -v forgejo-runner >/dev/null && forgejo-runner --version 2>/dev/null | grep -qF "${RUNNER_VERSION#v}"; then
   skip "forgejo-runner $RUNNER_VERSION already installed"
+elif [ -x "$PREBUILT_DIR/forgejo-runner" ]; then
+  sudo install -m 755 "$PREBUILT_DIR/forgejo-runner" /usr/local/bin/forgejo-runner
+  ok "forgejo-runner installed from prebuilt: $(forgejo-runner --version 2>&1 | head -1)"
 else
   ARCH=$(dpkg --print-architecture)
   if [ "$ARCH" = "amd64" ]; then RUNNER_ARCH=amd64; else RUNNER_ARCH=arm64; fi
-  sudo curl -fsSL \
+  sudo curl -fsSL --connect-timeout 10 --max-time 600 \
     "https://code.forgejo.org/forgejo/runner/releases/download/$RUNNER_VERSION/forgejo-runner-${RUNNER_VERSION#v}-linux-$RUNNER_ARCH" \
     -o /usr/local/bin/forgejo-runner
   sudo chmod +x /usr/local/bin/forgejo-runner
@@ -189,7 +246,7 @@ fi
 
 # ---------------------------------------------------------------------------
 log "[8/9] Installing systemd units + backup script + app.ini template"
-for unit in gitea.service forgejo-runner.service \
+for unit in gitea.service forgejo-runner.service caddy.service \
             hackforger-backup.service hackforger-backup.timer; do
   sudo cp "$SCRIPT_DIR/systemd/$unit" "/etc/systemd/system/$unit"
 done
@@ -200,6 +257,7 @@ sudo chown hackforger:hackforger /opt/hackforger/app.ini.tmpl
 sudo systemctl daemon-reload
 sudo systemctl enable hackforger-backup.timer >/dev/null 2>&1 || true
 sudo systemctl start hackforger-backup.timer
+sudo systemctl enable caddy >/dev/null 2>&1 || true
 ok "systemd units installed (gitea + runner enabled but NOT started — start after data migration)"
 
 # ---------------------------------------------------------------------------
@@ -216,7 +274,7 @@ echo "  Binary path:     /opt/hackforger/gitea (NOT YET PRESENT — scp it next)
 echo
 echo "Next steps:"
 echo "  1. From Mac: bash deploy/ecs/build-linux.sh"
-echo "  2. From Mac: scp gitea-linux-amd64 hackforger@218.91.114.178:/opt/hackforger/gitea"
+echo "  2. From Mac: scp gitea-linux-amd64 hackforger@203.119.115.130:/opt/hackforger/gitea"
 echo "  3. From Mac: bash deploy/ecs/migrate-data.sh --confirm"
 echo "  4. On ECS:   sudo systemctl start gitea caddy"
 ok "Bootstrap complete"

@@ -28,7 +28,7 @@ fi
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO"
 
-ECS=hackforger@218.91.114.178
+ECS=hackforger@203.119.115.130
 TMP_DUMP=/tmp/hackforger-prod.pgc
 TMP_TAR=/tmp/hackforger-data.tgz
 
@@ -91,13 +91,29 @@ if [ "$CONFIRM" = "1" ]; then
     exit 2
   fi
 
+  # Read the SSH-side sudo password from the same .env that ecs-bootstrap.sh
+  # uses. The remote restore needs sudo (drop/create DB, chown, install file),
+  # but the ssh session has no TTY so it can't prompt — feed via stdin once.
+  if ! grep -q "^ECS_SUDO_PASS=" .env; then
+    echo "FATAL: ECS_SUDO_PASS not in .env (the box's hackforger sudo password)" >&2
+    exit 2
+  fi
+  SUDO_PASS=$(grep "^ECS_SUDO_PASS=" .env | cut -d= -f2-)
+
   ssh "$ECS" \
     INTERNAL_TOKEN="'$INTERNAL_TOKEN'" \
     OAUTH_JWT="'$OAUTH_JWT'" \
+    SUDO_PASS="'$SUDO_PASS'" \
     bash -s <<'REMOTE_EOF'
 set -euo pipefail
 
 log() { printf "\n\033[1;34m  ▶ %s\033[0m\n" "$*"; }
+
+# Prime sudo from stdin once; keeper loop renews credentials every 60s.
+echo "$SUDO_PASS" | sudo -S -v
+( while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null ) &
+SUDO_KEEPER=$!
+trap 'kill $SUDO_KEEPER 2>/dev/null || true' EXIT
 
 log "Stopping gitea + runner (if running)"
 sudo systemctl stop gitea forgejo-runner 2>/dev/null || true

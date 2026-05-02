@@ -9,8 +9,8 @@ Spec: [`docs/superpowers/specs/2026-05-01-prod-cloud-migration-design.md`](../..
 - [ ] In Huawei console, verify ECS security group has inbound 80 + 443 open from `0.0.0.0/0`
         Verify externally:
         ```bash
-        nc -z 218.91.114.178 80   && echo OK
-        nc -z 218.91.114.178 443  && echo OK
+        nc -z 203.119.115.130 80   && echo OK
+        nc -z 203.119.115.130 443  && echo OK
         ```
 - [ ] In Logto admin, add allowed callback URL `https://www.synnovator.com/user/oauth2/<source>/callback`
         (find the exact source name in the Mac DB:
@@ -27,8 +27,8 @@ Spec: [`docs/superpowers/specs/2026-05-01-prod-cloud-migration-design.md`](../..
       ```bash
       bash deploy/ecs/build-linux.sh
       file gitea-linux-amd64   # confirm: ELF 64-bit LSB ... x86-64
-      scp gitea-linux-amd64 hackforger@218.91.114.178:/opt/hackforger/gitea
-      ssh hackforger@218.91.114.178 'sudo chmod +x /opt/hackforger/gitea && /opt/hackforger/gitea --version'
+      scp gitea-linux-amd64 hackforger@203.119.115.130:/opt/hackforger/gitea
+      ssh hackforger@203.119.115.130 'sudo chmod +x /opt/hackforger/gitea && /opt/hackforger/gitea --version'
       ```
 - [ ] Dry-run the data migration (no service stop):
       ```bash
@@ -56,13 +56,13 @@ Wait for "Restore complete" output. Ignore the last log line about "start gitea 
 ### (d) Start services on ECS
 
 ```bash
-ssh hackforger@218.91.114.178 'sudo systemctl start gitea && sudo systemctl start caddy'
+ssh hackforger@203.119.115.130 'sudo systemctl start gitea && sudo systemctl start caddy'
 ```
 
 ### (e) Smoke test internally on ECS
 
 ```bash
-ssh hackforger@218.91.114.178 '
+ssh hackforger@203.119.115.130 '
   curl -fsS http://127.0.0.1:3000/api/v1/version
 '
 ```
@@ -72,7 +72,7 @@ Expected: JSON with version.
 ### (f) Verify Caddy from outside (will fail TLS hostname check, that's fine)
 
 ```bash
-curl -kfsS https://218.91.114.178/api/v1/version
+curl -kfsS https://203.119.115.130/api/v1/version
 ```
 
 Expected: same version JSON.
@@ -81,7 +81,7 @@ Expected: same version JSON.
 
 In Aliyun DNS console, add/update A record:
 ```
-www.synnovator.com.   60   IN   A   218.91.114.178
+www.synnovator.com.   60   IN   A   203.119.115.130
 ```
 
 ### (h) Wait for propagation
@@ -92,7 +92,7 @@ for resolver in 8.8.8.8 1.1.1.1 114.114.114.114 223.5.5.5; do
 done
 ```
 
-All four should return `218.91.114.178`. If not, wait 30s and retry.
+All four should return `203.119.115.130`. If not, wait 30s and retry.
 
 ### (i) Verify externally over the public hostname
 
@@ -114,7 +114,7 @@ ADMIN_PASS=$(grep '^HACKFORGER_ADMIN_PASSWORD=' .env | cut -d= -f2)
 TOKEN=$(curl -fsS -u hackforger:$ADMIN_PASS \
   https://www.synnovator.com/api/v1/admin/runners/registration-token | jq -r .token)
 
-ssh hackforger@218.91.114.178 "
+ssh hackforger@203.119.115.130 "
   cd /var/lib/forgejo-runner
   /usr/local/bin/forgejo-runner register \
     --no-interactive \
@@ -156,7 +156,7 @@ launchctl print "gui/$UID/com.h2os.hackforger-backup-pull" | head -30
 
 Check the ECS-side timer:
 ```bash
-ssh hackforger@218.91.114.178 'systemctl list-timers hackforger-backup.timer'
+ssh hackforger@203.119.115.130 'systemctl list-timers hackforger-backup.timer'
 ```
 
 ## T+30d — Decommission decision

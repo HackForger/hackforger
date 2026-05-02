@@ -1,6 +1,6 @@
 # deploy/ecs/ — HackForger production cloud deployment
 
-Artifacts for deploying HackForger to the Huawei Cloud ECS at `218.91.114.178`,
+Artifacts for deploying HackForger to the Huawei Cloud ECS at `203.119.115.130`,
 serving `https://www.synnovator.com` as native binaries managed by systemd.
 
 > **Not to be confused with `deploy/caddy/`** (sibling dir) — that's the **Mac
@@ -29,12 +29,12 @@ serving `https://www.synnovator.com` as native binaries managed by systemd.
 ## Order of operations (first-time deploy)
 
 1. **Manual prerequisites (operator):**
-   - Open inbound :80 + :443 in the Huawei Cloud security group for ECS 218.91.114.178.
-   - In the Aliyun DNS console: lower `synnovator.com` zone TTL to 60s, add A record `www → 218.91.114.178`.
+   - Open inbound :80 + :443 in the Huawei Cloud security group for ECS 203.119.115.130.
+   - In the Aliyun DNS console: lower `synnovator.com` zone TTL to 60s, add A record `www → 203.119.115.130`.
    - In Logto admin: add `https://www.synnovator.com/user/oauth2/<source-name>/callback` to the allowed callback URLs.
 2. `bash deploy/ecs/build-linux.sh` on the Mac → produces `gitea-linux-amd64`.
-3. `scp -r deploy/ecs hackforger@218.91.114.178:/tmp/` and `bash /tmp/ecs/ecs-bootstrap.sh` (interactive sudo).
-4. `scp gitea-linux-amd64 hackforger@218.91.114.178:/opt/hackforger/gitea`.
+3. `scp -r deploy/ecs hackforger@203.119.115.130:/tmp/` and `bash /tmp/ecs/ecs-bootstrap.sh` (interactive sudo).
+4. `scp gitea-linux-amd64 hackforger@203.119.115.130:/opt/hackforger/gitea`.
 5. Run `bash deploy/ecs/migrate-data.sh --confirm` from the Mac during the maintenance window.
 6. Follow `cutover-runbook.md`.
 
@@ -42,7 +42,7 @@ serving `https://www.synnovator.com` as native binaries managed by systemd.
 
 ```bash
 bash deploy/ecs/build-linux.sh
-scp gitea-linux-amd64 hackforger@218.91.114.178:/opt/hackforger/gitea-new
-ssh hackforger@218.91.114.178 \
+scp gitea-linux-amd64 hackforger@203.119.115.130:/opt/hackforger/gitea-new
+ssh hackforger@203.119.115.130 \
   'sudo mv /opt/hackforger/gitea-new /opt/hackforger/gitea && sudo systemctl restart gitea'
 ```
