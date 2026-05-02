@@ -168,7 +168,9 @@ claude.local.sh
 /.env
 /.env.local
 docs/tests/e2e/*.pdf
-.claude/ralph-loop.local.md
+.claude/*.local.md
+# Project-wide guard-rail hooks ARE committed (override the .local.md ignore)
+!.claude/hookify.protect-*.local.md
 
 # E2E test screenshots (temporary artifacts, hosted on GitHub Releases if needed)
 tests/screenshots/
