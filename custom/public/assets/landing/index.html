@@ -2086,9 +2086,9 @@ window.HACKFORGER_LANDING_CONFIG = {
         try {
             var raw = localStorage.getItem(THEME_KEY);
             if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
-            return 'system';
+            return 'dark';
         } catch (e) {
-            return 'system';
+            return 'dark';
         }
     }
 
