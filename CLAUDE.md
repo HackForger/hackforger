@@ -55,6 +55,12 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - macOS host runner 使用 BSD shell 工具，不要用 GNU 扩展 (`sed \?` 等)，改用 POSIX 语法
 - See [docs/notes/forgejo-actions-token-permission.md](docs/notes/forgejo-actions-token-permission.md) for full permission matrix and checklist
 
+## Gitflow & Promotion to Production
+- **Process:** [docs/notes/gitflow.md](docs/notes/gitflow.md) — three stages: feat/* → `v0.1-dev/hackforger` (Claude E2E on Mac) → `prod` (admin manual sign-off on Mac) → cloud `https://www.synnovator.com`
+- **Both stages of testing happen on the same Mac instance** at `https://hackforger.inside.h2os.cloud`. Branch checked out determines what's tested.
+- **Smoke-test report is required** for every user-facing change. File at `docs/tests/e2e/reports/YYYY-MM-DD-<slug>.md` with frontmatter `commits: [<sha>...]` + `admin_signoff:` populated by admin in stage 2.
+- **Pre-deploy gate:** `bash deploy/ecs/preflight.sh` — refuses to ship any commit on `prod` that lacks a matching report. No `--force` override.
+
 ## Local Testing
 - See [docs/tests/local-testing-guide.md](docs/tests/local-testing-guide.md) for starting HackForger in worktrees, shared database, and common issues
 - See [docs/tests/e2e/e2e-lessons-learned.md](docs/tests/e2e/e2e-lessons-learned.md) for common pitfalls (migration mismatch, pr.Issue gotcha, template crashes, Vue auth, feed rendering)
