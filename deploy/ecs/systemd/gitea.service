@@ -1,0 +1,28 @@
+[Unit]
+Description=HackForger (gitea fork)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=hackforger
+Group=hackforger
+WorkingDirectory=/var/lib/hackforger
+ExecStart=/opt/hackforger/gitea web --custom-path /var/lib/hackforger/custom --work-path /var/lib/hackforger
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+Environment=USER=hackforger HOME=/var/lib/hackforger
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/hackforger /var/log
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+[Install]
+WantedBy=multi-user.target

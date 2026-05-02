@@ -1,0 +1,49 @@
+APP_NAME = HackForger
+RUN_MODE = prod
+WORK_PATH = /var/lib/hackforger
+
+[database]
+DB_TYPE = postgres
+HOST = 127.0.0.1:5432
+NAME = hackforger
+USER = hackforger
+PASSWD = __PG_PASSWORD__
+SSL_MODE = disable
+LOG_SQL = false
+
+[repository]
+ROOT = /var/lib/hackforger/data/forgejo-repositories
+
+[server]
+DOMAIN = www.synnovator.com
+HTTP_ADDR = 127.0.0.1
+HTTP_PORT = 3000
+ROOT_URL = https://www.synnovator.com/
+DISABLE_SSH = true
+LFS_START_SERVER = false
+
+[lfs]
+PATH = /var/lib/hackforger/data/lfs
+
+[security]
+INSTALL_LOCK = true
+INTERNAL_TOKEN = __INTERNAL_TOKEN__
+
+[log]
+MODE = console
+LEVEL = Info
+ROOT_PATH = /var/lib/hackforger/log
+
+[actions]
+ENABLED = true
+DEFAULT_ACTIONS_URL = https://code.forgejo.org
+
+[oauth2]
+JWT_SECRET = __OAUTH2_JWT_SECRET__
+
+[ui]
+DEFAULT_THEME = hackforger-dark
+
+[service]
+DISABLE_REGISTRATION = false
+ALLOW_ONLY_EXTERNAL_REGISTRATION = true
