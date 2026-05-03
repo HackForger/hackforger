@@ -6,19 +6,7 @@ commits:
 tested_against: https://hackforger.inside.h2os.cloud
 tested_at: 2026-05-03T22:00:00+08:00
 e2e_owner: claude
-admin_signoff:
-  by: allen.woods
-  at: 2026-05-03T22:35:00+08:00
-  notes: |
-    Stage 2 walkthrough confirmed all three observable bugs:
-      - PR #148: logged in as non-admin (linyilun), navbar dropdown does NOT
-        show 创建黑客松 / 新建资助 entries — '看不到了'.
-      - PR #150 (feed): /?repo-search-tab=hackathons now shows 'haiquan 加入了组织
-        opc-2026-shuzhi-w1 4 小时前' for the previously-empty card.
-      - PR #150 (i18n): /grants/new — '积分预算' label renders correctly (after
-        the second rebuild, since the first build's bindata regen had a
-        stale-hash race; resolved by removing modules/options/bindata.go.hash
-        and rebuilding).
+admin_signoff: { by: allen.woods, at: "2026-05-03T22:35:00+08:00", notes: "Stage 2 walkthrough confirmed all three observable bugs: PR #148 — non-admin (linyilun) navbar dropdown no longer shows 创建黑客松 / 新建资助 entries ('看不到了'); PR #150 feed — /?repo-search-tab=hackathons now shows 'haiquan 加入了组织 opc-2026-shuzhi-w1 4 小时前' on the previously-empty card; PR #150 i18n — /grants/new label '积分预算' renders correctly (after second rebuild — first build's bindata regen had a stale-hash race, resolved by removing modules/options/bindata.go.hash + rebuilding)." }
 ---
 
 # Navbar admin guard (#148) + feed render & i18n (#150)
