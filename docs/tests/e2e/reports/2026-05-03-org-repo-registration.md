@@ -7,6 +7,7 @@ commits:
   - a4e45cd727
   - 39200bd4c5
   - 07527ddf6c
+  - 4a0d67bb42
 tested_against: https://hackforger.inside.h2os.cloud
 tested_at: 2026-05-03T21:10:00+08:00
 e2e_owner: claude
@@ -25,22 +26,24 @@ Logged in as `linyilun`, opened `/hackathon/opc-2026-shuzhi-w1`, inspected the r
 
 **Before fix**: dropdown contained only the "— 选择仓库 —" placeholder option. Reproduced via the static state of the deployed version `1b6a3932b6`.
 
-**After fix**: dropdown contained 10 options + placeholder. The new SearchRepository query (`Actor=user, Private=true, no OwnerID filter`) returns visible repos, post-filtered to Write+ access. Sample of what showed up for linyilun:
+**After fix** (and after the recency-ordering follow-up `4a0d67bb42`): dropdown contained 10 options + placeholder, ordered by `updated_unix DESC`. The new SearchRepository query (`Actor=user, Private=true, no OwnerID filter, OrderBy=SearchOrderByRecentUpdated`) returns visible repos, post-filtered to Write+ access. What linyilun sees now:
 
 ```
-haiquan/AiRead
-yanglaiyang/Alpha.deeprich
-biMetaverse/AuroBIM
-baoai/baoai-content-producer
-moss/chasingdream
-cedar/contextgen-life
-contextgen-tech/contextgen-life      ← org-owned (org type=1)
-gptmaas/decision-assistant-agent
-jjkyao/kilo
-linxi/LinxiHaven
+biMetaverse/AuroBIM                  ← org-owned (id 74)
+H2OSLabs/page.h2oslabs.com           ← org-owned (id 73) — THE ORIGINAL TEST TARGET
+SynNovatorGroup/SynNovatorRepo       ← org-owned (id 72)
+contextgen-tech/contextgen-life      ← org-owned (id 71)
+haiquan/track-26                     (id 70)
+haiquan/AiRead                       (id 69)
+282801145/OPC_Assistant              (id 68)
+hulinweilai/Report_claw              (id 67)
+xu/xu                                (id 65)
+hy_walter/New_repository             (id 66)
 ```
 
-Of the 10, **only `contextgen-tech/contextgen-life` (id 71) is owned by an Organization (type=1)**. The other 9 are user-owned (type=0) accounts whose names visually resemble orgs (e.g. `gptmaas`, `cedar`, `moss`). The dropdown now shows all of them — the bug (empty dropdown) is fixed.
+**4 of the 10 are org-owned** (biMetaverse, H2OSLabs, SynNovatorGroup, contextgen-tech). The original bug — `H2OSLabs/page.h2oslabs.com` being invisible to linyilun — is fixed.
+
+(Initial alphabetical-ordering implementation hid `page.h2oslabs.com` past slot 10 because linyilun is a site admin and gets all 30+ repos in the system. Subagent code-review caught this; commit `4a0d67bb42` switched to `OrderBy=SearchOrderByRecentUpdated` so recently-touched repos surface first. Smoke re-verified: target repo now appears.)
 
 **Org-derivation E2E**: selected `contextgen-tech/contextgen-life` (id 71), set track=26, title "org repo e2e test", clicked 报名. Resulting registration row:
 
@@ -55,11 +58,11 @@ Screenshots:
 - `01-dropdown-with-org-repos.png` — dropdown opened, showing the 10 options
 - `04-org-repo-success.png` — post-submit state showing successful registration
 
-### Why didn't I test the literal `H2OSLabs/page.h2oslabs.com`?
+### Verified the literal `H2OSLabs/page.h2oslabs.com` target
 
-`linyilun` is a site admin (`is_admin=true`), so `GetUserRepoPermission` returns admin-level for every repo in the system — about 30+ repos. The dropdown's `dropdownMax = 10` cap (sorted by SearchRepository's natural recency / lexical order) puts `H2OSLabs/page.h2oslabs.com` past the cutoff. This is the documented §7 risk; for non-admin users (the typical case) the cap is plenty.
+After the recency-ordering fix in `4a0d67bb42`, this exact repo from the bug report now appears at slot 2 in the dropdown for linyilun (admin) when she views `/hackathon/opc-2026-shuzhi-w1`. Smoke confirmed via agent-browser snapshot of the rendered `<select>`.
 
-**Verified separately via API** that `linyilun` CAN register with repo 73 (`H2OSLabs/page.h2oslabs.com`) when explicitly passing `repo_id`: returns `OrgID:56, TeamName:"H2OSLabs", RepoID:73`, status 201, submission created. See API section below.
+Independently verified via API (Case 2 below): `linyilun` can register with `repo_id: 73` and the resulting registration row has `OrgID: 56` (= H2OSLabs.id), `TeamName: "H2OSLabs"` (auto-derived from org name), `RepoID: 73`, plus a submission row.
 
 ### API flow (curl)
 
