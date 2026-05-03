@@ -90,6 +90,25 @@ func ListUserWritableRepos(ctx context.Context, user *user_model.User) ([]*repo_
 	return out, nil
 }
 
+// UserCanRegisterRepo loads a repo by ID and verifies the user has at least
+// Write access to it. Returns the loaded repo (with Owner loaded) on success.
+//
+// Returns ErrRepoAccessDenied if the user lacks write permission.
+// Returns repo_model.ErrRepoNotExist if the repo doesn't exist.
 func UserCanRegisterRepo(ctx context.Context, user *user_model.User, repoID int64) (*repo_model.Repository, error) {
-	return nil, nil
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err != nil {
+		return nil, err // includes repo_model.ErrRepoNotExist
+	}
+	if err := repo.LoadOwner(ctx); err != nil {
+		return nil, err
+	}
+	perm, err := access_model.GetUserRepoPermission(ctx, repo, user)
+	if err != nil {
+		return nil, err
+	}
+	if perm.AccessMode < perm_model.AccessModeWrite {
+		return nil, ErrRepoAccessDenied{UserID: user.ID, RepoID: repoID}
+	}
+	return repo, nil
 }
