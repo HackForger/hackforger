@@ -33,6 +33,7 @@
 				{{else if eq .OpType 57}}{{ctx.Locale.Tr "hackforger.feed.grant_round_cancelled" .EntityName (HackforgerEntityURL .EntityType .EntitySlug)}}
 				{{else if eq .OpType 58}}{{ctx.Locale.Tr "hackforger.feed.order_fulfilled" .EntityName}}
 				{{else if eq .OpType 59}}{{ctx.Locale.Tr "hackforger.feed.order_cancelled" .EntityName}}
+				{{else if eq .OpType 60}}{{ctx.Locale.Tr "hackforger.feed.org_join_request" .EntityName (printf "%s/%s" AppSubUrl (.EntityName | PathEscape))}}
 				{{end}}
 				{{DateUtils.TimeSince .CreatedUnix}}
 			</div>
