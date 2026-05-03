@@ -368,22 +368,21 @@ func RegisterPost(ctx *context.Context) {
 		return
 	}
 
-	// Verify repo exists
-	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	// Load repo + verify user has Write+ access (covers owner, org-team grant,
+	// collaborator) — replaces the older inline `IsOrganizationMember` (read-
+	// level) check, which was too loose: a read-only org member could
+	// previously register but couldn't actually push to the repo. See
+	// docs/superpowers/specs/2026-05-03-hackathon-org-repo-registration-fix.md
+	// §4.4 + §7 for the intentional behavior tightening.
+	repo, err := hackforger_service.UserCanRegisterRepo(ctx, ctx.Doer, repoID)
 	if err != nil {
-		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.repo_required"))
-		ctx.Redirect("/hackathon/" + h.Slug)
-		return
-	}
-
-	// Check user has access
-	hasAccess := repo.OwnerID == ctx.Doer.ID
-	if !hasAccess {
-		isMember, _ := organization_model.IsOrganizationMember(ctx, repo.OwnerID, ctx.Doer.ID)
-		hasAccess = isMember
-	}
-	if !hasAccess {
-		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.repo_required"))
+		if hackforger_service.IsErrRepoAccessDenied(err) || repo_model.IsErrRepoNotExist(err) {
+			ctx.Flash.Error(ctx.Tr("hackforger.hackathon.register.repo_required"))
+			ctx.Redirect("/hackathon/" + h.Slug)
+			return
+		}
+		log.Error("UserCanRegisterRepo: %v", err)
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.internal"))
 		ctx.Redirect("/hackathon/" + h.Slug)
 		return
 	}
