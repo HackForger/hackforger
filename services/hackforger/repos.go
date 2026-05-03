@@ -65,6 +65,13 @@ func ListUserWritableRepos(ctx context.Context, user *user_model.User) ([]*repo_
 		AllLimited:         false,
 		IncludeDescription: false,
 		ListOptions:        db.ListOptions{Page: 1, PageSize: fetchPageSize},
+		// Order by recent activity, not alphabetic. Important because:
+		//   - For site admins, SearchRepository skips AccessibleRepositoryCondition
+		//     and returns ALL repos in the system. Default alphabetical order would
+		//     deterministically hide non-A-prefix repos behind the dropdownMax cap.
+		//   - For regular users with many writable repos, recently-touched repos
+		//     are what they actually want to register with.
+		OrderBy: db.SearchOrderByRecentUpdated,
 	})
 	if err != nil {
 		return nil, err

@@ -135,7 +135,10 @@ func Register(ctx *context.APIContext) {
 	}
 	if repo != nil {
 		r.RepoID = repo.ID
-		if repo.Owner.IsOrganization() {
+		// Defensive: UserCanRegisterRepo calls LoadOwner and returns its error,
+		// so repo.Owner is normally populated. Guard anyway in case of a
+		// concurrent owner deletion between LoadOwner and IsOrganization.
+		if repo.Owner != nil && repo.Owner.IsOrganization() {
 			r.OrgID = repo.Owner.ID
 			r.TeamName = repo.Owner.Name // override caller's TeamName for team/org registration
 		}

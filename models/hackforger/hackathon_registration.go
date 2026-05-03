@@ -143,8 +143,24 @@ func CreateRegistration(ctx context.Context, r *HackathonRegistration) error {
 			// Solo → Team upgrade
 			existing.OrgID = r.OrgID
 			existing.TeamName = r.TeamName
-			_, err := db.GetEngine(ctx).ID(existing.ID).Cols("org_id", "team_name").Update(existing)
-			return err
+			cols := []string{"org_id", "team_name"}
+			// Carry over RepoID if the upgrade also brought a repo binding (e.g. user
+			// initially registered solo, then re-registers with an org repo to bind it).
+			if r.RepoID > 0 {
+				existing.RepoID = r.RepoID
+				cols = append(cols, "repo_id")
+			}
+			if _, err := db.GetEngine(ctx).ID(existing.ID).Cols(cols...).Update(existing); err != nil {
+				return err
+			}
+			// Mutate caller's `r` to reflect persisted state. Critical for callers
+			// that build downstream rows referencing r.ID — without this they
+			// silently set RegistrationID = 0 (orphaned submission).
+			r.ID = existing.ID
+			r.CreatedUnix = existing.CreatedUnix
+			r.UpdatedUnix = existing.UpdatedUnix
+			r.Status = existing.Status
+			return nil
 		}
 		return ErrDuplicateRegistration{HackathonID: r.HackathonID, UserID: r.UserID}
 	}
