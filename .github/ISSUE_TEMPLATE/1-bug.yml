@@ -1,0 +1,118 @@
+name: 🐛 Bug 报告 / Bug Report
+description: 报告 HackForger 上发现的功能问题（用户能看到/操作的）
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 谢谢你提交问题！请尽量按下面的字段填完，**信息越完整、修起来越快**。每个字段的提示都给了一句"该写什么"。
+        >
+        > 如果你不确定某些字段，留空也行，但是 **复现步骤 / 实际现象 / 期望现象** 这三项必填。
+
+  - type: input
+    id: page_url
+    attributes:
+      label: 出问题的页面 URL
+      description: 完整地址。如果是登录后才能看到的页面，**也直接贴 URL**，我们能猜到要登录哪个账户。
+      placeholder: "https://www.synnovator.com/hackathon/opc-2026-xxxxx"
+    validations:
+      required: true
+
+  - type: input
+    id: account
+    attributes:
+      label: 你用什么账号操作的？
+      description: 用户名（不要填密码）。如果是匿名访问，写 `匿名`。
+      placeholder: "linyilun"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤（一步一行）
+      description: |
+        从打开浏览器开始一步一步写。最理想是别人按你这个步骤一定能看到同样的现象。
+      placeholder: |
+        1. 用 linyilun 账号登录
+        2. 打开 https://www.synnovator.com/hackathon/opc-2026-shuzhi-w1
+        3. 点页面右下角"报名"区
+        4. 在"选择仓库"下拉框里找 H2OSLabs/page.h2oslabs.com
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望看到 / 期望发生的事
+      description: 一两句话即可。
+      placeholder: 下拉里应该列出我所属的 H2OSLabs 组织的所有可写仓库，包括 page.h2oslabs.com
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际看到 / 实际发生的事
+      description: 一两句话即可。如果有错误提示，原文贴出来。
+      placeholder: 下拉是空的，只有"— 选择仓库 —"占位符，找不到任何组织的仓库
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: |
+        **强烈建议**贴 1-3 张截图（直接拖图到这个框里就会自动上传）。一张图胜过一千字。
+        如果是涉及多步操作的 bug，请截图关键步骤；如果有错误弹窗 / 红字提示，必须截图。
+      placeholder: 直接拖拽图片到这里
+    validations:
+      required: false
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 出现频率
+      options:
+        - "每次都能复现"
+        - "偶尔出现（>50%）"
+        - "很少出现（<50%）"
+        - "只出现过一次"
+        - "不确定"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: 你在哪个环境测的？
+      options:
+        - "线上 https://www.synnovator.com"
+        - "内网 https://hackforger.inside.h2os.cloud"
+        - "本地开发实例"
+        - "其他（请在描述里说明）"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器 + 版本（可选）
+      description: 如果你不知道版本号，写浏览器名就行，比如 "Chrome" / "Safari" / "微信内置"。
+      placeholder: "Chrome 130 / Safari 17 / 微信内置"
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他补充（可选）
+      description: 比如"以前能用，今天突然不行"、"换个账号就好了"、"前几天 #134 改了相关功能可能有影响"等线索都欢迎写在这里。
+    validations:
+      required: false
