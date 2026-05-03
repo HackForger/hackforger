@@ -17,8 +17,10 @@ ECS=hackforger@203.119.115.130
 REPORTS_DIR=docs/tests/e2e/reports
 PROD_BRANCH="${PROD_BRANCH:-prod}"
 
-# Paths that DON'T need a smoke-test report (infra/docs/tooling only)
-INFRA_PATHS_RE='^(deploy/|scripts/|docs/|\.github/|\.forgejo/|\.gitignore$|\.editorconfig$|Makefile$|CHANGELOG\.md$|[^/]+\.md$|go\.mod$|go\.sum$|package-lock\.json$|package\.json$)'
+# Paths that DON'T need a smoke-test report (infra/docs/tooling only).
+# `.claude/` covers hookify rules, agent prompts, plugin configs etc — they
+# affect tooling for future sessions, not what end users see in the running app.
+INFRA_PATHS_RE='^(deploy/|scripts/|docs/|\.github/|\.forgejo/|\.claude/|\.gitignore$|\.editorconfig$|Makefile$|CHANGELOG\.md$|[^/]+\.md$|go\.mod$|go\.sum$|package-lock\.json$|package\.json$)'
 
 log() { printf "\n\033[1;34m▶ %s\033[0m\n" "$*"; }
 fail() { printf "  \033[31m✗\033[0m %s\n" "$*"; }
@@ -85,7 +87,11 @@ for sha in $COMMITS; do
   fi
 
   # Look for a report referencing this SHA in frontmatter
-  report=$(grep -lE "^\s*-\s+${sha}\b|^\s*-\s+${short}\b" "$REPORTS_DIR"/*.md 2>/dev/null | head -1)
+  # `|| true` because grep returns 1 when no match; combined with set -euo
+  # pipefail this would silently kill the whole script after the first
+  # user-facing commit without a report. We want to record the failure and
+  # continue so the operator sees ALL missing reports in one run.
+  report=$(grep -lE "^\s*-\s+${sha}\b|^\s*-\s+${short}\b" "$REPORTS_DIR"/*.md 2>/dev/null | head -1 || true)
   if [ -z "$report" ]; then
     fail "$short $subject"
     echo "        no report references $sha (or $short) in $REPORTS_DIR/"
@@ -95,12 +101,34 @@ for sha in $COMMITS; do
 
   # Check admin_signoff: non-null AND not empty.
   # YAML allows two forms:
-  #   admin_signoff: null              ← unsigned, FAIL
-  #   admin_signoff:                   ← unsigned (empty value), FAIL
-  #   admin_signoff:\n  by: alice...   ← signed (mapping value), PASS
-  if grep -qE '^admin_signoff:\s*(null|~)?\s*$' "$report"; then
+  #   admin_signoff: null                       ← unsigned, FAIL
+  #   admin_signoff: ~                          ← unsigned, FAIL
+  #   admin_signoff:                            ← unsigned (empty value), FAIL
+  #   admin_signoff:\n  by: alice...            ← signed (multi-line mapping), PASS
+  #   admin_signoff: { by: alice, ... }         ← signed (inline mapping), PASS
+  # Detection: extract the value after the colon. If it's empty, null, or ~,
+  # check the line after — if that line is indented and looks like YAML mapping
+  # continuation (e.g., "  by:"), treat as signed; else unsigned.
+  signoff_check=$(awk '
+    /^admin_signoff:/ {
+      val = $0
+      sub(/^admin_signoff:[ \t]*/, "", val)
+      if (val == "" || val == "null" || val == "~") {
+        # Look at next line for mapping continuation
+        if ((getline next_line) > 0 && next_line ~ /^[ \t]+[A-Za-z_][A-Za-z0-9_-]*[ \t]*:/) {
+          print "SIGNED"
+        } else {
+          print "UNSIGNED"
+        }
+      } else {
+        print "SIGNED"
+      }
+      exit
+    }
+  ' "$report")
+  if [ "$signoff_check" = "UNSIGNED" ]; then
     fail "$short $subject"
-    echo "        report exists ($report) but admin_signoff is null"
+    echo "        report exists ($report) but admin_signoff is null/empty"
     FAIL=$((FAIL+1))
     continue
   fi

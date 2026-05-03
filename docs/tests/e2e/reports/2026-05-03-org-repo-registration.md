@@ -5,10 +5,7 @@ commits:
 tested_against: https://hackforger.inside.h2os.cloud
 tested_at: 2026-05-03T21:10:00+08:00
 e2e_owner: claude
-admin_signoff:
-  by: allen.woods
-  at: 2026-05-03T22:35:00+08:00
-  notes: "Stage 2: ran the non-admin user (linyilun) registration flow on Mac dev — '没有问题'. Squash-merged as 4fef909af5 (was originally commits f0c08420ab..b6a7bc750b in branch fix/hackathon-org-repo-registration before squash-merge)."
+admin_signoff: { by: allen.woods, at: "2026-05-03T22:35:00+08:00", notes: "Stage 2: non-admin (linyilun) registration flow confirmed on Mac dev — '没有问题'. Squash-merged as 4fef909af5 (originally f0c08420ab..b6a7bc750b on fix/hackathon-org-repo-registration)." }
 ---
 
 # Hackathon Registration: org-owned repos now appear in dropdown + API parity
