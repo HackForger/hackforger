@@ -252,6 +252,8 @@ func NewFuncMap() template.FuncMap {
 				return "octicon-gift"
 			case opType >= 54 && opType <= 57:
 				return "octicon-heart"
+			case opType == 60:
+				return "octicon-organization"
 			default:
 				return "octicon-pulse"
 			}
