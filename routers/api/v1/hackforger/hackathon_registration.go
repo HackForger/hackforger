@@ -7,7 +7,10 @@ import (
 	"net/http"
 
 	hackforger_model "forgejo.org/models/hackforger"
+	organization_model "forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
 	hackforger_service "forgejo.org/services/hackforger"
@@ -16,8 +19,12 @@ import (
 
 // RegisterForm is the form for registering to a hackathon.
 type RegisterForm struct {
-	TeamName string `json:"team_name" binding:"Required"`
-	TrackID  int64  `json:"track_id"`
+	TeamName    string `json:"team_name" binding:"Required"`
+	TrackID     int64  `json:"track_id"`
+	RepoID      int64  `json:"repo_id,omitempty"`     // NEW: optional; if 0, solo registration (no repo binding)
+	Title       string `json:"title,omitempty"`       // NEW: submission title (defaults to repo name)
+	Description string `json:"description,omitempty"` // NEW: submission description
+	DemoURL     string `json:"demo_url,omitempty"`    // NEW: submission demo URL
 }
 
 // UpdateRegistrationForm is the form for updating a registration's status.
@@ -69,6 +76,20 @@ func Register(ctx *context.APIContext) {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")
 		return
 	}
+	// Block organizer self-registration (parity with web RegisterPost)
+	if h.OwnerID == ctx.Doer.ID {
+		ctx.Error(http.StatusForbidden, "CannotRegisterOwn", "organizer cannot register for own hackathon")
+		return
+	}
+	if h.LinkedOrgID > 0 {
+		if org, err := organization_model.GetOrgByID(ctx, h.LinkedOrgID); err == nil {
+			if isOwner, _ := org.IsOwnedBy(ctx, ctx.Doer.ID); isOwner {
+				ctx.Error(http.StatusForbidden, "CannotRegisterOwn", "organizer cannot register for own hackathon")
+				return
+			}
+		}
+	}
+
 	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
 	if !canRegister {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")
@@ -85,11 +106,39 @@ func Register(ctx *context.APIContext) {
 		return
 	}
 	f := web.GetForm(ctx).(*RegisterForm)
+
+	// Optional repo binding — hoisted so submission block below can use `repo`.
+	var repo *repo_model.Repository
+	if f.RepoID > 0 {
+		var rerr error
+		repo, rerr = hackforger_service.UserCanRegisterRepo(ctx, ctx.Doer, f.RepoID)
+		if rerr != nil {
+			if hackforger_service.IsErrRepoAccessDenied(rerr) {
+				ctx.Error(http.StatusForbidden, "RepoAccessDenied", rerr)
+				return
+			}
+			if repo_model.IsErrRepoNotExist(rerr) {
+				ctx.Error(http.StatusNotFound, "RepoNotExist", rerr)
+				return
+			}
+			ctx.InternalServerError(rerr)
+			return
+		}
+	}
+
 	r := &hackforger_model.HackathonRegistration{
 		HackathonID: h.ID,
 		UserID:      ctx.Doer.ID,
 		TeamName:    f.TeamName,
 		TrackID:     f.TrackID,
+		Status:      hackforger_model.RegistrationStatusApproved, // ALWAYS — match web; was previously zero-value
+	}
+	if repo != nil {
+		r.RepoID = repo.ID
+		if repo.Owner.IsOrganization() {
+			r.OrgID = repo.Owner.ID
+			r.TeamName = repo.Owner.Name // override caller's TeamName for team/org registration
+		}
 	}
 	if err := hackforger_model.CreateRegistration(ctx, r); err != nil {
 		if hackforger_model.IsErrDuplicateRegistration(err) {
@@ -98,6 +147,34 @@ func Register(ctx *context.APIContext) {
 		}
 		ctx.InternalServerError(err)
 		return
+	}
+
+	// Repo-bound side-effects (parity with web): submission + AddOrgUser.
+	if repo != nil {
+		title := f.Title
+		if title == "" {
+			title = repo.Name
+		}
+		s := &hackforger_model.HackathonSubmission{
+			HackathonID:    h.ID,
+			RegistrationID: r.ID,
+			UserID:         ctx.Doer.ID,
+			Title:          title,
+			Description:    f.Description,
+			DemoURL:        f.DemoURL,
+			TrackID:        f.TrackID,
+			RepoID:         repo.ID,
+			Status:         hackforger_model.SubmissionStatusSubmitted,
+		}
+		if err := hackforger_service.CreateSubmission(ctx, ctx.Doer, h, s); err != nil {
+			log.Error("CreateSubmission on register: %v", err)
+			// Don't fail registration — log and continue (parity with web)
+		}
+	}
+
+	// AddOrgUser side-effect runs whether or not a repo was bound (matches web).
+	if h.LinkedOrgID > 0 {
+		_ = organization_model.AddOrgUser(ctx, h.LinkedOrgID, ctx.Doer.ID)
 	}
 
 	// Publish feed event for registration (global + followers so it appears in entity timelines)
