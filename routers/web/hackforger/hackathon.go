@@ -17,7 +17,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/markup/markdown"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
@@ -282,12 +281,13 @@ func ViewHackathon(ctx *context.Context) {
 		isJudge, _ := hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
 		ctx.Data["IsJudge"] = isJudge
 
-		repos, _, _ := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
-			Actor:       ctx.Doer,
-			OwnerID:     ctx.Doer.ID,
-			Private:     true,
-			Collaborate: optional.Some(false),
-		})
+		// regression: must NOT re-add OwnerID/Collaborate filters here — see
+		// docs/superpowers/specs/2026-05-03-hackathon-org-repo-registration-fix.md
+		repos, err := hackforger_service.ListUserWritableRepos(ctx, ctx.Doer)
+		if err != nil {
+			log.Warn("ListUserWritableRepos: %v", err)
+			repos = nil
+		}
 		ctx.Data["UserRepos"] = repos
 
 		preselectedRepoID := ctx.FormInt64("repo_id")
@@ -487,12 +487,13 @@ func SubmitForm(ctx *context.Context) {
 	ctx.Data["Tracks"] = tracks
 
 	// Load user's repos for the project repo selector
-	repos, _, _ := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
-		Actor:       ctx.Doer,
-		OwnerID:     ctx.Doer.ID,
-		Private:     true,
-		Collaborate: optional.Some(false),
-	})
+	// regression: must NOT re-add OwnerID/Collaborate filters here — see
+	// docs/superpowers/specs/2026-05-03-hackathon-org-repo-registration-fix.md
+	repos, err := hackforger_service.ListUserWritableRepos(ctx, ctx.Doer)
+	if err != nil {
+		log.Warn("ListUserWritableRepos: %v", err)
+		repos = nil
+	}
 	ctx.Data["UserRepos"] = repos
 
 	// During development phase, only show repos already registered
