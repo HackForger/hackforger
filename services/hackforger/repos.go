@@ -45,13 +45,49 @@ func IsErrRepoAccessDenied(err error) bool {
 	return ok
 }
 
-// Stub function bodies — implemented in Tasks 2 and 3.
+// ListUserWritableRepos returns up to `dropdownMax` repositories the user has
+// at least Write access to, including org-owned repos. Used to populate the
+// hackathon registration repo dropdown.
+//
+// Note on choice of SearchRepoOptions:
+//   - Actor=user + Private=true uses AccessibleRepositoryCondition, so
+//     visibility includes user-owned + org-team-granted + collaborator repos.
+//   - AllPublic/AllLimited=false intentionally excludes repos where the user
+//     is "just a member of a public org with no team grant" — those won't
+//     pass the Write+ post-filter anyway, so skipping them up front is faster.
+//   - Each returned repo gets its Owner loaded so templates can render
+//     "owner_name/repo_name" without N+1 lazy-load.
 func ListUserWritableRepos(ctx context.Context, user *user_model.User) ([]*repo_model.Repository, error) {
-	_ = db.ListOptions{}
-	_ = perm_model.AccessModeWrite
-	_ = access_model.GetUserRepoPermission
-	_ = repo_model.SearchRepository
-	return nil, nil
+	repos, _, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
+		Actor:              user,
+		Private:            true,
+		AllPublic:          false,
+		AllLimited:         false,
+		IncludeDescription: false,
+		ListOptions:        db.ListOptions{Page: 1, PageSize: fetchPageSize},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*repo_model.Repository, 0, dropdownMax)
+	for _, r := range repos {
+		if len(out) >= dropdownMax {
+			break
+		}
+		perm, err := access_model.GetUserRepoPermission(ctx, r, user)
+		if err != nil {
+			continue
+		}
+		if perm.AccessMode < perm_model.AccessModeWrite {
+			continue
+		}
+		if err := r.LoadOwner(ctx); err != nil {
+			continue // skip repo whose owner can't be loaded
+		}
+		out = append(out, r)
+	}
+	return out, nil
 }
 
 func UserCanRegisterRepo(ctx context.Context, user *user_model.User, repoID int64) (*repo_model.Repository, error) {
