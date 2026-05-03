@@ -171,6 +171,7 @@
 								</a>
 							</li>
 						{{end}}
+						{{if .SignedUser.IsAdmin}}
 							<li>
 								<a href="{{AppSubUrl}}/hackathons/new">
 									{{svg "octicon-rocket"}} {{ctx.Locale.Tr "hackforger.hackathon.new"}}
@@ -181,6 +182,7 @@
 									{{svg "octicon-heart"}} {{ctx.Locale.Tr "hackforger.grant.round.new"}}
 								</a>
 							</li>
+						{{end}}
 					</ul>
 				</div>
 			</details>
