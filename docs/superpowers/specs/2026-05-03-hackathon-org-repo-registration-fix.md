@@ -88,7 +88,7 @@ func ListUserWritableRepos(ctx context.Context, user *user_model.User) ([]*repo_
         AllPublic:       false,
         AllLimited:      false,
         IncludeDescription: false,
-        ListOptions:     db.ListOptions{Page: 1, PageSize: 200},  // dropdown cap
+        ListOptions:     db.ListOptions{Page: 1, PageSize: 10},   // dropdown cap (kept short — 10 is the dev-friendly max)
     })
     if err != nil {
         return nil, err
@@ -326,7 +326,7 @@ Estimated diff size: ~250 lines (helper + tests + 2 handler edits + report scaff
 | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- |
 | Permission helper returns too few repos (overly strict) | Medium | Medium | Unit tests cover owner / org-owner / org-write / org-read / collaborator-write cases |
-| `SearchRepository` without `OwnerID` returns way too many repos for users with broad access (page-size cap of 200 hit) | Low | Low | Pagination cap of 200 is a reasonable dropdown limit; users with >200 writable repos will need to use API (which doesn't list, just validates) |
+| Dropdown cap of 10 hides repos when user has many writable | Low-Medium | Low | The 10-item cap is for UX (long dropdown = unusable). Users with >10 writable repos can: (a) use API which takes any `repo_id` directly, or (b) accept that the dropdown shows their most recent — order is by `SearchRepository`'s natural recency. If this proves to be a real bottleneck we can add a search box to the dropdown later. |
 | API caller passes `team_name` AND `repo_id` with a personal repo (no org) | Low | Low | `team_name` honored as-is for personal repos; only overridden when repo owner is an org. Documented. |
 | Existing API callers break | Very low | High | All new fields are `omitempty`; default behavior unchanged |
 | Permission check is async-stale (user just lost write access) | Very low | Low | `UserCanRegisterRepo` is called inside the request; window is microseconds |
@@ -336,7 +336,7 @@ Estimated diff size: ~250 lines (helper + tests + 2 handler edits + report scaff
 | # | Topic | Default I assumed | Notes |
 | --- | --- | --- | --- |
 | 1 | Permission threshold | **Write+** (user confirmed 2026-05-03) | Read-only org members do not see org repos in dropdown |
-| 2 | Pagination cap on dropdown | 200 | Sane upper bound; can revisit if any user hits it |
+| 2 | Pagination cap on dropdown | **10** (user choice 2026-05-03) | Keeps the dropdown short and scannable. Power users with >10 writable repos can call the API directly with any `repo_id`. |
 | 3 | Should `team_name` be ignored when repo is an org? | **Yes — overridden by org name** for consistency with web behavior | Documented in handler comment; API caller's `team_name` is best-effort if repo is personal |
 
 ## 9. Rollback
