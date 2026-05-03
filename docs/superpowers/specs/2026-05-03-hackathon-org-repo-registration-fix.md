@@ -66,44 +66,68 @@ package hackforger
 
 import (
     "context"
+    "fmt"
 
-    access_model "forgejo.org/models/perm/access"
+    "forgejo.org/models/db"
     perm_model "forgejo.org/models/perm"
+    access_model "forgejo.org/models/perm/access"
     repo_model "forgejo.org/models/repo"
     user_model "forgejo.org/models/user"
 )
 
-// ListUserWritableRepos returns every repository the user has at least Write
-// access to, including org-owned repos. Used to populate the registration
-// repo dropdown.
+// dropdownMax is the number of writable repos shown in the registration UI.
+// Set conservatively for UX (long dropdown is unusable). Power users with more
+// writable repos can call the API directly with any repo_id.
+const dropdownMax = 10
+
+// fetchPageSize is the SearchRepository page size BEFORE the Write+ filter.
+// Larger than dropdownMax so the post-filter has enough candidates: a user
+// might have read-only repos that take up early slots. Set to 50 as a balance
+// between "enough to populate 10 writable repos" and "not so many we waste
+// permission lookups."
+const fetchPageSize = 50
+
+// ListUserWritableRepos returns up to `dropdownMax` repositories the user has
+// at least Write access to, including org-owned repos. Used to populate the
+// hackathon registration repo dropdown.
 //
-// Order: by recent activity (whatever SearchRepository returns naturally).
-// Filtering: post-fetch by access level — SearchRepository's permission filter
-// is broader than we need.
+// Note on choice of SearchRepoOptions:
+//   - Actor=user + Private=true uses AccessibleRepositoryCondition, so
+//     visibility includes user-owned + org-team-granted + collaborator repos.
+//   - AllPublic/AllLimited=false intentionally excludes repos where the user
+//     is "just a member of a public org with no team grant" — those won't
+//     pass the Write+ post-filter anyway, so skipping them up front is faster.
+//   - Each returned repo gets its Owner loaded so templates can render
+//     "owner_name/repo_name" without N+1 lazy-load.
 func ListUserWritableRepos(ctx context.Context, user *user_model.User) ([]*repo_model.Repository, error) {
-    // Fetch all visible repos for this user (owned + org + collaborator).
     repos, _, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
-        Actor:           user,
-        Private:         true,
-        AllPublic:       false,
-        AllLimited:      false,
+        Actor:              user,
+        Private:            true,
+        AllPublic:          false,
+        AllLimited:         false,
         IncludeDescription: false,
-        ListOptions:     db.ListOptions{Page: 1, PageSize: 10},   // dropdown cap (kept short — 10 is the dev-friendly max)
+        ListOptions:        db.ListOptions{Page: 1, PageSize: fetchPageSize},
     })
     if err != nil {
         return nil, err
     }
 
-    // Post-filter: keep only repos where user has >= Write.
-    out := make([]*repo_model.Repository, 0, len(repos))
+    out := make([]*repo_model.Repository, 0, dropdownMax)
     for _, r := range repos {
+        if len(out) >= dropdownMax {
+            break
+        }
         perm, err := access_model.GetUserRepoPermission(ctx, r, user)
         if err != nil {
             continue
         }
-        if perm.AccessMode >= perm_model.AccessModeWrite {
-            out = append(out, r)
+        if perm.AccessMode < perm_model.AccessModeWrite {
+            continue
         }
+        if err := r.LoadOwner(ctx); err != nil {
+            continue // skip repo whose owner can't be loaded
+        }
+        out = append(out, r)
     }
     return out, nil
 }
@@ -204,18 +228,36 @@ type RegisterForm struct {
 }
 ```
 
-`Register` handler gains a branch for `RepoID > 0`:
+`Register` handler is extended to (a) match all the web preconditions (organizer self-block, judge check, phase check, duplicate check), (b) optionally bind a repo, and (c) on repo-bind, create the submission + AddOrgUser side-effects. Status is **always set to Approved** (match web; was previously zero-value silently).
 
 ```go
-r := &hackforger_model.HackathonRegistration{
-    HackathonID: h.ID,
-    UserID:      ctx.Doer.ID,
-    TeamName:    f.TeamName,
-    TrackID:     f.TrackID,
+// --- Preconditions (parity with web RegisterPost) ---
+
+// Block organizer self-registration (was missing on API; web has it at lines 324-337)
+if h.OwnerID == ctx.Doer.ID {
+    ctx.Error(http.StatusForbidden, "CannotRegisterOwn", "organizer cannot register for own hackathon")
+    return
+}
+if h.LinkedOrgID > 0 {
+    if org, err := organization_model.GetOrgByID(ctx, h.LinkedOrgID); err == nil {
+        if isOwner, _ := org.IsOwnedBy(ctx, ctx.Doer.ID); isOwner {
+            ctx.Error(http.StatusForbidden, "CannotRegisterOwn", "organizer cannot register for own hackathon")
+            return
+        }
+    }
 }
 
+// (Existing checks below this point are unchanged: phase gate via AllowsAction,
+// judge check via IsJudgeForAnyTrack — both already in current code, keep them.)
+
+f := web.GetForm(ctx).(*RegisterForm)
+
+// --- Optional repo binding ---
+// Hoist `repo` so later submission block can reference it.
+var repo *repo_model.Repository
 if f.RepoID > 0 {
-    repo, err := hackforger_service.UserCanRegisterRepo(ctx, ctx.Doer, f.RepoID)
+    var err error
+    repo, err = hackforger_service.UserCanRegisterRepo(ctx, ctx.Doer, f.RepoID)
     if err != nil {
         if hackforger_service.IsErrRepoAccessDenied(err) {
             ctx.Error(http.StatusForbidden, "RepoAccessDenied", err)
@@ -228,20 +270,35 @@ if f.RepoID > 0 {
         ctx.InternalServerError(err)
         return
     }
+}
+
+// --- Build registration row ---
+r := &hackforger_model.HackathonRegistration{
+    HackathonID: h.ID,
+    UserID:      ctx.Doer.ID,
+    TeamName:    f.TeamName,
+    TrackID:     f.TrackID,
+    Status:      hackforger_model.RegistrationStatusApproved, // ALWAYS — match web; not just on repo branch
+}
+if repo != nil {
     r.RepoID = repo.ID
     if repo.Owner.IsOrganization() {
         r.OrgID = repo.Owner.ID
-        r.TeamName = repo.Owner.Name  // override caller-supplied TeamName for team registration
+        r.TeamName = repo.Owner.Name // override caller-supplied TeamName for team/org registration
     }
-    r.Status = hackforger_model.RegistrationStatusApproved  // match web behaviour
 }
 
 if err := hackforger_model.CreateRegistration(ctx, r); err != nil {
-    // ... existing duplicate handling
+    if hackforger_model.IsErrDuplicateRegistration(err) {
+        ctx.Error(http.StatusConflict, "AlreadyRegistered", err)
+        return
+    }
+    ctx.InternalServerError(err)
+    return
 }
 
-// If repo was provided, also create the submission (parity with web)
-if f.RepoID > 0 {
+// --- Repo-bound side-effects (parity with web): submission + AddOrgUser ---
+if repo != nil {
     title := f.Title
     if title == "" {
         title = repo.Name
@@ -254,16 +311,16 @@ if f.RepoID > 0 {
         Description:    f.Description,
         DemoURL:        f.DemoURL,
         TrackID:        f.TrackID,
-        RepoID:         f.RepoID,
+        RepoID:         repo.ID,
         Status:         hackforger_model.SubmissionStatusSubmitted,
     }
     if err := hackforger_service.CreateSubmission(ctx, ctx.Doer, h, s); err != nil {
         log.Error("CreateSubmission on register: %v", err)
-        // Don't fail the registration — log and continue (parity with web)
+        // Don't fail registration — log and continue (parity with web)
     }
 }
 
-// If linked org exists, add user to it (parity with web)
+// AddOrgUser side-effect runs whether or not a repo was bound (matches web).
 if h.LinkedOrgID > 0 {
     _ = organization_model.AddOrgUser(ctx, h.LinkedOrgID, ctx.Doer.ID)
 }
@@ -273,7 +330,13 @@ if h.LinkedOrgID > 0 {
 
 ### 4.4 Backward compatibility
 
-Existing API callers that pass `{team_name, track_id}` only continue to work — `RepoID == 0` triggers the original solo-registration path. Existing web flow with `repo_id` form param continues to work — same handler, same derivation, just access-checked through the helper.
+| Caller form | Before | After |
+| ----------- | ------ | ----- |
+| API `{team_name, track_id}` (legacy solo) | Status field zero-value (Pending) | **Status = Approved** (now matches web behavior) — minor behavior change |
+| API `{team_name, track_id, repo_id}` | Was impossible (no field) | Works: org derivation + submission + AddOrgUser |
+| Web `repo_id` form post (current) | Worked, but inline access check used `IsOrganizationMember` (read-level OK) | Now uses `UserCanRegisterRepo` which requires Write+ — **slightly stricter**, see §7 risks |
+
+The API status-on-solo change is intentional: the old behavior was a latent bug (solo registrations stuck in Pending until something else nudged them). Web has always set Approved on success, and we want one truth.
 
 ## 5. Test Plan
 
@@ -282,9 +345,17 @@ Existing API callers that pass `{team_name, track_id}` only continue to work —
 - `ListUserWritableRepos` returns org repos where user is org owner
 - `ListUserWritableRepos` excludes org repos where user is read-only member
 - `ListUserWritableRepos` returns collaborator repos with Write+ access
+- `ListUserWritableRepos` caps at `dropdownMax` (10) even when user has more writable
+- `ListUserWritableRepos` loads `Owner` on returned repos (for template rendering)
 - `UserCanRegisterRepo` returns repo for owner
 - `UserCanRegisterRepo` returns `ErrRepoAccessDenied` for read-only access
 - `UserCanRegisterRepo` returns `ErrRepoNotExist` for non-existent ID
+
+### 5.1a Regression tests (so the original bug doesn't sneak back)
+- Greppable assertion in `routers/web/hackforger/hackathon.go`: file MUST NOT contain `OwnerID:\s*ctx\.Doer\.ID` near a `SearchRepository` call. Add `// regression: must not re-add OwnerID filter — see docs/superpowers/specs/2026-05-03...` comment near the helper call sites so a future maintainer's diff doesn't silently revert.
+- API integration test that confirms judges still cannot register via API (existing protection — must not break).
+- API integration test that confirms organizers cannot register via API (newly added — must work).
+- API integration test for the read-only tightening: a user with only Read access to a repo gets `403 RepoAccessDenied` even if they could previously have used the loose `IsOrganizationMember` check on web. (This is intentional behavior change, see §4.4 + §7.)
 
 ### 5.2 E2E (web, agent-browser at hackforger.inside.h2os.cloud)
 The existing report template at `docs/tests/e2e/reports/` will be filled in. Acceptance:
@@ -325,10 +396,12 @@ Estimated diff size: ~250 lines (helper + tests + 2 handler edits + report scaff
 
 | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- |
+| **Permission tightening at POST**: web `RegisterPost` previously accepted any `IsOrganizationMember` (read-level) for org repos; new helper requires Write+. A read-only org member who could previously register loses that ability. | Medium | Medium | **Intentional** per §2 Goals + user choice 2026-05-03. If real users complain, the right fix is to upgrade their org-team grant to Write — the permission was always wrong for "you should be able to push to this repo for the hackathon." Document in release notes. |
 | Permission helper returns too few repos (overly strict) | Medium | Medium | Unit tests cover owner / org-owner / org-write / org-read / collaborator-write cases |
-| Dropdown cap of 10 hides repos when user has many writable | Low-Medium | Low | The 10-item cap is for UX (long dropdown = unusable). Users with >10 writable repos can: (a) use API which takes any `repo_id` directly, or (b) accept that the dropdown shows their most recent — order is by `SearchRepository`'s natural recency. If this proves to be a real bottleneck we can add a search box to the dropdown later. |
-| API caller passes `team_name` AND `repo_id` with a personal repo (no org) | Low | Low | `team_name` honored as-is for personal repos; only overridden when repo owner is an org. Documented. |
-| Existing API callers break | Very low | High | All new fields are `omitempty`; default behavior unchanged |
+| Dropdown cap of 10 + fetch page of 50: a power user's first 50 repos by recency could be all read-only, hiding a writable one | Low | Low | Sane defaults; the user's most-used repos are typically writable. If this actually bites, raise `fetchPageSize` to 200 — it's a constant. |
+| Dropdown cap of 10 hides repos when user has many writable | Low-Medium | Low | The 10-item cap is for UX (long dropdown = unusable). Power users can use the API with any `repo_id`. If this becomes a real bottleneck, add a search-box to the dropdown — out of scope for this fix. |
+| API caller passes `team_name` AND `repo_id` with a personal repo (no org) | Low | Low | `team_name` honored as-is for personal repos; only overridden when repo owner is an org. Documented in §4.3. |
+| Existing API callers break | Very low | High | All new fields are `omitempty`; the only behavior change is `Status: Approved` on solo registrations (§4.4) which is a fix, not a break |
 | Permission check is async-stale (user just lost write access) | Very low | Low | `UserCanRegisterRepo` is called inside the request; window is microseconds |
 
 ## 8. Open Questions
