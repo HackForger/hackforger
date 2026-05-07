@@ -20,7 +20,7 @@ To **accept** or **reject** a join request, use Forgejo's standard team membersh
 ```bash
 curl -X POST \
   -H "Authorization: token $FORGEJO_TOKEN" \
-  https://hackforger.inside.h2os.cloud/api/v1/hackforger/orgs/web3-innovation/join-request
+  "${FORGEJO_URL:?set FORGEJO_URL first — see SKILL.md Step 0}/api/v1/hackforger/orgs/web3-innovation/join-request"
 # → 202 {"status":"notified"}
 ```
 

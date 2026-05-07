@@ -28,11 +28,15 @@ The agent fetches the GitHub URL, reads SKILL.md + references/ contents, and pla
 
 ## After install
 
-Set these env vars in your shell:
+Set these env vars in your shell. **Do not assume a default URL** —
+HackForger is deployed at many domains for different purposes, so the skill
+will ask you which instance to target if `FORGEJO_URL` is unset:
 
 ```bash
 export FORGEJO_TOKEN=<personal-access-token>
-export FORGEJO_URL=https://hackforger.inside.h2os.cloud   # or your instance URL
+# Pick the instance that matches your deployment, e.g.:
+export FORGEJO_URL=https://www.synnovator.com   # public production (example)
+# or http://localhost:3000 for local dev, or your own self-hosted URL
 ```
 
 Generate a token at `<FORGEJO_URL>/-/user/settings/applications`. Scope must
