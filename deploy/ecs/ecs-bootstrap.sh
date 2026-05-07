@@ -245,7 +245,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-log "[8/9] Installing systemd units + backup script + app.ini template"
+log "[8/9] Installing systemd units + backup script + app.ini template + sshd drop-in"
 for unit in gitea.service forgejo-runner.service caddy.service \
             hackforger-backup.service hackforger-backup.timer; do
   sudo cp "$SCRIPT_DIR/systemd/$unit" "/etc/systemd/system/$unit"
@@ -254,6 +254,26 @@ sudo cp "$SCRIPT_DIR/backup-ecs.sh" /usr/local/bin/hackforger-backup.sh
 sudo chmod +x /usr/local/bin/hackforger-backup.sh
 sudo cp "$SCRIPT_DIR/app.ini.tmpl" /opt/hackforger/app.ini.tmpl
 sudo chown hackforger:hackforger /opt/hackforger/app.ini.tmpl
+
+# sshd drop-in: makes sshd read both /home/hackforger/.ssh/authorized_keys (operator
+# shell-login keys) and /var/lib/hackforger/.ssh/authorized_keys (Forgejo-managed
+# keys with command="gitea serv ..." prefix). Required because the gitea systemd
+# unit overrides HOME=/var/lib/hackforger + ProtectHome=yes, so Forgejo writes
+# authorized_keys outside the OS user's home where sshd looks by default.
+if [ -f "$SCRIPT_DIR/sshd-99-hackforger.conf" ]; then
+  sudo install -m 644 -o root -g root "$SCRIPT_DIR/sshd-99-hackforger.conf" \
+       /etc/ssh/sshd_config.d/99-hackforger.conf
+  if sudo sshd -t; then
+    sudo systemctl reload ssh
+    ok "sshd drop-in installed and ssh reloaded"
+  else
+    echo "  WARN: sshd -t failed after installing drop-in — removed it" >&2
+    sudo rm /etc/ssh/sshd_config.d/99-hackforger.conf
+  fi
+else
+  echo "  skip: $SCRIPT_DIR/sshd-99-hackforger.conf not present (older bootstrap?)"
+fi
+
 sudo systemctl daemon-reload
 sudo systemctl enable hackforger-backup.timer >/dev/null 2>&1 || true
 sudo systemctl start hackforger-backup.timer
