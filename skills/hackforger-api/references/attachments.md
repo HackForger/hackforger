@@ -14,7 +14,7 @@ Forgejo's standard attachment endpoints (`/repos/{owner}/{repo}/issues/{index}/a
 curl -X POST \
   -H "Authorization: token $FORGEJO_TOKEN" \
   -F "file=@design.png" \
-  https://hackforger.inside.h2os.cloud/api/v1/hackforger/attachments
+  "${FORGEJO_URL:?set FORGEJO_URL first — see SKILL.md Step 0}/api/v1/hackforger/attachments"
 # → {"uuid":"a3f8...e2c1"}
 ```
 
