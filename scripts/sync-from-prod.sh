@@ -49,7 +49,7 @@ fi
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 
-ECS=hackforger@203.119.115.130
+ECS=synnovator-admin   # ssh alias from ~/.ssh/config — uses ops-only key. plain hackforger@203.x routes through Forgejo SSH after #160.
 DEST="$HOME/Backups/hackforger/db"
 
 log() { printf "\n\033[1;34m▶ %s\033[0m\n" "$*"; }

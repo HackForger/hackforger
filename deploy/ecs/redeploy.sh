@@ -32,7 +32,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO"
 
-ECS=hackforger@203.119.115.130
+ECS=synnovator-admin   # ssh alias from ~/.ssh/config — uses ops-only key. plain hackforger@203.x routes through Forgejo SSH after #160.
 SKIP_BUILD=0
 SKIP_PREFLIGHT=0
 for arg in "$@"; do
