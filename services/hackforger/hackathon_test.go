@@ -87,3 +87,33 @@ func TestPublishHackathon_NoCriteria(t *testing.T) {
 	assert.Equal(t, int64(7), typed.HackathonID)
 	assert.Equal(t, int64(0), typed.TrackID, "global check, not track-scoped")
 }
+
+// TestCancelHackathon_DoesNotTouchIsPublished pins the minimal-scope decision
+// for issue #167: cancel must flip status_cache to Cancelled but must NOT
+// modify is_published. Keeping is_published=true preserves two existing
+// guards: PublishHackathon's "already published" rejection (prevents
+// re-publishing a cancelled hackathon) and manage.tmpl's `{{if not
+// .Hackathon.IsPublished}}` block that hides the Publish button.
+//
+// The actual "block new registrations on cancelled" enforcement lives in the
+// Register handlers (API + web), not in the service. We verify the status
+// transition the handlers key off of.
+func TestCancelHackathon_DoesNotTouchIsPublished(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// Fixture id=3 is "Open Hackathon": status_cache=1 (Open), is_published=true
+	h, err := hackforger_model.GetHackathonByID(db.DefaultContext, 3)
+	require.NoError(t, err)
+	require.True(t, h.IsPublished, "precondition: hackathon must start published")
+	require.Equal(t, hackforger_model.HackathonStatusOpen, h.StatusCache, "precondition: hackathon must start in Open state")
+
+	require.NoError(t, hackforger_service.CancelHackathon(db.DefaultContext, 2, h))
+
+	h2, err := hackforger_model.GetHackathonByID(db.DefaultContext, 3)
+	require.NoError(t, err)
+
+	assert.Equal(t, hackforger_model.HackathonStatusCancelled, h2.StatusCache,
+		"cancel must set status_cache to Cancelled (5) — register handlers key off of this")
+	assert.True(t, h2.IsPublished,
+		"minimal scope: cancel must NOT modify is_published (keeps re-publish guard and manage-page UI consistent)")
+}
