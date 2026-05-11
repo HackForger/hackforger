@@ -14,6 +14,20 @@ BINARY="$REPO/gitea"
 
 cd "$REPO"
 
+# Pre-flight: detect orphan-binary state (gitea running but $BINARY deleted on disk).
+# Unix unlink-while-open keeps the process alive but git push fails with ENOENT in
+# pre-receive. The rebuild below will recover; this banner just makes the cause
+# visible before make's 30s of output buries it. See docs/notes/orphan-binary.md.
+ORPHAN_PID=$(lsof -iTCP:3000 -sTCP:LISTEN -t 2>/dev/null || true)
+if [ -n "$ORPHAN_PID" ] && [ ! -e "$BINARY" ]; then
+  echo ""
+  echo "  ⚠ Orphan-binary state detected"
+  echo "    PID $ORPHAN_PID is listening on :3000 but $BINARY no longer exists on disk."
+  echo "    Any git push to this instance has been failing with ENOENT in pre-receive."
+  echo "    This restart will recover. See docs/notes/orphan-binary.md"
+  echo ""
+fi
+
 echo "[1/4] Building backend (bindata + sqlite tags)..."
 TAGS="bindata sqlite sqlite_unlock_notify" make build
 
