@@ -210,6 +210,7 @@ func ViewHackathon(ctx *context.Context) {
 	phases, _ := hackforger_service.GetPhases(ctx, "hackathon", h.ID)
 	ctx.Data["Phases"] = phases
 	canRegister, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "register")
+	canRegister = canRegister && h.StatusCache != hackforger_model.HackathonStatusCancelled
 	ctx.Data["CanRegister"] = canRegister
 	canSubmit, _ := hackforger_service.AllowsAction(ctx, "hackathon", h.ID, "submit_work")
 	ctx.Data["CanSubmit"] = canSubmit
@@ -334,6 +335,12 @@ func RegisterPost(ctx *context.Context) {
 				return
 			}
 		}
+	}
+
+	if h.StatusCache == hackforger_model.HackathonStatusCancelled {
+		ctx.Flash.Error(ctx.Tr("hackforger.hackathon.error.cancelled"))
+		ctx.Redirect("/hackathon/" + h.Slug)
+		return
 	}
 
 	// Check duplicate registration first (more specific error)
