@@ -76,7 +76,7 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - `go test ./models/hackforger/... -v` -- Run model tests
 - `go test ./services/hackforger/... -v` -- Run service tests
 - `./gitea web` -- Start server (http://localhost:3000)
-- `bash scripts/restart-gitea.sh` -- **After merging a PR**: one-command atomic rebuild + restart of the main instance. Does: build → stop-if-binary-path-matches → start → verify HTTP 200. Refuses to kill port-3000 processes whose binary path isn't the main repo's `gitea`, so it's safe to automate.
+- `bash scripts/restart-gitea.sh` -- **After merging a PR**: one-command atomic rebuild + restart of the main instance. Does: build → stop-if-binary-path-matches → start → verify HTTP 200. Refuses to kill port-3000 processes whose binary path isn't the main repo's `gitea`, so it's safe to automate. If you ever see `pre-receive ... No such file or directory` on push, you're in orphan-binary state — see [docs/notes/orphan-binary.md](docs/notes/orphan-binary.md).
 - `bash scripts/restart-gitea-test.sh` -- Same flow for the **test instance** (port 3001, `--custom-path /tmp/hackforger-test-custom`, log at `/tmp/gitea-test.log`). Use after editing test app.ini or rebuilding while it's up.
 - Restart server manually (fallback): kill old process, remove LevelDB lock (`rm -f data/queues/common/LOCK`), then start
 
