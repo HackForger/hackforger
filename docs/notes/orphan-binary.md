@@ -42,7 +42,7 @@ bash scripts/restart-gitea-test.sh   # for the test instance (port 3001)
 
 The restart script builds first, asserts the binary exists, then kills + restarts. After a clean run, pushes work again.
 
-If you run a patched (post-2026-05-11) version of the script, you'll see a banner before the build telling you the orphan state was detected — that's expected and means the script is doing its job.
+If your `scripts/restart-gitea.sh` prints an `⚠ Orphan-binary state detected` banner before `[1/4] Building backend`, that's the diagnostic doing its job — it just confirmed why your last push failed, and the build below will fix it.
 
 ## Why production isn't affected
 
@@ -51,7 +51,7 @@ Production ECS uses `sudo install -m 755 /tmp/gitea-new /opt/hackforger/gitea` i
 ## Prevention
 
 - Don't `rm gitea` while `gitea web` is running. If you must, run `bash scripts/restart-gitea.sh` immediately afterwards.
-- `make clean` will likely remove the binary — restart afterwards.
+- `make clean` removes the binary (Makefile target `clean-no-bindata` deletes `$(EXECUTABLE)`) — restart afterwards.
 - If unsure, check with the self-diagnosis snippet above.
 
 ## See also
