@@ -23,8 +23,26 @@ LOG="/tmp/gitea-test.log"
 
 cd "$REPO"
 
+# Pre-flight: detect orphan-binary state. See docs/notes/orphan-binary.md.
+ORPHAN_PID=$(lsof -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null || true)
+if [ -n "$ORPHAN_PID" ] && [ ! -e "$BINARY" ]; then
+  echo "" >&2
+  echo "  ⚠ Orphan-binary state detected" >&2
+  echo "    PID $ORPHAN_PID is listening on :$PORT but $BINARY no longer exists on disk." >&2
+  echo "    Any git push to this instance has been failing with ENOENT in pre-receive." >&2
+  echo "    This restart will recover. See docs/notes/orphan-binary.md" >&2
+  echo "" >&2
+fi
+
 echo "[1/4] Building backend (bindata + sqlite tags)..."
 TAGS="bindata sqlite sqlite_unlock_notify" make build
+
+# Defensive: make build exited 0 but did it actually produce a runnable binary?
+if [ ! -x "$BINARY" ]; then
+  echo "FATAL: make build returned 0 but $BINARY is missing or non-executable." >&2
+  echo "       Refusing to kill the running instance — that would leave you with nothing to start." >&2
+  exit 1
+fi
 
 echo "[2/4] Checking for process on port $PORT..."
 PID=$(lsof -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null || true)
