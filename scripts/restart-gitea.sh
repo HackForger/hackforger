@@ -31,6 +31,15 @@ fi
 echo "[1/4] Building backend (bindata + sqlite tags)..."
 TAGS="bindata sqlite sqlite_unlock_notify" make build
 
+# Defensive: make build exited 0 but did it actually produce a runnable binary?
+# Without this check, a broken Makefile target would let us kill the running
+# instance below and leave us with nothing to start.
+if [ ! -x "$BINARY" ]; then
+  echo "FATAL: make build returned 0 but $BINARY is missing or non-executable." >&2
+  echo "       Refusing to kill the running instance — that would leave you with nothing to start." >&2
+  exit 1
+fi
+
 echo "[2/4] Checking for process on port 3000..."
 PID=$(lsof -iTCP:3000 -sTCP:LISTEN -t 2>/dev/null || true)
 if [ -n "$PID" ]; then
