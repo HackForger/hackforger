@@ -211,7 +211,9 @@ Expected: `syntax ok`, then a clean run (no banner this time — we're healthy),
 
 - [ ] **Step 4: Sabotaged-build verification (optional but recommended)**
 
-This is the test that exercises the assertion. Simulate a Makefile that lies:
+This is the test that exercises the assertion. Simulate a Makefile that lies.
+
+**Note on the test itself**: this temporarily creates an orphan-binary state (we `mv` the real binary aside while gitea on :3000 keeps holding the inode). The assertion firing **prevents** the kill, so the running gitea is preserved throughout. Cleanup restores the binary. There is a ~10-second window where any concurrent git push against :3000 would fail — fine on a dev box, do not run this on shared instances.
 
 ```bash
 # Save the real binary, simulate "build produced nothing"
@@ -346,27 +348,44 @@ bash -n scripts/restart-gitea-test.sh && echo "syntax ok"
 
 Expected: `syntax ok`.
 
-- [ ] **Step 5: Run against the test instance (likely still orphan)**
+- [ ] **Step 5: Deliberately create an orphan fixture and verify the banner fires**
+
+Rather than relying on the test instance's pre-existing state (which Task 1's earlier rebuild may have healed if the test instance shares the same `$BINARY`), force the orphan state so the banner is guaranteed to be exercised at least once:
 
 ```bash
-lsof -iTCP:3001 -sTCP:LISTEN -t
-ls -la /Users/h2oslabs/Workspace/hackforger/gitea
+# Ensure the test instance is up and holding the binary open
+lsof -iTCP:3001 -sTCP:LISTEN -t || bash scripts/restart-gitea-test.sh
+
+# Create orphan fixture: move binary aside while both gitea processes
+# keep it open via the existing mmap'd text segments.
+mv /Users/h2oslabs/Workspace/hackforger/gitea /tmp/gitea.orphan-fixture
+ls /Users/h2oslabs/Workspace/hackforger/gitea 2>&1  # should report "No such file or directory"
 ```
 
-If both show: PID listening AND binary present → instance is already healthy; running the script should print no banner and complete cleanly.
-
-If PID listening AND binary missing → orphan fixture exists; banner should fire.
-
-Actually run it:
+Now run the patched test script:
 
 ```bash
 bash scripts/restart-gitea-test.sh
 ```
 
-Expected: banner if-and-only-if orphan, then a clean build + restart, HTTP 200 on `:3001`.
+Expected output:
+- The new orphan banner fires (4 indented lines naming PID, port `:3001`, and the missing path).
+- `[1/4] Building backend ...` rebuilds the binary at the path.
+- Assertion B silently passes.
+- `[2/4]` stops the test instance, `[3/4]` starts a fresh one, `[4/4]` reports HTTP 200.
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/
+ls -la /Users/h2oslabs/Workspace/hackforger/gitea
+rm -f /tmp/gitea.orphan-fixture  # the moved-aside binary is now stale; the rebuilt one supersedes it
+```
+
+Expected: `200`, binary present, fixture removed.
+
+**Side effect to be aware of**: this also leaves the **main** instance on :3000 in an orphan state for a few seconds (it was holding the same binary), but the rebuild restored the path before the test script's [2/4] kicked in. The main instance is still healthy at the end of this step — confirm with:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/
 ```
 
 Expected: `200`.
