@@ -718,11 +718,11 @@ window.HACKFORGER_LANDING_CONFIG = {
     's1-w2': { slug: 'opc-2026-shuzhi-w2-july', enabled: true  },
     's1-w3': { slug: 'opc-2026-shuzhi-w3',      enabled: false },
     's1-w4': { slug: 'opc-2026-shuzhi-w4',      enabled: false },
-    's2-w1': { slug: 'opc-2026-crossborder-w1', enabled: false },
+    's2-w1': { slug: 'opc-2026-crossborder-w1', enabled: true  },
     's2-w2': { slug: 'opc-2026-crossborder-w2', enabled: false },
     's2-w3': { slug: 'opc-2026-crossborder-w3', enabled: false },
     's2-w4': { slug: 'opc-2026-crossborder-w4', enabled: false },
-    's3-w1': { slug: 'opc-2026-youth-w1',       enabled: false },
+    's3-w1': { slug: 'opc-2026-youth-w1',       enabled: true  },
     's3-w2': { slug: 'opc-2026-youth-w2',       enabled: false },
     's3-w3': { slug: 'opc-2026-youth-w3',       enabled: false },
     's3-w4': { slug: 'opc-2026-youth-w4',       enabled: false }
@@ -1418,7 +1418,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="w-2.5 h-2.5 shrink-0 rounded-full animate-pulse bg-black"></div>
 <span class="pulse-compute-kicker font-bold tracking-[0.3em] uppercase text-black block text-[16px] leading-none font-oppo">算力消耗</span>
 </div>
-<p class="text-4xl md:text-5xl font-bold tracking-tighter leading-none mb-2 text-on-primary">即将发送</p>
+<p class="text-4xl md:text-5xl font-bold tracking-tighter leading-none mb-2 text-on-primary">500万+token</p>
 <p class="text-[10px] font-bold uppercase tracking-widest text-on-primary/85 font-oppo">大赛累计消耗🦞算力虾粮</p>
 </div>
 </div>
@@ -1427,7 +1427,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="w-2.5 h-2.5 shrink-0 rounded-full animate-pulse bg-brand-orange"></div>
 <span class="pulse-issued-kicker font-bold tracking-[0.3em] uppercase text-brand-orange block text-[16px] leading-none font-oppo">总计发放</span>
 </div>
-<p class="text-4xl md:text-5xl font-bold tracking-tighter text-on-surface leading-none mb-2">即将发送</p>
+<p class="text-4xl md:text-5xl font-bold tracking-tighter text-on-surface leading-none mb-2">30+只</p>
 <p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-oppo">已发放龙虾🦞数</p>
 </div>
 <div class="pulse-live-card rounded-md p-6 md:p-8 flex flex-col items-start h-full min-h-[143px] md:min-h-[160px] cursor-pointer select-none transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.995] focus:outline-none" data-info-id="pulse-live" role="button" tabindex="0" aria-label="正在进行 说明">
@@ -1435,7 +1435,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="w-2.5 h-2.5 shrink-0 rounded-full animate-pulse bg-brand-pink"></div>
 <span class="font-bold tracking-[0.3em] uppercase text-brand-pink block text-[16px] leading-none font-oppo">正在进行</span>
 </div>
-<p id="pulse-live-count" class="text-4xl md:text-5xl font-bold tracking-tighter leading-none mb-2 text-on-surface">即将发送</p>
+<p id="pulse-live-count" class="text-4xl md:text-5xl font-bold tracking-tighter leading-none mb-2 text-on-surface">30+只</p>
 <p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-oppo">活跃在线龙虾🦞数</p>
 </div>
 </div>
@@ -1657,7 +1657,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">5月27日-5月29日</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s2-w1" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5月11日开始报名</button>
+<button data-stage="s2-w1" class="w-full py-3 bg-primary text-black text-xs md:text-sm font-black rounded-full uppercase tracking-widest hover:scale-[0.98] transition-transform font-oppo mt-auto">即刻报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
@@ -1724,7 +1724,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <div class="mb-6 flex items-center flex-wrap gap-1.5">
 <span class="inline-flex items-center px-2 py-0.5 bg-[#FFA526] text-black text-[8px] font-black rounded-[2px] font-oppo">6月25日-7月2日</span>
 </div>
-<button disabled aria-disabled="true" data-stage="s3-w1" class="w-full py-3 bg-[#9CA3AF] text-[#4B5563] text-xs md:text-sm font-black rounded-full uppercase tracking-widest font-oppo mt-auto cursor-not-allowed">5月11日开始报名</button>
+<button data-stage="s3-w1" class="w-full py-3 bg-primary text-black text-xs md:text-sm font-black rounded-full uppercase tracking-widest hover:scale-[0.98] transition-transform font-oppo mt-auto">即刻报名</button>
 </div>
 </div>
 <div class="flex-shrink-0 w-[280px] md:w-[320px] tone-card rounded-lg overflow-hidden flex flex-col relative">
@@ -3224,6 +3224,7 @@ body.lang-en #share-modal p { line-height: 1.55; font-size: 14px; }
         "带上你的龙虾队友，协创者号社区提供养料，全球抢真实企业订单":
             "Bring your AI co-pilot. Get fueled by SynNovator. Win real enterprise orders worldwide.",
         "立即报名": "Register Now",
+        "即刻报名": "Register Now",
         "查看详情": "View Details",
         "赛规详情": "Full Rules",
         "共创未来 AI 生产力": "CO-CREATE FUTURE AI PRODUCTIVITY",
@@ -3260,6 +3261,8 @@ body.lang-en #share-modal p { line-height: 1.55; font-size: 14px; }
         "总计发放": "Total Issued",
         "正在进行": "Live Now",
         "即将发送": "Coming soon",
+        "500万+token": "5M+ tokens",
+        "30+只": "30+",
         // ---- Section: rewards ----
         "超高奖励": "High-Value Rewards",
         // ---- Section: tasks ----
