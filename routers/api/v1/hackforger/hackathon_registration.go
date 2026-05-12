@@ -76,6 +76,10 @@ func Register(ctx *context.APIContext) {
 		ctx.Error(http.StatusBadRequest, "InvalidPhase", "hackathon is not accepting registrations")
 		return
 	}
+	if h.StatusCache == hackforger_model.HackathonStatusCancelled {
+		ctx.Error(http.StatusBadRequest, "Cancelled", "hackathon has been cancelled and is no longer accepting registrations")
+		return
+	}
 	// Block organizer self-registration (parity with web RegisterPost)
 	if h.OwnerID == ctx.Doer.ID {
 		ctx.Error(http.StatusForbidden, "CannotRegisterOwn", "organizer cannot register for own hackathon")
