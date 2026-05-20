@@ -1328,15 +1328,24 @@ window.HACKFORGER_LANDING_CONFIG = {
 </div>
 </div>
 </div>
-<!-- Slide 2（暂隐藏：去掉 class 中的 hidden 即可恢复） -->
-<div class="carousel-item h-full hidden" aria-hidden="true">
-<img alt="Hero 2" loading="lazy" class="absolute inset-0 w-full h-full object-cover brightness-110" src="assets/images/轮播图1.webp"/>
+<!-- Slide 2 -->
+<div class="carousel-item h-full">
+<img alt="赛事主视觉轮播" class="absolute inset-0 w-full h-full object-cover brightness-110" src="assets/images/轮播图2.webp"/>
+<img alt="装饰图形" aria-hidden="true" class="absolute z-[2] pointer-events-none select-none object-contain" style="top: clamp(0px, 0.6vw, 10px); left: clamp(8px, 1.6vw, 24px); width: clamp(144px, 26.4vw, 336px); height: auto;" src="assets/images/Group_9216.svg"/>
 <div class="hero-bottom-overlay pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[58%]"></div>
-<div class="absolute bottom-8 left-6 right-6 z-[2] md:left-12 md:bottom-12">
-<span class="hero-kicker inline-block px-3 py-1 text-[10px] font-bold tracking-widest uppercase leading-none mb-2 font-oppo" style="background-color: rgb(255, 116, 167); color: rgb(0, 0, 0); border-radius: 2px;">共创未来 AI 生产力</span>
-<h1 class="hero-title text-white text-4xl md:text-6xl font-black tracking-tighter mb-2 md:mb-4 leading-none font-oppo">数智化跨境贸易新纪元</h1>
-<p class="hero-subtitle text-white/90 text-sm md:text-base font-medium w-full min-w-0 leading-relaxed mb-4 md:mb-6 font-oppo [text-wrap:balance]">利用大模型技术重构跨境贸易合规校验流程，实现分钟级自动申报。</p>
-<button type="button" class="px-8 py-2.5 bg-primary text-on-primary font-bold text-sm hover:scale-[0.98] transition-transform rounded-full leading-tight font-oppo" onclick="var el=document.getElementById('opc-stage-register');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})">立即报名</button>
+<div class="absolute z-[2]" style="left: clamp(16px, 4vw, 48px); right: clamp(16px, 4vw, 48px); bottom: clamp(20px, 4vw, 48px);">
+<div class="flex flex-col" style="gap: clamp(8px, 1.4vw, 18px);">
+<div class="flex flex-wrap items-center" style="gap: clamp(6px, 0.8vw, 10px);">
+<span class="inline-block font-bold font-oppo bg-primary" style="color: rgba(0,0,0,1); border-radius: 2px; padding: clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 14px); font-size: clamp(10px, 1.05vw, 13px); letter-spacing: 0.04em; line-height: 1.3;">滴水湖全球OPC人工智能挑战赛</span>
+<span class="inline-block font-bold font-oppo bg-primary" style="color: rgba(0,0,0,1); border-radius: 2px; padding: clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 14px); font-size: clamp(10px, 1.05vw, 13px); letter-spacing: 0.04em; line-height: 1.3;">第二届燕缘·协创者号AI+国际创业大赛</span>
+</div>
+<h1 class="hero-title text-white font-black tracking-tighter leading-[1.05] font-oppo" style="font-size: clamp(26px, 5.4vw, 60px); margin: 0;">S2·跨境OPC加速赛</h1>
+<p class="hero-subtitle text-white/90 font-medium w-full min-w-0 leading-snug font-oppo" style="font-size: clamp(12px, 1.4vw, 17px); margin: 0;">带上你的龙虾队友，协创者号社区提供养料，全球抢真实企业订单</p>
+<div class="flex flex-wrap items-center" style="gap: clamp(8px, 1vw, 14px); margin-top: clamp(4px, 0.8vw, 10px);">
+<button type="button" class="bg-primary text-on-primary font-bold hover:scale-[0.98] transition-transform rounded-full leading-tight font-oppo" style="padding: clamp(8px, 1vw, 12px) clamp(20px, 2.4vw, 32px); font-size: clamp(12px, 1.2vw, 15px);" onclick="var el=document.getElementById('opc-stage-register');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})">立即报名</button>
+<button type="button" class="hero-secondary-btn font-bold rounded-full leading-tight font-oppo transition-all hover:opacity-90 active:scale-[0.98]" style="padding: clamp(8px, 1vw, 12px) clamp(16px, 2vw, 26px); font-size: clamp(12px, 1.2vw, 15px);" data-info-id="rule-full" aria-label="查看赛规详情">赛规详情</button>
+</div>
+</div>
 </div>
 </div>
 <!-- Slide 3（暂隐藏：去掉 class 中的 hidden 即可恢复） -->
@@ -1364,7 +1373,7 @@ window.HACKFORGER_LANDING_CONFIG = {
 <!-- Indicators（多图时去掉容器 hidden，并取消其余圆点 hidden） -->
 <div class="hero-carousel-ui flex justify-center gap-2 mt-4 hidden">
 <div class="w-2 h-2 rounded-full dot-indicator transition-all bg-primary"></div>
-<div class="w-2 h-2 rounded-full dot-indicator transition-all bg-white/30 hidden"></div>
+<div class="w-2 h-2 rounded-full dot-indicator transition-all bg-white/30"></div>
 <div class="w-2 h-2 rounded-full dot-indicator transition-all bg-white/30 hidden"></div>
 </div>
 </section>
@@ -3221,6 +3230,7 @@ body.lang-en #share-modal p { line-height: 1.55; font-size: 14px; }
         "取消": "Cancel",
         // ---- Hero ----
         "S1·数智OPC加速赛": "S1 · Digital OPC Sprint",
+        "S2·跨境OPC加速赛": "S2 · Cross-Border OPC Sprint",
         "带上你的龙虾队友，协创者号社区提供养料，全球抢真实企业订单":
             "Bring your AI co-pilot. Get fueled by SynNovator. Win real enterprise orders worldwide.",
         "立即报名": "Register Now",
