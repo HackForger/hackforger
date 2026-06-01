@@ -2,14 +2,20 @@
 title: "Issue #182 — hackathon phase custom name not shown on public page"
 date: 2026-06-01
 issue: 182
-pr: 183
-commits: [984e7893b5fd1a6b4c663664da050a70f38b0938]
+pr: 184
+commits:
+  - 984e7893b5fd1a6b4c663664da050a70f38b0938
+  - 35321bbafca8255b97953efa50c07a97848764a1
+  - 71fa36b6f6c25966fa71b031692ee7232fd64e78
 environment:
   - "localhost:3000 (main instance)"
   - "https://hackforger.inside.h2os.cloud (smoke domain, via Caddy → 3000)"
 tester: Claude (Opus 4.8) + codex (gpt-5.5) E2E
 result: PASS
 admin_signoff:
+  by: Cynthialime
+  at: 2026-06-01T17:16:00+0800
+  notes: "tester acceptance round 2 on https://hackforger.inside.h2os.cloud — replied 验收通过 on PR #184 (owner authorized acceptance = sign-off). Commit list spans the #183 merge, its revert, and the #184 re-merge."
 ---
 
 # Smoke test: phase custom name on public page (#182)
