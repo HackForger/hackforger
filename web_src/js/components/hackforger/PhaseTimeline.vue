@@ -233,7 +233,7 @@ export default {
       </template>
       <strong v-else class="tw-min-w-24 tw-max-w-48 tw-truncate tw-flex tw-items-center tw-gap-1">
         {{ phaseTypeName(phase) }}
-        <button v-if="phaseState(phase) !== 'locked'" class="tw-text-gray tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0"
+        <button class="tw-text-gray tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0"
                 @click="startRename(phase)" title="Rename">
           <svg width="14" height="14" viewBox="0 0 16 16"><path fill="currentColor" d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L3.463 11.1a.25.25 0 00-.064.108l-.563 1.97 1.971-.564a.25.25 0 00.108-.064l8.61-8.61a.25.25 0 000-.354l-1.086-1.086z"/></svg>
         </button>

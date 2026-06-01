@@ -81,6 +81,36 @@ Fixed by decoupling the name from the time window:
 - Net behavior: renaming works on any phase; changing the **time window** of a
   locked/active phase is still rejected as before.
 
+## Follow-up: tester feedback fixes (round 2)
+
+Tester (Cynthialime) verified on hackforger.inside.h2os.cloud and reported the
+core render fix works, but two UI/handler gaps remained — the first round's
+verification used HTTP requests and missed the real Vue UI:
+
+1. **Ended phases had no rename control.** `PhaseTimeline.vue` rendered the
+   rename (✎) button with `v-if="phaseState(phase) !== 'locked'"`, so ended
+   phases couldn't be renamed in the UI even though the backend allowed it.
+   Fix: always render the rename button (time inputs stay disabled for ended).
+2. **Editing a phase's time wiped its custom name.** The Vue `updatePhase`
+   (time edit) PUTs `{start_time, end_time}` with no `custom_name`; the handler
+   decoded the missing field as `""` and cleared the name. Fix: `custom_name`
+   is now a `*string` in both the web (`routers/web/hackforger/phase.go`) and
+   API (`routers/api/v1/hackforger/phase.go`) handlers — nil = not provided
+   (leave untouched), non-nil sets it (`""` clears). The API handler was also
+   restructured to the same decoupled shape (time-guard only when times change)
+   for web/API parity.
+
+### Verification (round 2)
+
+- **Rename ended phase via the real browser UI**: logged in, opened the manage
+  page, the ended `报名` phase now shows the ✎ button (disabled date inputs);
+  renamed it → DB persisted `已结束阶段改名验证OK` → public page shows it. PASS.
+- **Time edit preserves name** (authenticated PUT, exactly what the Vue sends):
+  set name `FIXB2`, then a successful time-only edit (no `custom_name`) → HTTP
+  200, time changed, name **preserved**; a failed (overlap) time edit also kept
+  the name; explicit `custom_name:""` still clears. PASS.
+- All test values reverted to empty.
+
 ## Admin sign-off
 
 Pending admin manual verification (stage 3).

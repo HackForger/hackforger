@@ -103,9 +103,9 @@ func ManagePhasesUpdate(ctx *context.Context) {
 	phaseID := ctx.ParamsInt64("phase_id")
 
 	var req struct {
-		StartTime  int64  `json:"start_time"`
-		EndTime    int64  `json:"end_time"`
-		CustomName string `json:"custom_name"`
+		StartTime  int64   `json:"start_time"`
+		EndTime    int64   `json:"end_time"`
+		CustomName *string `json:"custom_name"`
 	}
 	if err := json.NewDecoder(ctx.Req.Body).Decode(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
@@ -131,9 +131,11 @@ func ManagePhasesUpdate(ctx *context.Context) {
 
 	// The custom name is a cosmetic label independent of the time window, so it
 	// can be changed on any phase (including ended ones). Persisted only after
-	// any time update above succeeded. Empty string clears it.
-	if req.CustomName != phase.CustomName {
-		if err := hackforger_model.UpdatePhaseCustomName(ctx, phaseID, req.CustomName); err != nil {
+	// any time update above succeeded. A nil custom_name means "not provided"
+	// (e.g. a time-only edit) and must leave the existing name untouched; a
+	// non-nil value sets it, where "" clears it.
+	if req.CustomName != nil && *req.CustomName != phase.CustomName {
+		if err := hackforger_model.UpdatePhaseCustomName(ctx, phaseID, *req.CustomName); err != nil {
 			handlePhaseError(ctx, err)
 			return
 		}
