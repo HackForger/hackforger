@@ -103,6 +103,17 @@ func UpdatePhase(ctx context.Context, p *Phase) error {
 	return err
 }
 
+// UpdatePhaseCustomName updates only the custom_name column of a phase.
+// The name is a cosmetic label independent of the time window, so this writes
+// just that column (and updated_unix) without touching start_time/end_time.
+// An empty string clears the custom name.
+func UpdatePhaseCustomName(ctx context.Context, phaseID int64, name string) error {
+	_, err := db.GetEngine(ctx).ID(phaseID).
+		Cols("custom_name", "updated_unix").
+		Update(&Phase{CustomName: name, UpdatedUnix: timeutil.TimeStampNow()})
+	return err
+}
+
 // DeletePhase deletes a phase by ID.
 func DeletePhase(ctx context.Context, id int64) error {
 	_, err := db.GetEngine(ctx).ID(id).Delete(&Phase{})
