@@ -69,16 +69,55 @@ fi
 ECS_SUDO_PASS=$(grep "^ECS_SUDO_PASS=" .env | cut -d= -f2-)
 
 # ---------------------------------------------------------------------------
-log "[2/6] Trigger fresh pg_dump on ECS (systemctl start hackforger-backup.service)"
-ssh "$ECS" "echo '$ECS_SUDO_PASS' | sudo -S systemctl start hackforger-backup.service" 2>&1 | tail -2
+# Shared SSH connection (ControlMaster) + retry.
+#
+# The ECS public :22 is constantly hammered by SSH brute-force bots that pile
+# up pre-auth connections and trip sshd's MaxStartups (default 10:30:100), so
+# individual handshakes get dropped at key-exchange time, intermittently:
+#   kex_exchange_identification: read: Connection reset by peer
+# We open ONE master connection (with retry), then multiplex every ssh/rsync
+# below over it -- only a single kex is ever exposed to the limiter, and the
+# retry absorbs the occasional drop while opening it.
+SSH_CTL="$HOME/.ssh/cm-sync-from-prod-$$"
+SSH_OPTS=(-o ControlMaster=auto -o ControlPath="$SSH_CTL" -o ControlPersist=120 -o ConnectTimeout=10)
+
+cleanup_master() {
+  ssh -o ControlPath="$SSH_CTL" -O exit "$ECS" 2>/dev/null || true
+  rm -f "$SSH_CTL" 2>/dev/null || true
+}
+trap cleanup_master EXIT
+
+open_master() {
+  # The :22 limiter drop is probabilistic, so retry generously. Backoff is
+  # capped (not unbounded) since waiting longer doesn't improve the odds.
+  local i tries=${SSH_MASTER_TRIES:-12} wait
+  for ((i = 1; i <= tries; i++)); do
+    if ssh "${SSH_OPTS[@]}" -fN "$ECS" 2>/dev/null \
+       && ssh -o ControlPath="$SSH_CTL" -O check "$ECS" 2>/dev/null; then
+      [ "$i" -gt 1 ] && echo "  ssh master established on attempt $i/$tries" >&2
+      return 0
+    fi
+    wait=$(( i * 2 < 6 ? i * 2 : 6 ))
+    echo "  ssh master attempt $i/$tries failed (likely MaxStartups drop) -- retry in ${wait}s" >&2
+    sleep "$wait"
+  done
+  echo "FATAL: could not establish ssh master to $ECS after $tries attempts" >&2
+  echo "       (ECS :22 is saturated by SSH brute-force; see scripts/sync-from-prod.sh header)" >&2
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+log "[2/6] Open shared SSH connection + trigger fresh pg_dump on ECS"
+open_master
+ssh "${SSH_OPTS[@]}" "$ECS" "echo '$ECS_SUDO_PASS' | sudo -S systemctl start hackforger-backup.service" 2>&1 | tail -2
 sleep 2
-NEWEST_REMOTE=$(ssh "$ECS" 'ls -1t /var/lib/hackforger/pg-backups/hf-*.pgc | head -1')
+NEWEST_REMOTE=$(ssh "${SSH_OPTS[@]}" "$ECS" 'ls -1t /var/lib/hackforger/pg-backups/hf-*.pgc | head -1')
 echo "  newest dump on ECS: $NEWEST_REMOTE"
 
 # ---------------------------------------------------------------------------
 log "[3/6] rsync the new dump to Mac"
 mkdir -p "$DEST"
-rsync -az "$ECS:$NEWEST_REMOTE" "$DEST/"
+rsync -az -e "ssh ${SSH_OPTS[*]}" "$ECS:$NEWEST_REMOTE" "$DEST/"
 LOCAL_DUMP="$DEST/$(basename "$NEWEST_REMOTE")"
 ls -lh "$LOCAL_DUMP"
 
