@@ -23,10 +23,12 @@ type AddPhaseForm struct {
 }
 
 // UpdatePhaseForm is the form for updating an existing phase.
+// CustomName is a pointer so callers can omit it (leave the name untouched on a
+// time-only edit) vs. send "" to clear it.
 type UpdatePhaseForm struct {
-	StartTime  int64  `json:"start_time" binding:"Required"`
-	EndTime    int64  `json:"end_time" binding:"Required"`
-	CustomName string `json:"custom_name"`
+	StartTime  int64   `json:"start_time" binding:"Required"`
+	EndTime    int64   `json:"end_time" binding:"Required"`
+	CustomName *string `json:"custom_name"`
 }
 
 // ReorderPhasesForm is the form for batch-updating phase sort orders.
@@ -160,28 +162,31 @@ func UpdatePhaseAPI(ctx *context.APIContext) {
 	phaseID := ctx.ParamsInt64(":phase_id")
 	form := web.GetForm(ctx).(*UpdatePhaseForm)
 
-	if err := hackforger_service.UpdatePhaseTime(ctx, phaseID, form.StartTime, form.EndTime); err != nil {
-		if hackforger_service.IsErrPhaseLocked(err) || hackforger_service.IsErrActivePhaseStartLocked(err) {
-			ctx.Error(http.StatusBadRequest, "UpdatePhase", err)
-			return
-		}
-		if hackforger_service.IsErrPhaseOverlap(err) {
-			ctx.Error(http.StatusBadRequest, "UpdatePhase", err)
-			return
-		}
-		ctx.InternalServerError(err)
+	phase, err := hackforger_model.GetPhaseByID(ctx, phaseID)
+	if err != nil || phase == nil {
+		ctx.NotFound()
 		return
 	}
 
-	// Update custom_name if provided
-	if form.CustomName != "" {
-		phase, err := hackforger_model.GetPhaseByID(ctx, phaseID)
-		if err != nil || phase == nil {
+	// The time window is guarded (locked/active phases reject changes). Only run
+	// the guarded path when the times actually change, so a pure rename (incl.
+	// an ended phase) isn't rejected and a failed time update never leaves a
+	// half-applied custom_name behind.
+	if form.StartTime != phase.StartTime || form.EndTime != phase.EndTime {
+		if err := hackforger_service.UpdatePhaseTime(ctx, phaseID, form.StartTime, form.EndTime); err != nil {
+			if hackforger_service.IsErrPhaseLocked(err) || hackforger_service.IsErrActivePhaseStartLocked(err) || hackforger_service.IsErrPhaseOverlap(err) {
+				ctx.Error(http.StatusBadRequest, "UpdatePhase", err)
+				return
+			}
 			ctx.InternalServerError(err)
 			return
 		}
-		phase.CustomName = form.CustomName
-		if err := hackforger_model.UpdatePhase(ctx, phase); err != nil {
+	}
+
+	// The custom name is independent of the time window and can be changed on
+	// any phase. nil = not provided (leave untouched); non-nil sets it, "" clears.
+	if form.CustomName != nil && *form.CustomName != phase.CustomName {
+		if err := hackforger_model.UpdatePhaseCustomName(ctx, phaseID, *form.CustomName); err != nil {
 			ctx.InternalServerError(err)
 			return
 		}
@@ -193,7 +198,7 @@ func UpdatePhaseAPI(ctx *context.APIContext) {
 	}
 
 	// Return the updated phase
-	phase, err := hackforger_model.GetPhaseByID(ctx, phaseID)
+	phase, err = hackforger_model.GetPhaseByID(ctx, phaseID)
 	if err != nil || phase == nil {
 		ctx.InternalServerError(err)
 		return

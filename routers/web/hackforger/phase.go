@@ -103,24 +103,42 @@ func ManagePhasesUpdate(ctx *context.Context) {
 	phaseID := ctx.ParamsInt64("phase_id")
 
 	var req struct {
-		StartTime  int64  `json:"start_time"`
-		EndTime    int64  `json:"end_time"`
-		CustomName string `json:"custom_name"`
+		StartTime  int64   `json:"start_time"`
+		EndTime    int64   `json:"end_time"`
+		CustomName *string `json:"custom_name"`
 	}
 	if err := json.NewDecoder(ctx.Req.Body).Decode(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
 		return
 	}
 
-	// Update custom_name if provided (can be empty string to clear)
-	if phase, _ := hackforger_model.GetPhaseByID(ctx, phaseID); phase != nil {
-		phase.CustomName = req.CustomName
-		_ = hackforger_model.UpdatePhase(ctx, phase)
+	phase, err := hackforger_model.GetPhaseByID(ctx, phaseID)
+	if err != nil || phase == nil {
+		ctx.JSON(http.StatusNotFound, map[string]string{"error": ctx.Locale.TrString("hackforger.phase.error.not_found")})
+		return
 	}
 
-	if err := hackforger_service.UpdatePhaseTime(ctx, phaseID, req.StartTime, req.EndTime); err != nil {
-		handlePhaseError(ctx, err)
-		return
+	// The time window is guarded (locked/active phases reject changes). Only run
+	// the guarded path when the times actually change, so a pure rename of an
+	// ended phase isn't rejected — and so a failed time update never leaves a
+	// half-applied custom_name behind.
+	if req.StartTime != phase.StartTime || req.EndTime != phase.EndTime {
+		if err := hackforger_service.UpdatePhaseTime(ctx, phaseID, req.StartTime, req.EndTime); err != nil {
+			handlePhaseError(ctx, err)
+			return
+		}
+	}
+
+	// The custom name is a cosmetic label independent of the time window, so it
+	// can be changed on any phase (including ended ones). Persisted only after
+	// any time update above succeeded. A nil custom_name means "not provided"
+	// (e.g. a time-only edit) and must leave the existing name untouched; a
+	// non-nil value sets it, where "" clears it.
+	if req.CustomName != nil && *req.CustomName != phase.CustomName {
+		if err := hackforger_model.UpdatePhaseCustomName(ctx, phaseID, *req.CustomName); err != nil {
+			handlePhaseError(ctx, err)
+			return
+		}
 	}
 
 	if syncErr := hackforger_service.SyncStatusCache(ctx, h.ID, ctx.Doer.ID); syncErr != nil {
