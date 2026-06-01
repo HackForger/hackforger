@@ -27,7 +27,7 @@
 		<div class="hf-timeline">
 			{{range .Phases}}
 			<div class="hf-timeline-step {{if .IsLocked}}hf-step-done{{else if .IsActive}}hf-step-active{{else}}hf-step-upcoming{{end}}">
-				<div class="hf-step-name">{{if .CustomName}}{{.CustomName}}{{else if .PhaseType}}{{ctx.Locale.Tr .PhaseType.DisplayNameI18n}}{{end}}</div>
+				<div class="hf-step-name">{{if .PhaseType}}{{ctx.Locale.Tr .PhaseType.DisplayNameI18n}}{{end}}</div>
 				<div class="hf-step-date">{{DateUtils.AbsoluteShort .StartTime}} — {{DateUtils.AbsoluteShort .EndTime}}</div>
 				<div class="hf-step-status">
 					{{if .IsLocked}}{{ctx.Locale.Tr "hackforger.hackathon.manage.phase.step.done"}}
