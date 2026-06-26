@@ -1,0 +1,1391 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>S2 决赛项目展示 | 滴水湖全球 OPC 人工智能挑战赛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800;900&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    @font-face {
+      font-family: OPPOSans;
+      src: url("https://cdn.jsdelivr.net/gh/project-noonnu/noonfonts_seven@1.0/OPPOSans-Medium.woff") format("woff");
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    :root {
+      --bg: #222222;
+      --ink: #ffffff;
+      --muted: #ababab;
+      --surface: #131313;
+      --surface-container: #1c1c1c;
+      --surface-high: #282828;
+      --paper: #1A1C1D;
+      --paper-warm: #1A1C1D;
+      --card-shell: #3B3B3B;
+      --card-panel: #3B3B3B;
+      --card-panel-deep: #3B3B3B;
+      --card-border: rgba(255, 255, 255, .12);
+      --card-shadow: 0 18px 28px rgba(0, 0, 0, .18);
+      --black: #0b0d10;
+      --green: #bbfd3b;
+      --pink: #ff74a7;
+      --orange: #fb7a38;
+      --cyan: #41faf4;
+      --yellow: #FFA526;
+      --accent-green: #bbfd3b;
+      --accent-orange: #fb7a38;
+      --accent-pink: #ff74a7;
+      --accent-cyan: #41faf4;
+      --accent-yellow: #FFA526;
+      --primary-accent: #bbfd3b;
+      --on-primary-accent: #050505;
+      --detail-button-bg: #ffffff;
+      --detail-button-fg: #111827;
+      --secondary-button-bg: #F4F6FA;
+      --secondary-button-fg: #111827;
+      --disabled-button-bg: #767B84;
+      --disabled-button-fg: #FFFFFF;
+      --line: rgba(255, 255, 255, .16);
+      --stroke: 1px solid rgba(255, 255, 255, .14);
+      --stroke-dark: 1px solid rgba(17, 24, 39, .10);
+      --soft-shadow: none;
+      --container: min(1440px, calc(100% - clamp(28px, 4.8vw, 72px)));
+      --motion: cubic-bezier(.2, 0, 0, 1);
+    }
+
+    body.theme-light {
+      --bg: #EEEEEE;
+      --ink: #111827;
+      --muted: #4B5563;
+      --surface: #FFFFFF;
+      --surface-container: #F3F4F6;
+      --surface-high: #E9EBEF;
+      --paper: #FFFFFF;
+      --paper-warm: #FFFFFF;
+      --card-shell: #FFFFFF;
+      --card-panel: #FFFFFF;
+      --card-panel-deep: #F3F4F6;
+      --card-border: rgba(17, 24, 39, .12);
+      --card-shadow: 0 14px 24px rgba(17, 24, 39, .08);
+      --line: rgba(17, 24, 39, .12);
+      --stroke: 1px solid rgba(17, 24, 39, .10);
+      --primary-accent: #FAAD14;
+      --on-primary-accent: #111827;
+      --accent-green: #A5E448;
+      --accent-orange: #EE7A2C;
+      --accent-pink: #ED76A8;
+      --accent-cyan: #46D4D7;
+      --accent-yellow: #FAAD14;
+      --detail-button-bg: #111827;
+      --detail-button-fg: #ffffff;
+      --secondary-button-bg: #111827;
+      --secondary-button-fg: #ffffff;
+      --disabled-button-bg: #DDE1E7;
+      --disabled-button-fg: #6B7280;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 328px; scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 328px;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Poppins, OPPOSans, Manrope, sans-serif;
+      overflow-x: hidden;
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    a, button { font: inherit; }
+    a { color: inherit; text-decoration: none; }
+    button { border: 0; cursor: pointer; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid rgba(255,255,255,.09);
+      background: rgba(34,34,34,.86);
+      backdrop-filter: blur(18px);
+    }
+
+    .header-inner {
+      --header-mark-size: clamp(32px, 2.8vw, 42px);
+      width: var(--container);
+      min-height: clamp(62px, 5vw, 78px);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: clamp(10px, 1.2vw, 16px);
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--header-mark-size) * .78);
+      height: var(--header-mark-size);
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: calc(var(--header-mark-size) * 1.5);
+      font-weight: 400;
+      line-height: .78;
+      padding: 0 0 2px;
+      transition: transform .22s var(--motion), color .22s var(--motion);
+    }
+
+    .back-link:hover {
+      transform: translateX(-3px);
+      color: var(--primary-accent);
+    }
+
+    .header-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: var(--ink);
+      font-weight: 900;
+      letter-spacing: -.03em;
+    }
+
+    .header-title img {
+      width: var(--header-mark-size);
+      height: auto;
+      border-radius: 8px;
+      flex: 0 0 auto;
+    }
+
+    .header-title span {
+      font-size: clamp(15px, 1.4vw, 20px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    body.theme-light .site-header {
+      border-bottom-color: rgba(17,24,39,.10);
+      background: rgba(238,238,238,.88);
+    }
+
+    main {
+      width: var(--container);
+      margin: 0 auto;
+      padding: clamp(24px, 3.6vw, 48px) 0 clamp(58px, 7vw, 96px);
+    }
+
+    .ranking-hero {
+      position: relative;
+      display: block;
+      padding: 0;
+      border: 0;
+      border-radius: 14px;
+      background: var(--paper-warm);
+      color: var(--ink);
+      box-shadow: var(--soft-shadow);
+      overflow: hidden;
+      isolation: isolate;
+      animation: page-rise .68s var(--motion) both;
+    }
+
+    .ranking-hero::before {
+      content: none;
+    }
+
+    .ranking-hero::after {
+      content: none;
+    }
+
+    .hero-banner {
+      position: relative;
+      min-height: clamp(360px, 42vw, 560px);
+      display: flex;
+      align-items: end;
+      overflow: hidden;
+      background: var(--surface);
+      isolation: isolate;
+    }
+
+    .hero-banner img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(1.1);
+      transform: scale(1.02);
+      z-index: 0;
+    }
+
+    .hero-banner::before {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 58%;
+      background-image:
+        linear-gradient(to top, rgba(0, 0, 0, 0.80) 0%, rgba(0, 0, 0, 0.44) 48%, rgba(0, 0, 0, 0.18) 72%, rgba(0, 0, 0, 0) 100%),
+        linear-gradient(to left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.04) 52%, rgba(0, 0, 0, 0.11) 100%);
+      filter: blur(20px);
+      transform: translateY(8px) scale(1.04);
+      transform-origin: center bottom;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      width: min(860px, 100%);
+      padding: clamp(24px, 4vw, 56px);
+      color: #fff;
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: max-content;
+      max-width: 100%;
+      padding: 7px 12px;
+      margin-bottom: clamp(12px, 2vw, 18px);
+      border: 0;
+      border-radius: 2px;
+      background: var(--accent-yellow);
+      color: var(--on-primary-accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .hero-kicker::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--on-primary-accent);
+    }
+
+    .ranking-hero h1 {
+      margin: 0;
+      max-width: 100%;
+      font-size: min(clamp(38px, 4.8vw, 68px), calc((100vw - 86px) / 9.4));
+      line-height: .92;
+      letter-spacing: -.055em;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .ranking-hero p {
+      max-width: 780px;
+      margin: clamp(14px, 1.8vw, 22px) 0 0;
+      color: rgba(255,255,255,.82);
+      font-size: clamp(14px, 1.18vw, 17px);
+      line-height: 1.55;
+      font-weight: 700;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin: clamp(36px, 5vw, 64px) 0 clamp(14px, 2vw, 22px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--accent-orange);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent-orange);
+      flex: 0 0 auto;
+    }
+
+    .section-head h2 {
+      margin: 7px 0 0;
+      font-size: clamp(28px, 3.6vw, 48px);
+      line-height: .95;
+      letter-spacing: -.06em;
+      font-weight: 900;
+    }
+
+    .section-head h2::after {
+      content: "";
+      display: block;
+      width: clamp(54px, 6vw, 92px);
+      height: 5px;
+      margin-top: 10px;
+      border-radius: 999px;
+      background: var(--accent-orange);
+    }
+
+    .section-head p {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: clamp(13px, 1.15vw, 16px);
+      line-height: 1.55;
+      font-weight: 800;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(18px, 2vw, 30px);
+      align-items: stretch;
+    }
+
+    .team-card {
+      --accent: var(--primary-accent);
+      --on-accent: var(--on-primary-accent);
+      --card-surface: var(--card-shell);
+      --hover-border: var(--accent);
+      --text: var(--ink);
+      --panel: #2d3036;
+      position: relative;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--card-surface);
+      color: var(--text);
+      height: auto;
+      min-height: 0;
+      box-shadow: var(--card-shadow);
+      transition: opacity .62s var(--motion), transform .62s var(--motion), border-color .22s var(--motion), box-shadow .22s var(--motion);
+      transition-delay: var(--reveal-delay, 0ms);
+    }
+
+    .team-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 0 solid var(--hover-border);
+      border-radius: inherit;
+      pointer-events: none;
+      transition: border-color .22s var(--motion), border-width .22s var(--motion);
+      z-index: 4;
+    }
+
+    .team-card:nth-child(15n+1),
+    .team-card:nth-child(15n+2),
+    .team-card:nth-child(15n+3) { --accent: var(--accent-green); }
+    .team-card:nth-child(15n+4),
+    .team-card:nth-child(15n+5),
+    .team-card:nth-child(15n+6) { --accent: var(--accent-orange); }
+    .team-card:nth-child(15n+7),
+    .team-card:nth-child(15n+8),
+    .team-card:nth-child(15n+9) { --accent: var(--accent-cyan); }
+    .team-card:nth-child(15n+10),
+    .team-card:nth-child(15n+11),
+    .team-card:nth-child(15n+12) { --accent: var(--accent-pink); }
+    .team-card:nth-child(15n+13),
+    .team-card:nth-child(15n+14),
+    .team-card:nth-child(15n+15) { --accent: var(--accent-yellow); }
+
+    .is-reveal-pending {
+      opacity: 0;
+      transform: translateY(18px) scale(.988);
+    }
+
+    .is-reveal-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .team-card:hover {
+      transform: translateY(-3px) scale(1.004);
+      border-color: var(--hover-border);
+      box-shadow: 0 20px 32px rgba(0, 0, 0, .22);
+    }
+
+    .team-card:hover::after {
+      border-color: var(--hover-border);
+      border-width: 2px;
+    }
+
+    .team-card.is-reveal-visible:hover {
+      transform: translateY(-4px) scale(1.006);
+    }
+
+    .poster {
+      position: relative;
+      aspect-ratio: 3 / 2;
+      flex: 0 0 auto;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-high);
+      color: #fff;
+      isolation: isolate;
+    }
+
+    .poster::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4px;
+      background: var(--accent);
+      opacity: .96;
+      z-index: 1;
+      transition: height .28s var(--motion), opacity .28s var(--motion);
+    }
+
+    .poster::after {
+      content: none;
+    }
+
+    .poster-img {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .poster.is-missing {
+      background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 18px),
+        var(--surface-high);
+    }
+
+    .team-card:hover .poster::before {
+      height: 6px;
+      opacity: 1;
+    }
+
+    .rank-chip {
+      position: absolute;
+      left: clamp(7px, .8vw, 10px);
+      top: clamp(7px, .8vw, 10px);
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: clamp(24px, 2.1vw, 30px);
+      padding: 0 clamp(8px, .75vw, 10px);
+      border: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--on-accent);
+      font-size: clamp(9px, .75vw, 11px);
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .poster-stage {
+      position: absolute;
+      right: clamp(7px, .8vw, 10px);
+      top: clamp(7px, .8vw, 10px);
+      z-index: 2;
+      min-height: clamp(24px, 2.1vw, 30px);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 clamp(8px, .75vw, 10px);
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--bg);
+      font-size: clamp(8px, .7vw, 10px);
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .rank-chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--on-accent);
+    }
+
+    .card-body {
+      display: grid;
+      grid-template-rows: auto auto auto auto;
+      flex: 1;
+      gap: clamp(6px, .7vw, 8px);
+      padding: clamp(10px, 1vw, 14px);
+      min-height: 0;
+      background: linear-gradient(180deg, var(--card-panel) 0%, var(--card-panel-deep) 100%);
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: clamp(17px, 1.45vw, 22px);
+      color: var(--muted);
+      opacity: 1;
+      font-size: clamp(8px, .72vw, 10px);
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .meta-row span {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .meta-row b {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: clamp(8px, .68vw, 10px);
+      letter-spacing: .08em;
+    }
+
+    .team-card h3 {
+      margin: 0;
+      min-height: 2.16em;
+      font-size: clamp(14px, 1.15vw, 18px);
+      line-height: 1.12;
+      letter-spacing: -.015em;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .source-grid {
+      display: none;
+      gap: 3px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      font-size: clamp(10px, .82vw, 12px);
+      line-height: 1.38;
+      font-weight: 650;
+      min-height: 0;
+      max-height: none;
+      overflow: hidden;
+      color: #4a4f58;
+    }
+
+    .source-grid span {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .source-grid b {
+      color: #6a717d;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: none;
+    }
+
+    .intro-text {
+      margin: 0;
+      color: currentColor;
+      opacity: .72;
+      font-size: clamp(10px, .78vw, 12px);
+      line-height: 1.42;
+      font-weight: 500;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      min-height: 2.84em;
+      max-height: none;
+      overflow: hidden;
+      padding-right: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(5px, .6vw, 7px);
+      margin-top: auto;
+      padding-top: 2px;
+    }
+
+    .card-link {
+      min-width: 0;
+      min-height: clamp(30px, 2.25vw, 34px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--on-accent);
+      padding: 0 10px;
+      font-size: clamp(9.2px, .74vw, 11px);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: nowrap;
+      transition: transform .2s var(--motion);
+    }
+
+    .card-link.primary {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+    .card-link:hover { transform: translateY(-2px); }
+    .card-link.primary:hover {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+    .card-link.is-disabled {
+      opacity: 1;
+      pointer-events: none;
+      background: var(--disabled-button-bg);
+      color: var(--disabled-button-fg);
+    }
+    .detail-btn {
+      grid-column: 1 / -1;
+      background: var(--detail-button-bg);
+      color: var(--detail-button-fg);
+      border: 0;
+      width: 100%;
+    }
+
+    .detail-btn:hover {
+      background: var(--detail-button-bg);
+      color: var(--detail-button-fg);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      place-items: center;
+      padding: clamp(14px, 3vw, 36px);
+      background: rgba(0,0,0,.68);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .24s var(--motion);
+    }
+
+    .modal-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .detail-modal {
+      width: min(820px, 100%);
+      max-height: min(760px, calc(100vh - 36px));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      border: var(--stroke-dark);
+      border-radius: 22px;
+      background: #f7f8fb;
+      color: #101114;
+      box-shadow: none;
+      overflow: hidden;
+      transform: translateY(14px) scale(.985);
+      transition: transform .24s var(--motion);
+    }
+
+    .modal-backdrop.is-open .detail-modal { transform: translateY(0) scale(1); }
+
+    .modal-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: start;
+      padding: clamp(16px, 2.4vw, 24px);
+      border-bottom: 1px solid rgba(255,255,255,.14);
+      background: #2d3036;
+      color: #fff;
+    }
+
+    .modal-kicker {
+      display: inline-flex;
+      width: fit-content;
+      margin-bottom: 8px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: var(--accent-yellow);
+      color: #050505;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 38px);
+      line-height: 1.05;
+      letter-spacing: -.035em;
+      font-weight: 800;
+    }
+
+    .modal-close {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 50%;
+      background: #fff;
+      color: #050505;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .modal-body {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      gap: 12px;
+      padding: clamp(16px, 2.4vw, 24px);
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr);
+      gap: 14px;
+      padding: 0 0 12px;
+      border-bottom: 1px solid rgba(5,5,5,.16);
+      font-size: 14px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .detail-row b {
+      color: #626875;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .06em;
+    }
+
+    .detail-row span {
+      min-width: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      padding: 14px clamp(16px, 2.4vw, 24px);
+      border-top: 1px solid #D4D8E0;
+      background: #f7f8fb;
+    }
+
+    .modal-actions .card-link {
+      min-height: 44px;
+      min-width: 138px;
+      padding: 0 22px;
+      font-size: 14px;
+      font-weight: 900;
+      background: #171a1f;
+      color: #ffffff;
+      border: 1px solid #171a1f;
+    }
+
+    .modal-actions .card-link.primary {
+      background: var(--accent);
+      color: var(--on-accent);
+      border-color: var(--accent);
+    }
+
+    .modal-actions .card-link.is-disabled {
+      background: #D9DDE5;
+      color: #49515F;
+      border-color: #C9D0DA;
+    }
+
+    @keyframes page-rise {
+      from { opacity: 0; transform: translateY(18px) scale(.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 980px) {
+      .team-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      :root { --container: min(100% - 24px, 430px); }
+      .header-inner { min-height: 62px; }
+      .header-title span { max-width: 9.2em; }
+      main { padding-top: 18px; }
+      .ranking-hero { padding: 0; box-shadow: none; }
+      .hero-banner { min-height: 420px; }
+      .hero-content { padding: 22px 18px; }
+      .ranking-hero h1 { font-size: min(clamp(26px, 8vw, 36px), calc((100vw - 86px) / 9.4)); }
+      .ranking-hero p { font-size: 13px; }
+      .section-head { align-items: start; margin-top: 34px; }
+      .section-head h2 { font-size: 32px; }
+      .section-head p { font-size: 13px; }
+      .team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
+      .team-card { border-radius: 12px; box-shadow: 0 12px 20px rgba(0, 0, 0, .16); }
+      .poster::before { height: 4px; }
+      .poster::after { inset: 9px; }
+      .rank-chip { left: 7px; top: 7px; min-height: 24px; padding: 0 8px; font-size: 9px; }
+      .poster-stage { right: 7px; top: 7px; min-height: 24px; padding: 0 8px; font-size: 8px; }
+      .card-body { gap: 6px; padding: 8px; }
+      .meta-row { min-height: 18px; font-size: 8px; }
+      .meta-row b { font-size: 8px; }
+      .team-card h3 { font-size: 13px; min-height: 2.12em; }
+      .source-grid { font-size: 8.5px; }
+      .source-grid b { font-size: 8px; }
+      .intro-text { font-size: 9px; line-height: 1.34; min-height: 2.68em; -webkit-line-clamp: 2; }
+      .card-actions { gap: 5px; padding-top: 2px; }
+      .card-link { min-height: 30px; border-radius: 999px; font-size: 9px; letter-spacing: 0; padding: 0 6px; }
+      .detail-btn { min-height: 30px; }
+      .detail-row { grid-template-columns: 1fr; gap: 4px; font-size: 13px; }
+      .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .modal-actions .card-link { min-width: 0; min-height: 40px; font-size: 13px; }
+    }
+
+    @media (max-width: 360px) {
+      :root { --container: calc(100% - 18px); }
+      .team-grid { gap: 12px 8px; }
+      .team-card h3 { font-size: 12px; }
+      .intro-text { font-size: 8.4px; }
+      .card-link { font-size: 8.4px; padding: 0 5px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+      }
+    }
+  </style>
+</head>
+<body class="theme-dark">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="back-link" href="/" aria-label="返回">‹</a>
+      <a class="header-title" href="/" aria-label="返回首页">
+        <img src="assets/images/S2-mark.webp" alt="S2" />
+        <span>S2 决赛队伍</span>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <section class="ranking-hero" aria-labelledby="page-title">
+      <div class="hero-banner">
+        <img src="assets/images/s2-final-banner.webp" alt="S2 决赛 Banner" />
+        <div class="hero-content">
+          <div class="hero-kicker">第二届燕缘·协创者号AI+国际创业大赛</div>
+          <h1 id="page-title">S2 决赛队伍成果展示</h1>
+          <p>聚焦跨境服务与企业命题场景，展示 S2 决赛项目的产品成果与访问入口。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ranking" aria-labelledby="ranking-title">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Finalist Cards</div>
+          <h2 id="ranking-title">决赛队伍</h2>
+          <p>本页集中展示 S2 决赛 20 支项目队伍，按照当前决赛名单顺序排列。点击卡片可查看项目详情及相关访问入口。</p>
+        </div>
+      </div>
+      <div id="team-grid" class="team-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="detail-modal" aria-hidden="true" hidden>
+    <article class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <header class="modal-head">
+        <div>
+          <div class="modal-kicker" id="modal-rank">S2 W4</div>
+          <h2 class="modal-title" id="modal-title">项目详情</h2>
+        </div>
+        <button class="modal-close" type="button" data-close-modal aria-label="关闭详情">×</button>
+      </header>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </article>
+  </div>
+
+  <script>
+    const THEME_KEY = 'league_theme_mode';
+    const systemThemeQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+    function readThemeMode() {
+      try {
+        const mode = localStorage.getItem(THEME_KEY);
+        return ['dark', 'light', 'system'].includes(mode) ? mode : 'dark';
+      } catch (error) {
+        return 'dark';
+      }
+    }
+
+    function resolveThemeMode(mode) {
+      if (mode === 'system') {
+        return systemThemeQuery && systemThemeQuery.matches ? 'dark' : 'light';
+      }
+      return mode === 'light' ? 'light' : 'dark';
+    }
+
+    function applyThemeFromMain() {
+      const resolved = resolveThemeMode(readThemeMode());
+      document.body.classList.toggle('theme-light', resolved === 'light');
+      document.body.classList.toggle('theme-dark', resolved !== 'light');
+    }
+
+    applyThemeFromMain();
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === THEME_KEY) applyThemeFromMain();
+    });
+
+    if (systemThemeQuery && systemThemeQuery.addEventListener) {
+      systemThemeQuery.addEventListener('change', () => {
+        if (readThemeMode() === 'system') applyThemeFromMain();
+      });
+    }
+
+    const teams = [
+          {
+                    "rank": 1,
+                    "team": "peakora66",
+                    "systemName": "SupplyChainOS",
+                    "displayName": "SupplyChainOS",
+                    "name": "SupplyChainOS",
+                    "intro": "SupplyChainOS是面向跨境OPC卖家的AI供应链指挥系统，覆盖采购→质检→清关→物流→仓储→履约全链路。通过5个AI Agent（采购/质检/清关/物流/指挥塔）、15个专业Skill和可视化指挥塔仪表盘，实现1人拥有6人供应链团队的管控能力。后端采用Python FastAPI + WebSocket，前端Vue 3 + ECharts，AI推理基于GLM-5.1深度思考模型，支持三级降级策略。",
+                    "repo": "https://www.synnovator.com/peakora66/s2w3",
+                    "demo": "http://220.154.139.82:7860",
+                    "demoLinks": [
+                              "http://220.154.139.82:7860"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_01_supplychainos_3x2.webp"
+          },
+          {
+                    "rank": 2,
+                    "team": "Jerrydai",
+                    "systemName": "CultureOS——AI 文化出海 Agent 团队与工作流系统",
+                    "displayName": "CultureOS——AI 文化出海 Agent 团队与工作流系统",
+                    "name": "CultureOS——AI 文化出海 Agent 团队与工作流系统",
+                    "intro": "CultureOS 是一款面向文化 IP 与品牌出海的新一代跨文化深度转译与合规审计智能协同系统。系统开创性地将传统字面翻译升华为“精神符号、地缘民俗、法律合规、视听氛围”四位一体的全链路工程体系。内置 7 大专家级 AI 智能体协同管线，深度对齐 Hofstede 跨文化度量模型。系统具备自进化 RAG 合规风控大类，能前置且客观地熔断美国 FDA/FTC 及拉美民俗广告雷区，并对音频与画面进行声学等效和符号映射处理，最终把原始 IP 转化成大区受众原声悦纳并在地合规的 CulturePack™ 交付物，助推中国故事在全球范围本土化引爆。",
+                    "repo": "https://www.synnovator.com/Jerrydai/cultureos-agent-workflow",
+                    "demo": "https://culture-os.shuntian.uk",
+                    "demoLinks": [
+                              "https://culture-os.shuntian.uk",
+                              "http://61.29.254.143:3000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_02_cultureosai-agent_3x2.webp"
+          },
+          {
+                    "rank": 3,
+                    "team": "CindyLiu",
+                    "systemName": "RetailGo——品牌出海 AI 顾问",
+                    "displayName": "RetailGo——品牌出海 AI 顾问",
+                    "name": "RetailGo——品牌出海 AI 顾问",
+                    "intro": "RetailGo 是面向有门店网络的零售品牌(时尚服饰/运动/集合店)的全渠道出海 AI 顾问,把传统需 6–12 个月组建的出海团队,压缩成 7 个随时召唤的 AI 同事 + 1 个项目经理,陪品牌走完出海四阶段:品牌画像 → 出海决策书 → 成熟度诊断·合规架构·系统蓝图 → 项目剧本·创意·伙伴匹配。区别于一次性咨询或工具集合,它是\"越用越懂你\"的长期顾问:记住品牌的门店网络、系统现状与历次决策,把一个市场跑通的\"模式 + 系统 + SOP\"复制到下一国。结构化产出由确定性 Skill 生成(数据可溯源),AI 对话层负责讲解与追问;合规法务还会主动监听对话、对其他同事的建议泼冷水,暴露法规红线。核心壁垒是全渠道(线上 + 线下门店)的系统落地能力(POS/OMS/库存统一/O2O)——不止给策略,更能落地。",
+                    "repo": "https://www.synnovator.com/CindyLiu/RetailGo",
+                    "demo": "http://203.205.88.31:9000",
+                    "demoLinks": [
+                              "http://203.205.88.31:9000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_03_retailgo-ai_3x2.webp"
+          },
+          {
+                    "rank": 4,
+                    "team": "Starry",
+                    "systemName": "CrossScope｜跨境透镜——AI 跨境社媒数据情报与营销全景分析 Agent",
+                    "displayName": "CrossScope｜跨境透镜——AI 跨境社媒数据情报与营销全景分析 Agent",
+                    "name": "CrossScope｜跨境透镜——AI 跨境社媒数据情报与营销全景分析 Agent",
+                    "intro": "CrossScope 是服务品牌双向跨境的 AI 市场情报平台：海外品牌入华看懂小红书，中国品牌出海读懂 TikTok。\n输入品牌与目标市场，AI 智能体集群自动执行市场扫描、爆款内容解码、策略生成与报告整合四步流水线，30 分钟产出过去需要 2-4 周、5-30 万咨询费才能获得的市场进入策略报告；支持竞品订阅监控，按周自动推送投放动态与策略变化预警。\n一线社媒运营经验深度编码进 AI 分析逻辑——外溢转化规律、KOL 选号标准、内容价值阶梯诊断，输出的不是数据搬运，而是可直接执行的决策建议。",
+                    "repo": "https://www.synnovator.com/Starry/CrossScope",
+                    "demo": "https://scope.starrycross.com",
+                    "demoLinks": [
+                              "https://scope.starrycross.com"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_05_crossscope-ai-agent_3x2.webp"
+          },
+          {
+                    "rank": 5,
+                    "team": "loom",
+                    "systemName": "SeedBridge AI——跨境品牌入华种草 Agent",
+                    "displayName": "SeedBridge AI——跨境品牌入华种草 Agent",
+                    "name": "SeedBridge AI——跨境品牌入华种草 Agent",
+                    "intro": "SeedBridge AI 是面向海外品牌的小红书种草内容 AI Agent 平台。品牌方只需提交一份 Brief（支持日/韩/英文），AI 智能体集群即自动完成 Brief 解读、爆款趋势扫描、受众匹配、文案创作与拍摄指导五步流水线，几分钟产出 3 版可直接发布的种草笔记方案，并附真实感与广告风险自评。\nSeedBridge可以解决三大痛点：找不到靠谱的内容服务方、内容本地化难度大、MCN 产能瓶颈制约规模。一人 + AI 即可承接传统 5-8 人 MCN 团队的服务量：月服务 10-20 个品牌，单条内容成本不到传统模式的十分之一。",
+                    "repo": "https://www.synnovator.com/loom/SeedBridge",
+                    "demo": "https://seed.starrycross.com",
+                    "demoLinks": [
+                              "https://seed.starrycross.com"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_06_seedbridge-ai-agent_3x2.webp"
+          },
+          {
+                    "rank": 6,
+                    "team": "cj66666",
+                    "systemName": "closer",
+                    "displayName": "Closer 工作台",
+                    "name": "Closer 工作台",
+                    "intro": "Closer 工作台是面向跨境 B2B 中小卖家的 AI 询盘成交 Agent。它把站点表单、Email、WhatsApp 等多渠道询盘统一进入工作台，自动完成客户建档、询盘评分、产品匹配、报价草稿、风险审批、投递记录和跟进任务。系统强调“接住好询盘、报准价、守住底线”，高风险动作必须人工确认，Agent 不能绕过服务端护栏。",
+                    "repo": "https://www.synnovator.com/cj66666/closer",
+                    "demo": "https://61.29.254.154:9443",
+                    "demoLinks": [
+                              "https://61.29.254.154:9443"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_07_closer_3x2.webp"
+          },
+          {
+                    "rank": 7,
+                    "team": "Neutrino",
+                    "systemName": "BrandPassport AI：面向跨境品牌的多市场创意内容本地化生成与评测系统",
+                    "displayName": "BrandPassport AI：面向跨境品牌的多市场创意内容本地化生成与评测系统",
+                    "name": "BrandPassport AI：面向跨境品牌的多市场创意内容本地化生成与评测系统",
+                    "intro": "BrandPassport AI是面向跨境品牌、中小商家、MCN与海外营销代理的智能体工具，帮助团队将商品卖点快速转化为适合不同目标市场和平台的本地化社媒内容包。系统通过市场文化画像、平台语感分析、短视频脚本生成和风险评测，输出Hook、分镜脚本、Caption、Hashtag、达人Brief、CTA、评分证据与可提交JSON。半决赛版本已具备Agent Console交互能力，支持用户追问、换市场、重写Hook、补强风险控制，并展示Skill调用链和最终交付结果。",
+                    "repo": "https://www.synnovator.com/Neutrino/OPC-ai",
+                    "demo": "http://61.29.254.153:3000",
+                    "demoLinks": [
+                              "http://61.29.254.153:3000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_08_brandpassport-ai_3x2.webp"
+          },
+          {
+                    "rank": 8,
+                    "team": "xiaochen",
+                    "systemName": "CrossAccess AI",
+                    "displayName": "CrossAccess AI（无碍智检）",
+                    "name": "CrossAccess AI（无碍智检）",
+                    "intro": "CrossAccess AI（无碍智检）是一款由真实无障碍使用痛点与数据安全和网络安全保护需求共同驱动的 AI 预检测智能体。系统面向网站、小程序、跨境服务与公共数字服务流程，基于 Agent 编排无障碍检测、适老化体验分析、跨境体验评估、个人信息与残疾人相关数据风险识别等 Skills，形成可追溯的问题证据链、整改建议、复测留档和预检测报告。\n项目聚焦老年人、有无障碍需求的用户、低数字能力用户及跨语言用户在数字服务中的访问、理解、操作与安全使用问题，辅助识别残疾证号、健康状况、辅助器具需求等敏感数据风险，适用于政务、医疗、教育、国企、公益助残、数字化服务商及跨境电商等交付场景。",
+                    "repo": "https://www.synnovator.com/xiaochen/CrossAccess-AI",
+                    "demo": "http://203.205.88.30:3000",
+                    "demoLinks": [
+                              "http://203.205.88.30:3000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_09_crossaccess-ai_3x2.webp"
+          },
+          {
+                    "rank": 9,
+                    "team": "vinexio",
+                    "systemName": "Ignite",
+                    "displayName": "Ignite",
+                    "name": "Ignite",
+                    "intro": "Ignite 是面向跨境中小卖家的全链路运营 AI 助手。\n\n核心问题：中小卖家选款靠直觉、定价靠同行、测款靠烧钱——每个环节都在赌。Ignite 用数据和 AI替代赌感，把商品生命周期从\"凭经验拍脑袋\"变成\"数据驱动闭环决策\"。\n\n6 个能力模块：\n  - 选款（Finder）：从1688海量商品中聚类筛选出潜力爆款，视觉+数据双\n  维度打分，不是\"什么火卖什么\"，而是\"什么即将火才卖什么\"\n  - 测款（Testing）：低成本试销验证，AI预测销售曲线，避免全量投产后\n  的库存灾难\n  - Listing 优化：标题、主图、详情页智能生成，SEO关键词自动堆叠，让\n  算法推荐你的商品\n  - 定价（Pricing）：竞品价格扫描+利润模拟，找到\"既能卖出去又能赚到\n  钱\"的价格锚点\n  - 广告（Ads）：推广预算分配+ROI预测，每一分钱花在转化概率最高的流\n  量上\n  - 口碑（Reviews）：评价趋势监控+负面预警，在差评扩散前介入\n\n差异化：不是给大卖家做仪表盘，是给小卖家做决策引擎。不展示数据，直接告诉你要做什么、怎么做、做了会怎样。从选到卖，一条链路，一个闭环。",
+                    "repo": "https://www.synnovator.com/vinexio/ignite",
+                    "demo": "http://61.29.254.152:9000",
+                    "demoLinks": [
+                              "http://61.29.254.152:9000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_10_ignite_3x2.webp"
+          },
+          {
+                    "rank": 10,
+                    "team": "yyb9807",
+                    "systemName": "万象（WANXIANG AI Creative Studio）",
+                    "displayName": "万象（WANXIANG AI Creative Studio）",
+                    "name": "万象（WANXIANG AI Creative Studio）",
+                    "intro": "万象是一款面向跨境电商与广告营销场景的 AI Creative Studio。用户只需上传商品图片、品牌理念或营销需求，系统即可自动生成广告创意策略、高转化 Prompt、多语言营销文案以及高质量广告图片，帮助商家快速完成从\"创意策划\"到\"营销素材生产\"的全流程。 平台结合 AI 生成能力与社区共创机制，持续沉淀不同国家、平台与品类下的高转化营销模板，支持小红书、Instgram、 TikTok、Meta、Amazon 等主流跨境平台的内容营销需求，帮助企业降低内容生产成本、提升广告转化效率，实现全球化营销增长。",
+                    "repo": "https://www.synnovator.com/yyb9807/wanxiang",
+                    "demo": "http://203.205.88.27:8000",
+                    "demoLinks": [
+                              "http://203.205.88.27:8000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_11_wanxiang-ai-creative-studio_3x2.webp"
+          },
+          {
+                    "rank": 11,
+                    "team": "biganson",
+                    "systemName": "Arrival Pilot/Ange Shanghai Medical Visit Assistant",
+                    "displayName": "ArrivalPilot（到场流程协助智能体）",
+                    "name": "ArrivalPilot（到场流程协助智能体）",
+                    "intro": "ArrivalPilot 是一个面向医院、展会、园区、商务拜访等陌生场景的“到场流程协助智能体”。很多用户第一次前往复杂场地时，真正困难的不是导航到目的地，而是搞不清到达后先去哪、缺哪些材料、路线怎么走、窗口如何衔接、迟到或信息缺失时该如何处理。ArrivalPilot 通过收集目的地、到场任务、时间、材料、交通方式等信息，自动识别信息缺口，生成到场前准备清单、路线与时间建议、现场流程卡、风险提醒和人工协助建议。目前项目已完成医院到院、展会到场、商务拜访三类场景的Demo演示，并进入 S2W3「滴水湖全球OPC人工智能挑战赛」阶段排行榜 Top 20，暂列第12。后续将继续优化为可落地的到场流程AI Agent。",
+                    "repo": "https://www.synnovator.com/biganson/arrivalpilot-agent",
+                    "demo": "https://arrivalpilot-s2w3-demo.netlify.app",
+                    "demoLinks": [
+                              "https://arrivalpilot-s2w3-demo.netlify.app"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_12_arrivalpilot_3x2.webp"
+          },
+          {
+                    "rank": 12,
+                    "team": "tony203",
+                    "systemName": "Drop-the-Tone.AI｜国际青年沪上中文沉浸服务智能体",
+                    "displayName": "Drop-the-Tone.AI｜国际青年沪上中文沉浸服务智能体",
+                    "name": "Drop-the-Tone.AI｜国际青年沪上中文沉浸服务智能体",
+                    "intro": "来中国玩的外国年轻人，想体验本地夜生活，却被语言和信息门槛挡在门外。现有平台只做景点攻略，没人解决\"今晚去哪玩\"。DropTone.AI是 AI-native 跨境夜生活智能体。用户只需说vibe，就能在英文聊天窗口里完成城市选择、场所发现、行程规划、中文救急和免费预约。已覆盖上海、北京、成都、深圳，沉淀 34 个精选场所。核心壁垒是\"外国用户优先\"的 AI 对话体验：规则引擎 + 大模型混合策略保证准确稳定，结构化数据 + LLM 生成实现低成本扩展，商家后台一键生成英文内容反哺推荐库。目标用户为 18-32岁海外体验型游客及在华外籍年轻人。随着免签放宽、入境游回暖，市场尚无直接竞品。MVP 已完成核心闭环，下一步将扩展城市与商户网络，探索会员增值与商家分润。如果你看好 AI 应用层与入境消费的结合，DropTone.AI正是把\"来中国\"从犹豫变成一场 drop 的入口。",
+                    "repo": "https://www.synnovator.com/FatAuntFamily/dropthetone",
+                    "demo": "http://61.29.254.140:3000",
+                    "demoLinks": [
+                              "http://61.29.254.140:3000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_13_drop-the-tone-ai_3x2.webp"
+          },
+          {
+                    "rank": 13,
+                    "team": "AragornY",
+                    "systemName": "ClawLove",
+                    "displayName": "ClawLove",
+                    "name": "ClawLove",
+                    "intro": "ClawLove —— Agentic找对象儿\n你想不想找个灵魂契合的对象儿？\n你是不是工作忙圈子小还缺社交？\n你有没有觉得找对象儿劳心费神？\n有没有在线有一搭没一搭地聊着索然无味？\n有没有见了一面发现其实根本聊不来还大老远跑一趟？\n有没有前期小心翼翼地推进关系却根本没有聊过深层次的三观不合？\n如果\n你也想找到心仪的Ta\n却已经在这个过程中累觉不爱\n那让 ClawLove 替你完成所有的前期深度认知吧！\n只让真正灵魂契合的值得见的人推送到你的面前！\n玩法：\n用户注册 -> 一键丢给自己的Agent Setup -> 情感代理养成 -> 自主龙虾海寻亲 \n-> Agent Match -> 推送Profile -> 用户Match -> 群聊破冰 -> 交换联系方式",
+                    "repo": "https://www.synnovator.com/AragornY/ClawLove-S2W3",
+                    "demo": "https://piece-considers-meets-median.trycloudflare.com",
+                    "demoLinks": [
+                              "https://piece-considers-meets-median.trycloudflare.com"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_14_clawlove_3x2.webp"
+          },
+          {
+                    "rank": 14,
+                    "team": "BlueDot",
+                    "systemName": "BlueDot 智能训练引擎——跨境企业一线员工 AI 陪练平台",
+                    "displayName": "BlueDot 智能训练引擎——跨境企业一线员工 AI 陪练平台",
+                    "name": "BlueDot 智能训练引擎——跨境企业一线员工 AI 陪练平台",
+                    "intro": "AI智能陪练系统面向跨境企业、海外园区与多语言岗位培训场景，打造“学、练、测、评”一体化的智能培训平台。系统可将企业制度、SOP文档、巡检规范、培训视频等资料自动解析为课程、题库与陪练任务，支持员工通过网页、手机、AR眼镜、语音终端等多种入口进行学习、模拟演练和能力测评。针对跨境业务中语言不统一、培训标准难复制、海外员工上岗周期长、管理者难以追踪学习效果等问题，平台可提供多语言知识问答、岗位能力认证、现场操作辅助和数据化评估，帮助企业将总部经验快速复制到海外团队。项目适用于跨境制造、海外工厂、连锁出海、能源巡检、安全生产等场景，助力企业降低培训成本、提升员工上岗效率与全球化运营标准化水平。",
+                    "repo": "https://www.synnovator.com/BlueDot/BlueDot",
+                    "demo": "https://14.103.144.187:30111/dashboard",
+                    "demoLinks": [
+                              "https://14.103.144.187:30111/dashboard"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_15_bluedot-ai_3x2.webp"
+          },
+          {
+                    "rank": 15,
+                    "team": "zoey",
+                    "systemName": "AI Execution Orchestrator",
+                    "displayName": "Orcha AI（AI Execution Orchestrator）",
+                    "name": "Orcha AI（AI Execution Orchestrator）",
+                    "intro": "Orcha 是⼀套⾯向企业级 AI 任务执⾏、多智能体协作和流程⾃动化编排的综合平台。系 \n统围绕“⽤户需求到可执⾏任务”的完整链路进⾏设计，将⾃然语⾔交互、结构化操作计 \n划、流程模板、智能体能⼒、知识资源、外部⼯具和执⾏结果统⼀管理。 \n⽤户可以通过 Orcha 创建任务、设计流程、配置智能体、接⼊模型和⼯具能⼒，并在执 \n⾏过程中查看任务状态、执⾏⽇志、运⾏结果和成果物。系统通过权限控制、操作确 \n认、⽇志记录和结构化 payload 管理，保障 AI 辅助操作具备可追踪、可审计、可复⽤的 \n企业级能⼒。 \nOrcha 的核⼼⽬标是降低企业使⽤ AI ⾃动化能⼒的⻔槛，让⽤户能够以⾃然语⾔或配置 \n化⽅式完成任务编排、流程⽣成、知识调⽤和⼯具执⾏，并将执⾏过程沉淀为可管理的 \n平台资源。",
+                    "repo": "https://www.synnovator.com/zoey/OrchaAI",
+                    "demo": "https://orcha-test.tansuo.cloud:8888",
+                    "demoLinks": [
+                              "https://orcha-test.tansuo.cloud:8888"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_16_orcha-ai-ai-execution-orchestrator_3x2.webp"
+          },
+          {
+                    "rank": 16,
+                    "team": "xuantianfengwu",
+                    "systemName": "基于AI的多样文旅内容生成引擎",
+                    "displayName": "AI驱动的跨境游内容创作引擎",
+                    "name": "AI驱动的跨境游内容创作引擎",
+                    "intro": "项目简介：整体项目主要服务跨境游咨询类网站的内容供给。实现路径上，致力于通过AI驱动的大语言文本模型、生图模型、生视频模型、生3d素材模型的互相有效组合，融合在成体系的工程框架内，服务跨境类网站所需具体内容创作，实现围绕某个城市主题的内容多样化创作和提效。目前已落成部分，包括城市介绍文章生成，城市主题曲生成，城市2d互动地图生成，城市3d场景空间生成等。同时在AI大模型的交互上，刻意规避直接使用第三方的模型API，而是通过本地/云端算力调用开源模型/工作流，以保障实现流程的透明及稳定。",
+                    "repo": "https://www.synnovator.com/xuantianfengwu/MyChinaTravelArticleProduction",
+                    "demo": "http://203.205.88.32:9000",
+                    "demoLinks": [
+                              "http://203.205.88.32:9000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_17_ai_3x2.webp"
+          },
+          {
+                    "rank": 17,
+                    "team": "contextgen-tech",
+                    "systemName": "语境跨境服务专家集群",
+                    "displayName": "",
+                    "name": "语境跨境服务专家集群",
+                    "intro": "语境跨境服务专家集群\n语境（ContextGen Life）是一个创新的AI+应用系统，由个人助手AI（PAI）、A2A通信协议与专家AI（EAI）和谐构成。\n系统作为统一生命入口，能深度维护用户的长期记忆与偏好，自动拆解复杂任务，并通过标准化协议智能调度多领域专家代理，实现一体化、个性化的数字生命辅助，彻底降低用户多工具切换与任务路由的拓扑。\n在跨境服务领域，系统依托建立的A2A协议，无缝对接了多语言学术文献检索、跨文化合规多语种翻译以及跨境商务报告提炼等专家EAI。\n无论是协助外贸精准调取并翻译海外历史原始文献，还是服务创作者与跨境创业者进行多国竞品资料分析、海外路演策略优化及跨时区活动时间提醒，无缝补全跨境背景周边，提供无缝的全球化知识与个人支持效率。",
+                    "repo": "https://www.synnovator.com/contextgen-tech/Contextgen-s2",
+                    "demo": "http://203.205.88.33:3000",
+                    "demoLinks": [
+                              "http://203.205.88.33:3000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_19_s2-19_3x2.webp"
+          },
+          {
+                    "rank": 18,
+                    "team": "Shy",
+                    "systemName": "CrossComply AI",
+                    "displayName": "",
+                    "name": "CrossComply AI",
+                    "intro": "CrossComply AI 是一款面向中国出海企业的 AI 跨境合规助手，通过多 Agent 协作架构，为企业提供从产品准入、合规检测、风险预警到专家转介的全链路合规服务。\n核心能力包括：智能文件解析（PDF/Word/Excel/图片自动提取产品信息）、AI 合规检测引擎（覆盖 30+ 目标市场的法规要求）、PDF 审计报告生成、以及完整的审计日志追踪。系统采用 Coordinator + 4 Specialist Agents 架构，确保每个环节都有专业 Agent 负责，Coordinator 统一调度，实现高效、准确的合规判断。帮助企业降低合规成本 60% 以上，缩短产品上市周期。",
+                    "repo": "https://www.synnovator.com/Shy/CrossComply",
+                    "demo": "http://203.205.88.34:3000",
+                    "demoLinks": [
+                              "http://203.205.88.34:3000",
+                              "http://203.205.88.34:5000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_20_crosscomply-ai_3x2.webp"
+          },
+          {
+                    "rank": 19,
+                    "team": "Novain",
+                    "systemName": "跨境B2B智能询盘管家",
+                    "displayName": "跨境B2B智能询盘管家（外贸雷达AI）",
+                    "name": "跨境B2B智能询盘管家（外贸雷达AI）",
+                    "intro": "外贸雷达 AI 面向中小外贸工厂、跨境 B2B 卖家和个人 OPC 出海团队，打造一套基于多 Agent 协作的 AI 外贸销售作战平台。",
+                    "repo": "https://www.synnovator.com/Novain/cross-border-inquiry-butler",
+                    "demo": "http://61.29.254.151:8000",
+                    "demoLinks": [
+                              "http://61.29.254.151:8000"
+                    ],
+                    "image": "assets/images/s2-covers/S2_cover_21_b2b-ai_3x2.webp"
+          }
+];
+
+    const teamGrid = document.getElementById('team-grid');
+    const detailModal = document.getElementById('detail-modal');
+    const modalRank = document.getElementById('modal-rank');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalActions = document.getElementById('modal-actions');
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const sourceText = (value, fallback = '表格未填写') => escapeHtml(value || fallback);
+
+    const accentTokenForRank = (rank) => {
+      const group = Math.floor(((rank - 1) % 15) / 3);
+      return ['--accent-green', '--accent-orange', '--accent-cyan', '--accent-pink', '--accent-yellow'][group] || '--primary-accent';
+    };
+
+    function actionLink(href, label, className = '') {
+      if (!href) return '<span class="card-link is-disabled ' + className + '" aria-disabled="true">' + label.replace('访问', '') + '待补</span>';
+      return '<a class="card-link ' + className + '" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+    }
+
+    function detailRow(label, value, fallback = '表格未填写') {
+      return '<div class="detail-row"><b>' + escapeHtml(label) + '</b><span>' + sourceText(value, fallback) + '</span></div>';
+    }
+
+    function openDetail(rank) {
+      const item = teams.find((entry) => entry.rank === rank);
+      if (!item) return;
+
+      modalRank.textContent = '#' + String(item.rank).padStart(2, '0') + ' / S2 W4';
+      modalTitle.textContent = item.name || item.systemName || item.displayName || '表格未填写';
+      modalBody.innerHTML =
+        detailRow('团队/作者', item.team) +
+        detailRow('系统项目名', item.systemName || item.name || item.displayName) +
+        detailRow('对外展示项目名', item.displayName) +
+        detailRow('平台仓库链接', item.repo) +
+        detailRow('演示链接', item.demoLinks && item.demoLinks.length ? item.demoLinks.join('\n') : item.demo) +
+        detailRow('项目简介', item.intro, '表格未填写项目简介');
+      modalActions.style.setProperty('--accent', 'var(' + accentTokenForRank(item.rank) + ')');
+      modalActions.style.setProperty('--on-accent', 'var(--on-primary-accent)');
+      modalActions.innerHTML =
+        actionLink(item.repo, '访问仓库', '') +
+        actionLink(item.demo, '访问演示', 'primary');
+
+      detailModal.hidden = false;
+      requestAnimationFrame(() => {
+        detailModal.classList.add('is-open');
+        detailModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      });
+    }
+
+    function closeDetail() {
+      detailModal.classList.remove('is-open');
+      detailModal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+      window.setTimeout(() => {
+        if (!detailModal.classList.contains('is-open')) detailModal.hidden = true;
+      }, 240);
+    }
+
+    function cardTemplate(item, index) {
+      const coverSrc = escapeHtml(item.image || '');
+      const coverAlt = escapeHtml((item.name || item.systemName || item.displayName || '项目') + ' 封面');
+      return '<article class="team-card" style="--i:' + index + '" data-rank="' + item.rank + '">' +
+        '<div class="poster" data-rank="#' + String(item.rank).padStart(2, '0') + '">' +
+          (coverSrc ? '<img class="poster-img" src="' + coverSrc + '" alt="' + coverAlt + '" loading="lazy" decoding="async" onerror="this.parentElement.classList.add(&quot;is-missing&quot;); this.remove();">' : '') +
+          '<span class="rank-chip">#' + String(item.rank).padStart(2, '0') + '</span>' +
+          '<span class="poster-stage">S2 W4</span>' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<div class="meta-row"><span>' + sourceText(item.team) + '</span><b>S2 W4</b></div>' +
+          '<h3>' + sourceText(item.name) + '</h3>' +
+          '<p class="intro-text">' + sourceText(item.intro, '表格未填写项目简介') + '</p>' +
+          '<div class="card-actions">' +
+            actionLink(item.repo, '访问仓库', '') +
+            actionLink(item.demo, '访问演示', 'primary') +
+            '<button class="card-link detail-btn" type="button" data-detail-rank="' + item.rank + '">查看详情</button>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    }
+
+    function render() {
+      teamGrid.innerHTML = teams.map((item, index) => cardTemplate(item, index)).join('');
+    }
+
+    function initMotion() {
+      const targets = Array.from(document.querySelectorAll('.section-head, .team-card'));
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduceMotion || !('IntersectionObserver' in window)) {
+        targets.forEach((target) => target.classList.add('is-reveal-visible'));
+        return;
+      }
+
+      targets.forEach((target, index) => {
+        target.classList.add('is-reveal-pending');
+        target.style.setProperty('--reveal-delay', `${Math.min(index, 18) * 26}ms`);
+      });
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.remove('is-reveal-pending');
+          entry.target.classList.add('is-reveal-visible');
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
+
+      targets.forEach((target) => observer.observe(target));
+    }
+
+    render();
+    initMotion();
+
+    teamGrid.addEventListener('click', (event) => {
+      const detailButton = event.target.closest('[data-detail-rank]');
+      if (!detailButton) return;
+      openDetail(Number(detailButton.dataset.detailRank));
+    });
+
+    detailModal.addEventListener('click', (event) => {
+      if (event.target === detailModal || event.target.closest('[data-close-modal]')) closeDetail();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && detailModal.classList.contains('is-open')) closeDetail();
+    });
+  </script>
+</body>
+</html>
