@@ -1,3 +1,5 @@
+# LEGACY — 早期 Docker 版 inside-caddy 的配置,已被宿主机原生 launchd Caddy 取代
+# (~/.config/caddy/Caddyfile)。仅作历史参考,勿用于现行部署。详见本目录 README.md。
 *.inside.h2os.cloud {
 	tls {
 		dns alidns {
