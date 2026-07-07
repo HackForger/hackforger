@@ -923,7 +923,7 @@
         <div>
           <div class="eyebrow">Finalist Cards</div>
           <h2 id="ranking-title">决赛队伍</h2>
-          <p>本页集中展示 S1 决赛 22 支项目队伍，按照当前决赛名单顺序排列。点击卡片可查看项目详情及相关访问入口。</p>
+          <p>本页集中展示 S1 决赛 20 支项目队伍，按照决赛得分从高到低排列。点击卡片可查看项目详情及相关访问入口。</p>
         </div>
       </div>
       <div id="team-grid" class="team-grid" aria-live="polite"></div>
@@ -985,31 +985,29 @@
     const teams = [
           {
                     "rank": 1,
-                    "team": "ninkch",
-                    "systemName": "链睿 SynchroFlow — 基于“供应链同步智能”范式的全链路决策优化平台",
-                    "displayName": "链睿 SynchroFlow",
-                    "name": "链睿 SynchroFlow",
-                    "intro": "链睿 SynchroFlow 是一款面向中小制造企业的 AI Agent 供应链智能决策平台。平台部署了五个协同智能体（供应链预警、质量根因分析、生产计划、设备预警、供应商评估），通过事件驱动的联动机制，将传统\"事后单一预警\"升级为\"事前-事中-事后\"全链路同步决策。当任一环节出现异常，系统自动广播信号至所有 Agent 并行评估，协同编排联合决策方案——设备异常时自动追溯产品质量影响、关联供应商来料、评估供应链缺口、调整生产排程，实现一次信号触发全链路响应。每个 Agent 通过可插拔 Skill 机制获得分析能力，预置 14 种通用 Skill（六维排除法、鱼骨图、5Why、8D报告、库存预警、多维评分卡等）开箱即用。支持 Excel 上传、对话式输入、自然语言报数等多种零门槛数据接入方式，无结构化数据的企业 25 分钟即可完成冷启动。技术上采用 Next.js + FastAPI + PostgreSQL + LLM 架构，支持 SSE 流式分析、多租户隔离、私有化部署，企业数据可全部留在本地。",
-                    "repo": "https://www.synnovator.com/ninkch/SynchroFlow_AI",
-                    "demo": "http://121.237.183.21:9080",
+                    "team": "yishan",
+                    "systemName": "MiniGame-Studios",
+                    "displayName": "MiniGame Studio",
+                    "name": "MiniGame Studio",
+                    "intro": "MiniGame Studio 是一套面向小游戏开发的 AI Harness 工程，基于claude code使用，致力于建立一条小游戏快速开发与验证的流水线。解决AI辅助开发中AI幻觉、上下文断裂、可维护性恶化、验证反馈缺失等核心困境。\n核心由四套体系精密协同驱动：\n- 27个角色化Agent ：三层级架构，覆盖完整的小游戏开发工作室岗位矩阵\n- 71个标准化Skill ：7阶段研发管线，每阶段设阶段门\n- 17条自动化Rule ：路径绑定质量护栏，变更自动触发\n- 13个事件驱动Hook ：关键节点自动验证\n一个人+MiniGame Studio，即等价于一个小游戏开发工作室——这正是AI Native组织形态的实践。",
+                    "repo": "https://www.synnovator.com/yishan/MiniGame-Studios-S1W3",
+                    "demo": "http://220.154.129.216:3000",
                     "demoLinks": [
-                              "http://121.237.183.21:9080"
+                              "http://220.154.129.216:3000"
                     ],
-                    "image": "assets/images/s1-covers/rank-01.webp"
+                    "image": "assets/images/s1-covers/rank-05.webp"
           },
           {
                     "rank": 2,
-                    "team": "Jyoti",
-                    "systemName": "TradePilot AI｜拿货搭子：进货选品与爆款测款智能体",
-                    "displayName": "TradePilot Al|拿货搭子",
-                    "name": "TradePilot Al|拿货搭子",
-                    "intro": "进货前，先算清楚\n面向小商品进货、内容电商测款和大学生创业场景，TradePilot AI 将经验型拿货转化为可计算、可比较、可复盘的决策流程。\n从看货到复盘\n用户上传商品图片或填写拿货价、售价、MOQ、渠道等信息，即可获得包含利润测算、压货资金、渠道适配、内容潜力和供应风险分析等内容的详细报告。\n核心创新\n系统进一步生成小红书、抖音测款方向及供应商沟通清单，并支持产品库沉淀、候选产品PK和测款复盘，让用户先验证、再进货，持续积累可复用的选品经验。\n项目价值\n少一点盲目进货，多一点理性判断。\n别让第一次创业，变成第一次压货。",
-                    "repo": "https://www.synnovator.com/Jyoti/tradepilot-ai-wave3",
-                    "demo": "http://203.170.59.14:3000",
-                    "demoLinks": [
-                              "http://203.170.59.14:3000"
-                    ],
-                    "image": "assets/images/s1-covers/rank-03.webp"
+                    "team": "biMetaverse",
+                    "systemName": "AutoBIM for AutoPart",
+                    "displayName": "AutoBIM for AutoPart",
+                    "name": "AutoBIM for AutoPart",
+                    "intro": "AaaS（Auto-as-a-Service）对标全球最大汽摩零配件AutoDoc垂类电商平台，赋能本土制造商产能出海·行业升级·资产增值。针对离散制造产品结构关系固定、部件繁琐物料多样、过程控制复杂多变等痛点，通过“客选配+厂定制”双模块绑定联动，突破个性化定制“体验+成本”融通瓶颈。AutoBIM系统基于“MAA(Model-as-an-AI Agent)模型即智能体”框架搭建供应链模型、以拆单·拼单·拼装流程编码升级CTO(Configure-to-Order)生产方式、以产业链·供应链·价值链“三链融合” 打穿上下游数据流、以跨品牌·跨企业·跨链条“工业拼多多”模式颠覆采购成本，实现底层BIM-BoM开源技术的C2M柔性制造出海平台。",
+                    "repo": "https://www.synnovator.com/biMetaverse/AuroBIM3",
+                    "demo": "",
+                    "demoLinks": [],
+                    "image": "assets/images/s1-covers/rank-27.webp"
           },
           {
                     "rank": 3,
@@ -1028,188 +1026,6 @@
           },
           {
                     "rank": 4,
-                    "team": "yishan",
-                    "systemName": "MiniGame-Studios",
-                    "displayName": "MiniGame Studio",
-                    "name": "MiniGame Studio",
-                    "intro": "MiniGame Studio 是一套面向小游戏开发的 AI Harness 工程，基于claude code使用，致力于建立一条小游戏快速开发与验证的流水线。解决AI辅助开发中AI幻觉、上下文断裂、可维护性恶化、验证反馈缺失等核心困境。\n核心由四套体系精密协同驱动：\n- 27个角色化Agent ：三层级架构，覆盖完整的小游戏开发工作室岗位矩阵\n- 71个标准化Skill ：7阶段研发管线，每阶段设阶段门\n- 17条自动化Rule ：路径绑定质量护栏，变更自动触发\n- 13个事件驱动Hook ：关键节点自动验证\n一个人+MiniGame Studio，即等价于一个小游戏开发工作室——这正是AI Native组织形态的实践。",
-                    "repo": "https://www.synnovator.com/yishan/MiniGame-Studios-S1W3",
-                    "demo": "http://220.154.129.216:3000",
-                    "demoLinks": [
-                              "http://220.154.129.216:3000"
-                    ],
-                    "image": "assets/images/s1-covers/rank-05.webp"
-          },
-          {
-                    "rank": 5,
-                    "team": "Gauss",
-                    "systemName": "拾城 CityPick",
-                    "displayName": "拾城CityPick —基于\"多源融合推荐\"范式的城市文旅出行搭子",
-                    "name": "拾城CityPick —基于\"多源融合推荐\"范式的城市文旅出行搭子",
-                    "intro": "拾城CityPick —基于\"多源融合推荐\"范式的城市文旅出行搭子，是一个基于多Agent协同架构的城市文旅信息智能体平台。用户只需用自然语言提问（如这周末临港有什么活动？），系统自动调度7个AI Agent协同工作，一站式解决城市文旅去哪玩的问题。以临港新片区为首发验证场景，验证完成后模式可复制至全国任意城市。",
-                    "repo": "https://www.synnovator.com/Gauss/s1-w3",
-                    "demo": "http://220.154.130.14:7860",
-                    "demoLinks": [
-                              "http://220.154.130.14:7860"
-                    ],
-                    "image": "assets/images/s1-covers/rank-06.webp"
-          },
-          {
-                    "rank": 6,
-                    "team": "link",
-                    "systemName": "AI红娘",
-                    "displayName": "AI红娘-基于“学习型相亲代理人”范式的智能婚恋匹配平台",
-                    "name": "AI红娘-基于“学习型相亲代理人”范式的智能婚恋匹配平台",
-                    "intro": "AI红娘是一款学习型 AI 相亲代理人平台。它不只按标签推荐对象，而是通过对话理解用户的性格、择偶偏好、价值观、边界感与关系目标，为每位用户生成专属 AI 相亲代理人。代理人可代表用户进行匹配模拟、关系场景推演，并输出可解释的兼容性报告，帮助用户更高效、更安心地认识合适的人。我们希望让相亲从“凭感觉碰运气”，变成一次更真诚、更理性的双向了解。",
-                    "repo": "https://www.synnovator.com/link/ai_matchmaker",
-                    "demo": "http://220.154.130.69:7860",
-                    "demoLinks": [
-                              "http://220.154.130.69:7860"
-                    ],
-                    "image": "assets/images/s1-covers/rank-07.webp"
-          },
-          {
-                    "rank": 7,
-                    "team": "lprintf",
-                    "systemName": "广告投放助手",
-                    "displayName": "AdPilot",
-                    "name": "AdPilot",
-                    "intro": "AdPilot 是面向跨境电商与国际贸易企业的广告智能代理。用户通过自然语言下达需求，AdPilot 自动完成账户开通、Campaign/AdSet/Ad 创建与管理、预算调整与定向优化，并提供带缓存的性能查询、本地派生指标（ROAS/CPC/CTR 等）与 ML 预测、规则自动化。系统以 Agent Core + 模块化 Skill + 智能数据层构建，原型已实现前端与 Agent 的数据闭环（当前对接 Mock 平台 API，后续可切换真实 Facebook/Google/Pinterest API）。",
-                    "repo": "https://www.synnovator.com/lprintf/AdPilot",
-                    "demo": "https://ad-pilot.lprintf.com",
-                    "demoLinks": [
-                              "https://ad-pilot.lprintf.com"
-                    ],
-                    "image": "assets/images/s1-covers/rank-08.webp"
-          },
-          {
-                    "rank": 8,
-                    "team": "tiandong",
-                    "systemName": "视频翻译新形态—助力电商出海漫剧出海",
-                    "displayName": "视频翻译新形态一助力电商出海漫剧出海",
-                    "name": "视频翻译新形态一助力电商出海漫剧出海",
-                    "intro": "VideoSync 是一个运行在 Windows 和 Linux 上的全自动 AI 视频配音工具。它将业界最强的开源模型整合为一个工作流，旨在实现“一键式”视频语言本地化。不需要联网 API，不需要高昂的订阅费，利用你的本地显卡即可完成：ASR 识别 -> 文本翻译 -> 语音克隆 -> 音画对齐。现在已经推出线上免环境配置版本，安装即跑，支持批量并发，https://norgateai.com欢迎尝试",
-                    "repo": "https://www.synnovator.com/tiandong/videoSync_Master",
-                    "demo": "http://220.154.131.51:8000",
-                    "demoLinks": [
-                              "http://220.154.131.51:8000"
-                    ],
-                    "image": "assets/images/s1-covers/rank-09.webp"
-          },
-          {
-                    "rank": 9,
-                    "team": "Dennis",
-                    "systemName": "HR SSC智能助手",
-                    "displayName": "Yoma+HR",
-                    "name": "Yoma+HR",
-                    "intro": "Yoma+HR 是一款面向企业人力资源场景的智能体管理与自助服务平台原型。项目基于 OpenClaw 构建员工侧 Bot 与管理侧 Bot，形成双端协同架构：员工可通过 HR 小助手自助查询假期、考勤、福利、入离职等制度问题，HR 管理员则可通过管理端上传制度文档，自动生成结构化知识库并记录完整审计日志。\n平台通过员工端只读、管理端可维护的权限隔离机制，有效降低提示注入与误操作风险。未来管理平台将演进为统一的 HR 智能体管理入口，集中管理智能体配置、能力开关、知识库绑定与运行状态，并基于 HR 实际业务场景深度挖掘智能化工作流，推动从【问答工具】向【业务执行者】的能力升级。",
-                    "repo": "https://www.synnovator.com/Dennis/yomajiahr-W3",
-                    "demo": "https://hr.yomakit.com:19443",
-                    "demoLinks": [
-                              "https://hr.yomakit.com:19443"
-                    ],
-                    "image": "assets/images/s1-covers/rank-10.webp"
-          },
-          {
-                    "rank": 10,
-                    "team": "JunjieCai",
-                    "systemName": "科研端到端一体化AI工作台",
-                    "displayName": "科络（CORA）",
-                    "name": "科络（CORA）",
-                    "intro": "科络（CORA）是面向患者队列驱动医学科研的端到端 AI 智能体平台，聚焦医生与科研团队从临床问题提出、研究假设形成，到方案设计、数据治理、统计分析、模型构建、论文辅助撰写与投稿选刊辅助等科研流程。平台以真实世界患者队列为核心数据资产，连接文献证据、疾病知识、研究设计、课题数据和分析工具，通过多个专业 AI Agent 协同工作，为科研人员提供连续、可追溯、可复核的智能辅助。CORA 旨在帮助科研团队更高效地识别有价值的临床问题，提升研究设计、数据分析和成果表达的规范性，降低方法学工具使用难度，并在医生、研究者和方法学专家审核基础上，推动临床数据沉淀为高质量科研成果。",
-                    "repo": "https://www.synnovator.com/JunjieCai/scienith-research-booster-w3",
-                    "demo": "http://220.154.132.93:18080",
-                    "demoLinks": [
-                              "http://220.154.132.93:18080"
-                    ],
-                    "image": "assets/images/s1-covers/rank-11.webp"
-          },
-          {
-                    "rank": 11,
-                    "team": "aipm",
-                    "systemName": "智能项目管理",
-                    "displayName": "智能项目管理（AIPM - AI Project Management）",
-                    "name": "智能项目管理（AIPM - AI Project Management）",
-                    "intro": "智能项目管理（AIPM）是面向工程咨询行业的AI+数字化解决方案，致力于通过人工智能技术提升工程项目管理效率。核心功能：工地安全AI检测 - 工地照片一键实时安全隐患识别及纠偏建议工程质量AI检测 - 工地照片一键实时质量缺陷识别及纠偏建议二类费智能计算 - 工程二类费用的智能化计算AI档案管理 - 工程文档的智能归档（可批量自动识别归类）与检索规范查询 - 约2000份涉及工程安全隐患和质量缺陷的规范文件每日监管大纲 - 智能AI分析施工阶段及内容，自动生成专业质量与安全监管要点技术架构：采用Flask+Python后端，集成Kimi K2.5 AI模型，支持JWT认证、SQLite数据库、Word报告自动生成。前端使用HTML5+JavaScript+Tailwind CSS。创新点：将大模型能力引入传统工程咨询领域，实现工地照片进行安全隐患和质量缺陷一键自动识别、文档管理智能化、根据施工阶段自动编制每日监管大纲（含重点内容的操作细节指导），显著降低人工成本，提升项目监管水平。应用前景：已部署于http://aipm.sh.cn，正启动对edu版机器狗进行二次开发，目标是工地巡航自动拍照和编制AI报告，助力工程安全和质量监管，推动工程咨询行业数字化转型。",
-                    "repo": "https://www.synnovator.com/aipm/aipm",
-                    "demo": "http://220.154.138.16:5000/index.html",
-                    "demoLinks": [
-                              "http://220.154.138.16:5000/index.html"
-                    ],
-                    "image": "assets/images/s1-covers/rank-12.webp"
-          },
-          {
-                    "rank": 12,
-                    "team": "jackeyun",
-                    "systemName": "Pharma_Intelligence_System_S1W3医药情报智能分析系统",
-                    "displayName": "Pharma Intelligence System",
-                    "name": "Pharma Intelligence System",
-                    "intro": "一套面向生物医药研发的智能化情报分析平台。用户以自然语言输入查询（如靶点名称、疾病、药物或技术路线），系统自动解析提取关键实体（靶点、药物、疾病、时间窗口、化合物等），从多个国际权威公共数据库（ChEMBL、DrugCentral、PubMed、ClinicalTrials.gov、openFDA、EMA 等）进行增量数据采集，经实体对齐和标准化处理后汇入本地结构化数据库，在此基础上执行多维度量化分析、趋势检测与情景推演，最终生成数据驱动、完全可溯源的专业分析报告（支持 HTML/PDF/JSON/DOCX 下载）。",
-                    "repo": "https://www.synnovator.com/jackeyun/Pharma_Intelligence_System_S1W3.git",
-                    "demo": "http://220.154.138.188:5000",
-                    "demoLinks": [
-                              "http://220.154.138.188:5000"
-                    ],
-                    "image": "assets/images/s1-covers/rank-14.webp"
-          },
-          {
-                    "rank": 13,
-                    "team": "JeremyDou",
-                    "systemName": "next-manufacture-digitwin",
-                    "displayName": "TwinX-Composer",
-                    "name": "TwinX-Composer",
-                    "intro": "TwinX-Composer是一款面向工业、制造业的数字孪生解决方案，聚焦产线、设备、工艺与运维等核心场景。提供强大的可视化编辑器能力，帮助用户快速构建运维管理、设备监控、产线仿真、工艺分析等数字孪生应用。系统融合先进 AI 理念，借助大语言模型，为用户提供内容编辑、知识查询、数据分析、故障定位与解决建议等智能辅助能力。在使用过程中可持续沉淀行业知识与场景经验，不断提升分析能力与决策支持水平。",
-                    "repo": "https://www.synnovator.com/JeremyDou/next-manufacture-digitwin-w3",
-                    "demo": "http://220.154.139.76:8081",
-                    "demoLinks": [
-                              "http://220.154.139.76:8081"
-                    ],
-                    "image": "assets/images/s1-covers/rank-15.webp"
-          },
-          {
-                    "rank": 14,
-                    "team": "crazzie",
-                    "systemName": "Scripta — AI 驱动的编程基础教学工具",
-                    "displayName": "Scripta —— 面向非技术背景学习者的编程教学助手",
-                    "name": "Scripta —— 面向非技术背景学习者的编程教学助手",
-                    "intro": "编程入门阶段，学习者常面临一个困境：获得的解释定义准确，却难以将其转化为可执行的直觉。更根本的问题是，大多数学习工具指向\"让代码跑通\"，而非\"让你下次自己能想通\"。\nScripta 的核心目标不是帮学生写出正确答案，而是培养独立的编程思维。学生提交代码后，AI 通过逐步提问引导其自行定位问题、推测原因、修正逻辑；修正完成后，进一步要求其归纳错误类型和排查方法，将单次经验固化为可迁移的调试直觉。引导力度随学生能力自动调节——理解深入时逐步撤出，遇到障碍时适当增强。\nDemo以单链表为主要教学场景，后续方向是引入更多知识点以及类比式表达，将抽象概念对应到日常经验之中，使非技术背景学习者能以更自然的方式建立编程思维。",
-                    "repo": "https://www.synnovator.com/crazzie/scripta-w3",
-                    "demo": "http://220.154.139.81:3456",
-                    "demoLinks": [
-                              "http://220.154.139.81:3456"
-                    ],
-                    "image": "assets/images/s1-covers/rank-16.webp"
-          },
-          {
-                    "rank": 15,
-                    "team": "along429",
-                    "systemName": "阅历成章",
-                    "displayName": "忆笔（Memory Pen）",
-                    "name": "忆笔（Memory Pen）",
-                    "intro": "忆笔是一款面向家庭记忆传承的AI辅助创作平台。针对中老年回忆丰富却难以成篇、子女想记录却缺乏工具的痛点，我们首创\"AI采访式对话\"：老人自由口述，子女上传任意老物件照片，AI分析物质痕迹（磕碰、褪色、手写体）而非仅识别文字，以\"物的叙事\"唤醒身体记忆，最终生成回忆录或文学化小说。\n产品核心在于\"克制的技术\"：不纠正记忆矛盾（裂隙美学），不强行拉回话题（跑题保护），在沉重时刻主动止步（无知原则）。真实记忆本就充满裂隙，修正它等于篡改它。\n比赛现场可扫码体验真实系统：随手拍摄家中老物件，自由讲述任何时期回忆，AI即时生成带有人文脚注的章节草稿。忆笔不是效率工具，而是陪伴家庭完成代际传承的记忆筛子。",
-                    "repo": "https://www.synnovator.com/along429/opc-memory-pen",
-                    "demo": "http://220.154.131.127:8000",
-                    "demoLinks": [
-                              "http://220.154.131.127:8000"
-                    ],
-                    "image": "assets/images/s1-covers/rank-17.webp"
-          },
-          {
-                    "rank": 16,
-                    "team": "Z2wen1tao_31",
-                    "systemName": "企业研报智能体",
-                    "displayName": "企业研报智能体",
-                    "name": "企业研报智能体",
-                    "intro": "本项目面向企业研究人员、投资分析师、产业咨询人员等，提供一套企业资料分析与研报生成工作台。用户可上传企业年报、公告、行业资料等文档，系统自动整理知识库，并支持围绕企业经营、财务表现、竞争优势、风险因素等问题进行连续问答。平台能够辅助生成结构化研究报告，提炼关键财务指标，展示企业能力评分和维度分析，帮助用户更快理解企业基本面。项目适用于上市公司研究、行业对比、投研初筛和企业尽调等场景，降低资料阅读与信息整合成本，提高研究效率和分析一致性。",
-                    "repo": "https://www.synnovator.com/Z2wen1tao_31/S1W3-Enterprise-Research-Report-Agent",
-                    "demo": "http://220.154.139.40:18080",
-                    "demoLinks": [
-                              "http://220.154.139.40:18080"
-                    ],
-                    "image": "assets/images/s1-covers/rank-19.webp"
-          },
-          {
-                    "rank": 17,
                     "team": "zhancongc",
                     "systemName": "澹墨学术",
                     "displayName": "澹墨学术：面向中小制造企业的AI质量管理平台",
@@ -1223,35 +1039,21 @@
                     "image": "assets/images/s1-covers/rank-20.webp"
           },
           {
-                    "rank": 18,
-                    "team": "Ethan",
-                    "systemName": "AirGap-Hub——基于物理熔断机制的边缘可信中控系统",
-                    "displayName": "AirGap-EdgeGateway：基于物理熔断与大模型局域网推理的边缘可信网关",
-                    "name": "AirGap-EdgeGateway：基于物理熔断与大模型局域网推理的边缘可信网关",
-                    "intro": "本项目从第一性原理出发，打破传统软件防御的概率性局限，构建基于物理级隔离的确定性安全底座。核心技术首创“双路径异构指令路由”，涵盖5ms广域网物理熔断机制与基于热力学熵的纳秒级内存短接防御架构（均已受理国家发明专利），相关学术成果已录用于IEEE GAIIS 2026国际会议。项目现已完成软硬件全栈交付，包括树莓派实机打样、定制硬件外壳、底层驱动及Web中控台开发。系统在断网状态下可无缝切换至本地大模型（Qwen2.5）进行闭环推理，实现零数据外泄。致力于为高端住宿、涉密办公等高隐私场景，提供可被肉眼验证的“绝对安全”智能体解决方案。",
-                    "repo": "https://www.synnovator.com/Ethan/AirGap-EdgeGateway-W3",
-                    "demo": "http://220.154.139.83:9000",
+                    "rank": 5,
+                    "team": "Jyoti",
+                    "systemName": "TradePilot AI｜拿货搭子：进货选品与爆款测款智能体",
+                    "displayName": "TradePilot Al|拿货搭子",
+                    "name": "TradePilot Al|拿货搭子",
+                    "intro": "进货前，先算清楚\n面向小商品进货、内容电商测款和大学生创业场景，TradePilot AI 将经验型拿货转化为可计算、可比较、可复盘的决策流程。\n从看货到复盘\n用户上传商品图片或填写拿货价、售价、MOQ、渠道等信息，即可获得包含利润测算、压货资金、渠道适配、内容潜力和供应风险分析等内容的详细报告。\n核心创新\n系统进一步生成小红书、抖音测款方向及供应商沟通清单，并支持产品库沉淀、候选产品PK和测款复盘，让用户先验证、再进货，持续积累可复用的选品经验。\n项目价值\n少一点盲目进货，多一点理性判断。\n别让第一次创业，变成第一次压货。",
+                    "repo": "https://www.synnovator.com/Jyoti/tradepilot-ai-wave3",
+                    "demo": "http://203.170.59.14:3000",
                     "demoLinks": [
-                              "http://220.154.139.83:9000"
+                              "http://203.170.59.14:3000"
                     ],
-                    "image": "assets/images/s1-covers/rank-21.webp"
+                    "image": "assets/images/s1-covers/rank-03.webp"
           },
           {
-                    "rank": 19,
-                    "team": "xinqing",
-                    "systemName": "One Person Compliance：opc4opc 创始人身边的合规官",
-                    "displayName": "OPC4OPC-创始人身边的 AI 合规官",
-                    "name": "OPC4OPC-创始人身边的 AI 合规官",
-                    "intro": "OPC4OPC 是专为初创及中小企业打造的“AI合规官”。针对小微企业“雇不起专职法务、日常合规风险滞后”的痛点，项目改变了传统事后补窟窿的模式，将合规能力前置。\n产品秉持“嵌入工作流，不打断工作流”的理念，无缝集成于飞书、企业微信等办公生态。产品聚焦劳动合同、广告营销、商业合同、数据合规及商业贿赂等高频场景，在用户“正在写、正在发、正在签”的过程中自动识别潜在风险，并输出风险说明、法规依据方向与可执行修改建议，而非事后补救。",
-                    "repo": "https://www.synnovator.com/xinqing/opc4opc",
-                    "demo": "http://220.154.131.132:3000",
-                    "demoLinks": [
-                              "http://220.154.131.132:3000"
-                    ],
-                    "image": "assets/images/s1-covers/rank-22.webp"
-          },
-          {
-                    "rank": 20,
+                    "rank": 6,
                     "team": "linxi",
                     "systemName": "证言(Testimony.ai) - AI赋能青少年反霸凌证据守护平台",
                     "displayName": "证言（Testimony.ai）",
@@ -1266,32 +1068,202 @@
                     "image": "assets/images/s1-covers/rank-23.webp"
           },
           {
-                    "rank": 21,
-                    "team": "Jinhui",
-                    "systemName": "Call It A Day",
-                    "displayName": "Call It A Day",
-                    "name": "Call It A Day",
-                    "intro": "本项⽬是⼀款全年龄段、⾼共情的 AI ⽇记陪伴应⽤。区别于传统单⼀的记录⼯具，\n产品以“⽇记记录为载体、AI 交互为核⼼、游戏化机制为驱动”，打破传统⽇记单向记录、⽆反\n馈、难坚持、难复盘的痛点，将静态的⽂字⽇记本，升级为伴随⽤户童年、⻘年、中⽼年全⽣\n命周期的专属 AI 成⻓伴侣，为⽤户提供记录留存、情绪疗愈、记忆复盘、⾃我成⻓全⽅位服\n务。",
-                    "repo": "https://www.synnovator.com/Jinhui/CallItADay",
-                    "demo": "http://220.154.135.106:3000",
+                    "rank": 7,
+                    "team": "tiandong",
+                    "systemName": "视频翻译新形态—助力电商出海漫剧出海",
+                    "displayName": "视频翻译新形态一助力电商出海漫剧出海",
+                    "name": "视频翻译新形态一助力电商出海漫剧出海",
+                    "intro": "VideoSync 是一个运行在 Windows 和 Linux 上的全自动 AI 视频配音工具。它将业界最强的开源模型整合为一个工作流，旨在实现“一键式”视频语言本地化。不需要联网 API，不需要高昂的订阅费，利用你的本地显卡即可完成：ASR 识别 -> 文本翻译 -> 语音克隆 -> 音画对齐。现在已经推出线上免环境配置版本，安装即跑，支持批量并发，https://norgateai.com欢迎尝试",
+                    "repo": "https://www.synnovator.com/tiandong/videoSync_Master",
+                    "demo": "http://220.154.131.51:8000",
                     "demoLinks": [
-                              "http://220.154.135.106:3000"
+                              "http://220.154.131.51:8000"
                     ],
-                    "image": "assets/images/s1-covers/rank-24.webp"
+                    "image": "assets/images/s1-covers/rank-09.webp"
           },
           {
-                    "rank": 22,
-                    "team": "biMetaverse",
-                    "systemName": "AutoBIM for AutoPart",
-                    "displayName": "AutoBIM for AutoPart",
-                    "name": "AutoBIM for AutoPart",
-                    "intro": "AaaS（Auto-as-a-Service）对标全球最大汽摩零配件AutoDoc垂类电商平台，赋能本土制造商产能出海·行业升级·资产增值。针对离散制造产品结构关系固定、部件繁琐物料多样、过程控制复杂多变等痛点，通过“客选配+厂定制”双模块绑定联动，突破个性化定制“体验+成本”融通瓶颈。AutoBIM系统基于“MAA(Model-as-an-AI Agent)模型即智能体”框架搭建供应链模型、以拆单·拼单·拼装流程编码升级CTO(Configure-to-Order)生产方式、以产业链·供应链·价值链“三链融合” 打穿上下游数据流、以跨品牌·跨企业·跨链条“工业拼多多”模式颠覆采购成本，实现底层BIM-BoM开源技术的C2M柔性制造出海平台。",
-                    "repo": "https://www.synnovator.com/biMetaverse/AuroBIM3",
-                    "demo": "",
-                    "demoLinks": [],
-                    "image": "assets/images/s1-covers/rank-27.webp"
+                    "rank": 8,
+                    "team": "aipm",
+                    "systemName": "智能项目管理",
+                    "displayName": "智能项目管理（AIPM - AI Project Management）",
+                    "name": "智能项目管理（AIPM - AI Project Management）",
+                    "intro": "智能项目管理（AIPM）是面向工程咨询行业的AI+数字化解决方案，致力于通过人工智能技术提升工程项目管理效率。核心功能：工地安全AI检测 - 工地照片一键实时安全隐患识别及纠偏建议工程质量AI检测 - 工地照片一键实时质量缺陷识别及纠偏建议二类费智能计算 - 工程二类费用的智能化计算AI档案管理 - 工程文档的智能归档（可批量自动识别归类）与检索规范查询 - 约2000份涉及工程安全隐患和质量缺陷的规范文件每日监管大纲 - 智能AI分析施工阶段及内容，自动生成专业质量与安全监管要点技术架构：采用Flask+Python后端，集成Kimi K2.5 AI模型，支持JWT认证、SQLite数据库、Word报告自动生成。前端使用HTML5+JavaScript+Tailwind CSS。创新点：将大模型能力引入传统工程咨询领域，实现工地照片进行安全隐患和质量缺陷一键自动识别、文档管理智能化、根据施工阶段自动编制每日监管大纲（含重点内容的操作细节指导），显著降低人工成本，提升项目监管水平。应用前景：已部署于http://aipm.sh.cn，正启动对edu版机器狗进行二次开发，目标是工地巡航自动拍照和编制AI报告，助力工程安全和质量监管，推动工程咨询行业数字化转型。",
+                    "repo": "https://www.synnovator.com/aipm/aipm",
+                    "demo": "http://220.154.138.16:5000/index.html",
+                    "demoLinks": [
+                              "http://220.154.138.16:5000/index.html"
+                    ],
+                    "image": "assets/images/s1-covers/rank-12.webp"
+          },
+          {
+                    "rank": 9,
+                    "team": "ninkch",
+                    "systemName": "链睿 SynchroFlow — 基于“供应链同步智能”范式的全链路决策优化平台",
+                    "displayName": "链睿 SynchroFlow",
+                    "name": "链睿 SynchroFlow",
+                    "intro": "链睿 SynchroFlow 是一款面向中小制造企业的 AI Agent 供应链智能决策平台。平台部署了五个协同智能体（供应链预警、质量根因分析、生产计划、设备预警、供应商评估），通过事件驱动的联动机制，将传统\"事后单一预警\"升级为\"事前-事中-事后\"全链路同步决策。当任一环节出现异常，系统自动广播信号至所有 Agent 并行评估，协同编排联合决策方案——设备异常时自动追溯产品质量影响、关联供应商来料、评估供应链缺口、调整生产排程，实现一次信号触发全链路响应。每个 Agent 通过可插拔 Skill 机制获得分析能力，预置 14 种通用 Skill（六维排除法、鱼骨图、5Why、8D报告、库存预警、多维评分卡等）开箱即用。支持 Excel 上传、对话式输入、自然语言报数等多种零门槛数据接入方式，无结构化数据的企业 25 分钟即可完成冷启动。技术上采用 Next.js + FastAPI + PostgreSQL + LLM 架构，支持 SSE 流式分析、多租户隔离、私有化部署，企业数据可全部留在本地。",
+                    "repo": "https://www.synnovator.com/ninkch/SynchroFlow_AI",
+                    "demo": "http://121.237.183.21:9080",
+                    "demoLinks": [
+                              "http://121.237.183.21:9080"
+                    ],
+                    "image": "assets/images/s1-covers/rank-01.webp"
+          },
+          {
+                    "rank": 10,
+                    "team": "jackeyun",
+                    "systemName": "Pharma_Intelligence_System_S1W3医药情报智能分析系统",
+                    "displayName": "Pharma Intelligence System",
+                    "name": "Pharma Intelligence System",
+                    "intro": "一套面向生物医药研发的智能化情报分析平台。用户以自然语言输入查询（如靶点名称、疾病、药物或技术路线），系统自动解析提取关键实体（靶点、药物、疾病、时间窗口、化合物等），从多个国际权威公共数据库（ChEMBL、DrugCentral、PubMed、ClinicalTrials.gov、openFDA、EMA 等）进行增量数据采集，经实体对齐和标准化处理后汇入本地结构化数据库，在此基础上执行多维度量化分析、趋势检测与情景推演，最终生成数据驱动、完全可溯源的专业分析报告（支持 HTML/PDF/JSON/DOCX 下载）。",
+                    "repo": "https://www.synnovator.com/jackeyun/Pharma_Intelligence_System_S1W3.git",
+                    "demo": "http://220.154.138.188:5000",
+                    "demoLinks": [
+                              "http://220.154.138.188:5000"
+                    ],
+                    "image": "assets/images/s1-covers/rank-14.webp"
+          },
+          {
+                    "rank": 11,
+                    "team": "crazzie",
+                    "systemName": "Scripta — AI 驱动的编程基础教学工具",
+                    "displayName": "Scripta —— 面向非技术背景学习者的编程教学助手",
+                    "name": "Scripta —— 面向非技术背景学习者的编程教学助手",
+                    "intro": "编程入门阶段，学习者常面临一个困境：获得的解释定义准确，却难以将其转化为可执行的直觉。更根本的问题是，大多数学习工具指向\"让代码跑通\"，而非\"让你下次自己能想通\"。\nScripta 的核心目标不是帮学生写出正确答案，而是培养独立的编程思维。学生提交代码后，AI 通过逐步提问引导其自行定位问题、推测原因、修正逻辑；修正完成后，进一步要求其归纳错误类型和排查方法，将单次经验固化为可迁移的调试直觉。引导力度随学生能力自动调节——理解深入时逐步撤出，遇到障碍时适当增强。\nDemo以单链表为主要教学场景，后续方向是引入更多知识点以及类比式表达，将抽象概念对应到日常经验之中，使非技术背景学习者能以更自然的方式建立编程思维。",
+                    "repo": "https://www.synnovator.com/crazzie/scripta-w3",
+                    "demo": "http://220.154.139.81:3456",
+                    "demoLinks": [
+                              "http://220.154.139.81:3456"
+                    ],
+                    "image": "assets/images/s1-covers/rank-16.webp"
+          },
+          {
+                    "rank": 12,
+                    "team": "lprintf",
+                    "systemName": "广告投放助手",
+                    "displayName": "AdPilot",
+                    "name": "AdPilot",
+                    "intro": "AdPilot 是面向跨境电商与国际贸易企业的广告智能代理。用户通过自然语言下达需求，AdPilot 自动完成账户开通、Campaign/AdSet/Ad 创建与管理、预算调整与定向优化，并提供带缓存的性能查询、本地派生指标（ROAS/CPC/CTR 等）与 ML 预测、规则自动化。系统以 Agent Core + 模块化 Skill + 智能数据层构建，原型已实现前端与 Agent 的数据闭环（当前对接 Mock 平台 API，后续可切换真实 Facebook/Google/Pinterest API）。",
+                    "repo": "https://www.synnovator.com/lprintf/AdPilot",
+                    "demo": "https://ad-pilot.lprintf.com",
+                    "demoLinks": [
+                              "https://ad-pilot.lprintf.com"
+                    ],
+                    "image": "assets/images/s1-covers/rank-08.webp"
+          },
+          {
+                    "rank": 13,
+                    "team": "Z2wen1tao_31",
+                    "systemName": "企业研报智能体",
+                    "displayName": "企业研报智能体",
+                    "name": "企业研报智能体",
+                    "intro": "本项目面向企业研究人员、投资分析师、产业咨询人员等，提供一套企业资料分析与研报生成工作台。用户可上传企业年报、公告、行业资料等文档，系统自动整理知识库，并支持围绕企业经营、财务表现、竞争优势、风险因素等问题进行连续问答。平台能够辅助生成结构化研究报告，提炼关键财务指标，展示企业能力评分和维度分析，帮助用户更快理解企业基本面。项目适用于上市公司研究、行业对比、投研初筛和企业尽调等场景，降低资料阅读与信息整合成本，提高研究效率和分析一致性。",
+                    "repo": "https://www.synnovator.com/Z2wen1tao_31/S1W3-Enterprise-Research-Report-Agent",
+                    "demo": "http://220.154.139.40:18080",
+                    "demoLinks": [
+                              "http://220.154.139.40:18080"
+                    ],
+                    "image": "assets/images/s1-covers/rank-19.webp"
+          },
+          {
+                    "rank": 14,
+                    "team": "Gauss",
+                    "systemName": "拾城 CityPick",
+                    "displayName": "拾城CityPick —基于\"多源融合推荐\"范式的城市文旅出行搭子",
+                    "name": "拾城CityPick —基于\"多源融合推荐\"范式的城市文旅出行搭子",
+                    "intro": "拾城CityPick —基于\"多源融合推荐\"范式的城市文旅出行搭子，是一个基于多Agent协同架构的城市文旅信息智能体平台。用户只需用自然语言提问（如这周末临港有什么活动？），系统自动调度7个AI Agent协同工作，一站式解决城市文旅去哪玩的问题。以临港新片区为首发验证场景，验证完成后模式可复制至全国任意城市。",
+                    "repo": "https://www.synnovator.com/Gauss/s1-w3",
+                    "demo": "http://220.154.130.14:7860",
+                    "demoLinks": [
+                              "http://220.154.130.14:7860"
+                    ],
+                    "image": "assets/images/s1-covers/rank-06.webp"
+          },
+          {
+                    "rank": 15,
+                    "team": "link",
+                    "systemName": "AI红娘",
+                    "displayName": "AI红娘-基于“学习型相亲代理人”范式的智能婚恋匹配平台",
+                    "name": "AI红娘-基于“学习型相亲代理人”范式的智能婚恋匹配平台",
+                    "intro": "AI红娘是一款学习型 AI 相亲代理人平台。它不只按标签推荐对象，而是通过对话理解用户的性格、择偶偏好、价值观、边界感与关系目标，为每位用户生成专属 AI 相亲代理人。代理人可代表用户进行匹配模拟、关系场景推演，并输出可解释的兼容性报告，帮助用户更高效、更安心地认识合适的人。我们希望让相亲从“凭感觉碰运气”，变成一次更真诚、更理性的双向了解。",
+                    "repo": "https://www.synnovator.com/link/ai_matchmaker",
+                    "demo": "http://220.154.130.69:7860",
+                    "demoLinks": [
+                              "http://220.154.130.69:7860"
+                    ],
+                    "image": "assets/images/s1-covers/rank-07.webp"
+          },
+          {
+                    "rank": 16,
+                    "team": "Dennis",
+                    "systemName": "HR SSC智能助手",
+                    "displayName": "Yoma+HR",
+                    "name": "Yoma+HR",
+                    "intro": "Yoma+HR 是一款面向企业人力资源场景的智能体管理与自助服务平台原型。项目基于 OpenClaw 构建员工侧 Bot 与管理侧 Bot，形成双端协同架构：员工可通过 HR 小助手自助查询假期、考勤、福利、入离职等制度问题，HR 管理员则可通过管理端上传制度文档，自动生成结构化知识库并记录完整审计日志。\n平台通过员工端只读、管理端可维护的权限隔离机制，有效降低提示注入与误操作风险。未来管理平台将演进为统一的 HR 智能体管理入口，集中管理智能体配置、能力开关、知识库绑定与运行状态，并基于 HR 实际业务场景深度挖掘智能化工作流，推动从【问答工具】向【业务执行者】的能力升级。",
+                    "repo": "https://www.synnovator.com/Dennis/yomajiahr-W3",
+                    "demo": "https://hr.yomakit.com:19443",
+                    "demoLinks": [
+                              "https://hr.yomakit.com:19443"
+                    ],
+                    "image": "assets/images/s1-covers/rank-10.webp"
+          },
+          {
+                    "rank": 17,
+                    "team": "JeremyDou",
+                    "systemName": "next-manufacture-digitwin",
+                    "displayName": "TwinX-Composer",
+                    "name": "TwinX-Composer",
+                    "intro": "TwinX-Composer是一款面向工业、制造业的数字孪生解决方案，聚焦产线、设备、工艺与运维等核心场景。提供强大的可视化编辑器能力，帮助用户快速构建运维管理、设备监控、产线仿真、工艺分析等数字孪生应用。系统融合先进 AI 理念，借助大语言模型，为用户提供内容编辑、知识查询、数据分析、故障定位与解决建议等智能辅助能力。在使用过程中可持续沉淀行业知识与场景经验，不断提升分析能力与决策支持水平。",
+                    "repo": "https://www.synnovator.com/JeremyDou/next-manufacture-digitwin-w3",
+                    "demo": "http://220.154.139.76:8081",
+                    "demoLinks": [
+                              "http://220.154.139.76:8081"
+                    ],
+                    "image": "assets/images/s1-covers/rank-15.webp"
+          },
+          {
+                    "rank": 18,
+                    "team": "along429",
+                    "systemName": "阅历成章",
+                    "displayName": "忆笔（Memory Pen）",
+                    "name": "忆笔（Memory Pen）",
+                    "intro": "忆笔是一款面向家庭记忆传承的AI辅助创作平台。针对中老年回忆丰富却难以成篇、子女想记录却缺乏工具的痛点，我们首创\"AI采访式对话\"：老人自由口述，子女上传任意老物件照片，AI分析物质痕迹（磕碰、褪色、手写体）而非仅识别文字，以\"物的叙事\"唤醒身体记忆，最终生成回忆录或文学化小说。\n产品核心在于\"克制的技术\"：不纠正记忆矛盾（裂隙美学），不强行拉回话题（跑题保护），在沉重时刻主动止步（无知原则）。真实记忆本就充满裂隙，修正它等于篡改它。\n比赛现场可扫码体验真实系统：随手拍摄家中老物件，自由讲述任何时期回忆，AI即时生成带有人文脚注的章节草稿。忆笔不是效率工具，而是陪伴家庭完成代际传承的记忆筛子。",
+                    "repo": "https://www.synnovator.com/along429/opc-memory-pen",
+                    "demo": "http://220.154.131.127:8000",
+                    "demoLinks": [
+                              "http://220.154.131.127:8000"
+                    ],
+                    "image": "assets/images/s1-covers/rank-17.webp"
+          },
+          {
+                    "rank": 19,
+                    "team": "JunjieCai",
+                    "systemName": "科研端到端一体化AI工作台",
+                    "displayName": "科络（CORA）",
+                    "name": "科络（CORA）",
+                    "intro": "科络（CORA）是面向患者队列驱动医学科研的端到端 AI 智能体平台，聚焦医生与科研团队从临床问题提出、研究假设形成，到方案设计、数据治理、统计分析、模型构建、论文辅助撰写与投稿选刊辅助等科研流程。平台以真实世界患者队列为核心数据资产，连接文献证据、疾病知识、研究设计、课题数据和分析工具，通过多个专业 AI Agent 协同工作，为科研人员提供连续、可追溯、可复核的智能辅助。CORA 旨在帮助科研团队更高效地识别有价值的临床问题，提升研究设计、数据分析和成果表达的规范性，降低方法学工具使用难度，并在医生、研究者和方法学专家审核基础上，推动临床数据沉淀为高质量科研成果。",
+                    "repo": "https://www.synnovator.com/JunjieCai/scienith-research-booster-w3",
+                    "demo": "http://220.154.132.93:18080",
+                    "demoLinks": [
+                              "http://220.154.132.93:18080"
+                    ],
+                    "image": "assets/images/s1-covers/rank-11.webp"
+          },
+          {
+                    "rank": 20,
+                    "team": "Ethan",
+                    "systemName": "AirGap-Hub——基于物理熔断机制的边缘可信中控系统",
+                    "displayName": "AirGap-EdgeGateway：基于物理熔断与大模型局域网推理的边缘可信网关",
+                    "name": "AirGap-EdgeGateway：基于物理熔断与大模型局域网推理的边缘可信网关",
+                    "intro": "本项目从第一性原理出发，打破传统软件防御的概率性局限，构建基于物理级隔离的确定性安全底座。核心技术首创“双路径异构指令路由”，涵盖5ms广域网物理熔断机制与基于热力学熵的纳秒级内存短接防御架构（均已受理国家发明专利），相关学术成果已录用于IEEE GAIIS 2026国际会议。项目现已完成软硬件全栈交付，包括树莓派实机打样、定制硬件外壳、底层驱动及Web中控台开发。系统在断网状态下可无缝切换至本地大模型（Qwen2.5）进行闭环推理，实现零数据外泄。致力于为高端住宿、涉密办公等高隐私场景，提供可被肉眼验证的“绝对安全”智能体解决方案。",
+                    "repo": "https://www.synnovator.com/Ethan/AirGap-EdgeGateway-W3",
+                    "demo": "http://220.154.139.83:9000",
+                    "demoLinks": [
+                              "http://220.154.139.83:9000"
+                    ],
+                    "image": "assets/images/s1-covers/rank-21.webp"
           }
-];
+    ];
 
     const teamGrid = document.getElementById('team-grid');
     const detailModal = document.getElementById('detail-modal');
@@ -1332,9 +1304,6 @@
       modalBody.innerHTML =
         detailRow('团队/作者', item.team) +
         detailRow('系统项目名', item.systemName || item.name || item.displayName) +
-        detailRow('对外展示项目名', item.displayName) +
-        detailRow('平台仓库链接', item.repo) +
-        detailRow('ECS演示链接', item.demoLinks && item.demoLinks.length ? item.demoLinks.join('\n') : item.demo) +
         detailRow('项目简介', item.intro, '表格未填写项目简介');
       modalActions.style.setProperty('--accent', 'var(' + accentTokenForRank(item.rank) + ')');
       modalActions.style.setProperty('--on-accent', 'var(--on-primary-accent)');
