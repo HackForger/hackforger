@@ -1292,9 +1292,6 @@
       modalBody.innerHTML =
         detailRow('团队/作者', item.team) +
         detailRow('系统项目名', item.systemName || item.name || item.displayName) +
-        detailRow('对外展示项目名', item.displayName) +
-        detailRow('平台仓库链接', item.repo) +
-        detailRow('演示链接', item.demoLinks && item.demoLinks.length ? item.demoLinks.join('\n') : item.demo) +
         detailRow('项目简介', item.intro, '表格未填写项目简介');
       modalActions.style.setProperty('--accent', 'var(' + accentTokenForRank(item.rank) + ')');
       modalActions.style.setProperty('--on-accent', 'var(--on-primary-accent)');
