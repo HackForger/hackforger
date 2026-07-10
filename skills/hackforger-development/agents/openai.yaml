@@ -1,0 +1,4 @@
+interface:
+  display_name: "HackForger Development"
+  short_description: "Develop HackForger within its public repository boundary"
+  default_prompt: "Use $hackforger-development to implement this HackForger change without adding business-specific content to the public repository."

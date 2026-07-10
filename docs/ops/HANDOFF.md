@@ -182,7 +182,7 @@ bash deploy/ecs/redeploy.sh
 `redeploy.sh` 自动做：
 1. **preflight 检查**（确认所有要部署的 commit 都有签字的 smoke-test 报告，详见 [`docs/notes/gitflow.md`](../notes/gitflow.md)）
 2. 用 docker 交叉编译 linux/amd64 binary（5–8 分钟，qemu 仿真）
-3. **rsync `custom/templates/` + `custom/public/`** 到云端 ⚠️ 这一步**绝对不能省** —— 否则模板/landing 改动不会生效
+3. **rsync `custom/templates/` + `custom/public/` 中除 landing 外的覆盖文件**到云端；外部管理的 `assets/landing/` 会被明确排除并保护，不由此脚本发布或删除
 4. scp binary → install → restart gitea
 5. 更新 `/var/lib/hackforger/.last-deploy` 标记
 6. 公网烟测（API + navbar 文案 + HTTPS 200）

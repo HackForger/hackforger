@@ -2,14 +2,16 @@
 # Atomic redeploy of HackForger to the production ECS.
 #
 # Build (or reuse existing) gitea-linux-amd64, sync custom/templates/ and
-# custom/public/, install the binary, restart gitea, record .last-deploy.
+# non-landing custom/public/ overrides, install the binary, restart gitea, record
+# .last-deploy. The externally managed landing subtree is never synced here.
 #
 # This is the script you run AFTER the initial migrate-data.sh — for every
 # subsequent change. Use it instead of ad-hoc scp + restart, because:
 #
-# - It rsyncs custom/templates/ and custom/public/ alongside the binary.
+# - It rsyncs custom/templates/ and non-landing custom/public/ overrides alongside
+#   the binary while protecting the externally managed landing subtree.
 #   Forgetting these is a real bug we hit: PRs that only touch templates
-#   or landing assets won't take effect from a binary-only deploy.
+#   or tracked public assets won't take effect from a binary-only deploy.
 #   (Locale .ini files ARE in the binary via bindata, so they don't need
 #   rsync — but template files do, since custom/ overrides bindata at
 #   runtime.)
@@ -76,7 +78,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-log "[3/7] Sync custom/templates + custom/public to ECS"
+log "[3/7] Sync custom/templates + non-landing custom/public to ECS"
 # These override bindata-embedded templates at runtime. A binary-only deploy
 # is a bug — locale .ini files are in the binary, but template/asset
 # overrides are in the filesystem.
@@ -84,8 +86,10 @@ log "[3/7] Sync custom/templates + custom/public to ECS"
 # DELIBERATELY excluded:
 #   custom/conf/app.ini   (per-instance config; renders on bootstrap, never sync)
 #   custom/options/       (locale overrides; if used, add separately)
+#   custom/public/assets/landing/ (external source; must survive --delete)
 rsync -az --delete custom/templates/ "$ECS:/tmp/custom-templates-staged/"
-rsync -az --delete custom/public/    "$ECS:/tmp/custom-public-staged/"
+rsync -az --delete --exclude '/assets/landing/' \
+  custom/public/ "$ECS:/tmp/custom-public-staged/"
 ok "staged at /tmp/custom-{templates,public}-staged/"
 
 # ---------------------------------------------------------------------------
@@ -103,9 +107,17 @@ echo "$SUDO_PASS" | sudo -S -v
 KEEPER=$!
 trap 'kill $KEEPER 2>/dev/null || true' EXIT
 
-# Templates + public assets
+# Templates + non-landing public assets. The landing tree is no longer in git, so
+# require the deployed source to exist and protect it from receiver-side delete.
+LANDING_DIR=/var/lib/hackforger/custom/public/assets/landing
+if ! sudo test -s "$LANDING_DIR/index.html"; then
+  echo "FATAL: managed landing source is missing; refusing destructive sync" >&2
+  exit 1
+fi
 sudo rsync -a --delete /tmp/custom-templates-staged/ /var/lib/hackforger/custom/templates/
-sudo rsync -a --delete /tmp/custom-public-staged/    /var/lib/hackforger/custom/public/
+sudo rsync -a --delete --exclude '/assets/landing/' \
+  /tmp/custom-public-staged/ /var/lib/hackforger/custom/public/
+sudo test -s "$LANDING_DIR/index.html"
 sudo chown -R hackforger:hackforger /var/lib/hackforger/custom/templates /var/lib/hackforger/custom/public
 sudo rm -rf /tmp/custom-templates-staged /tmp/custom-public-staged
 

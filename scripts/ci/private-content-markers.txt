@@ -1,0 +1,10 @@
+# Fingerprints of case-insensitive business markers forbidden in paths/content.
+# Format: byte_length rolling_hash_64 sha256. Plaintext business or topology
+# values must never be stored in this public policy file. Use the sibling
+# fingerprint_private_content_marker.py helper, which reads the value hidden.
+10 98c78d2b9aa4ea63 3a4e46b4b9f7bfcbf978a33a4f187897a52ac5ed5676a6d3069e502ccdef6e16
+10 ca5e735826d0ffc1 b44a8c9b15c4741a07b874b9f1ce88fd36e01b97b390219d2113faa576041294
+8 6b1436dcc22d661e 250b879bc5db23dab916633b7e476761993ed7bee763e28547f227828a47d39f
+10 24b329b668b98844 e4f6167405a8233dcf22b46fa6ca994393eabda31823c16389e6c774ad40b342
+8 728535f5c6667639 7639c3ff04ac901c8feb34ceb7c122771569c5d3c183dd5659f065c1717d063a
+16 cb44c0d79f961299 a73820a009aaefcc7e9fabe8247ec6ccf599e1dccbdf37ab086f81a82d115fe3
