@@ -47,9 +47,11 @@ git_sanitized() {
     -u GIT_SSH -u GIT_SSH_COMMAND -u GIT_SSH_VARIANT -u GIT_PROXY_COMMAND \
     GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
     GIT_NO_REPLACE_OBJECTS=1 GIT_LITERAL_PATHSPECS=1 GIT_OPTIONAL_LOCKS=0 \
-    GIT_TERMINAL_PROMPT=0 \
-    GIT_SSH_COMMAND='ssh -F /dev/null -o BatchMode=yes' \
-    GIT_PROTOCOL_FROM_USER=0 git "$@"
+    GIT_NO_LAZY_FETCH="${GIT_NO_LAZY_FETCH:-0}" GIT_TERMINAL_PROMPT=0 \
+    GIT_SSH_COMMAND='ssh -F /dev/null -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3' \
+    GIT_PROTOCOL_FROM_USER=0 git \
+    -c protocol.ext.allow=never -c protocol.file.allow=never \
+    -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"
 }
 
 validate_inode_types() {
@@ -312,23 +314,50 @@ SOURCE_REVISION=unversioned
 if [ "$REQUIRE_CLEAN_SOURCE" = true ]; then
   [ -z "${GIT_REPLACE_REF_BASE:-}" ] && [ -z "${GIT_GRAFT_FILE:-}" ] \
     || die "replace/graft environment overrides are forbidden"
-  SOURCE_REPO=$(git_sanitized -C "$SOURCE" rev-parse --show-toplevel 2>/dev/null) || die "source is not inside a git repository"
-  MANIFEST_REPO=$(git_sanitized -C "$MANIFEST_DIR" rev-parse --show-toplevel 2>/dev/null) || die "manifest is not inside a git repository"
-  CONFIG_REPO=$(git_sanitized -C "$CONFIG_DIR" rev-parse --show-toplevel 2>/dev/null) || die "config is not inside a git repository"
+  SOURCE_REPO=$(GIT_NO_LAZY_FETCH=1 git_sanitized -C "$SOURCE" rev-parse --show-toplevel 2>/dev/null) || die "source is not inside a git repository"
+  MANIFEST_REPO=$(GIT_NO_LAZY_FETCH=1 git_sanitized -C "$MANIFEST_DIR" rev-parse --show-toplevel 2>/dev/null) || die "manifest is not inside a git repository"
+  CONFIG_REPO=$(GIT_NO_LAZY_FETCH=1 git_sanitized -C "$CONFIG_DIR" rev-parse --show-toplevel 2>/dev/null) || die "config is not inside a git repository"
   SOURCE_REPO=$(cd "$SOURCE_REPO" && pwd -P)
   MANIFEST_REPO=$(cd "$MANIFEST_REPO" && pwd -P)
   CONFIG_REPO=$(cd "$CONFIG_REPO" && pwd -P)
   [ "$SOURCE_REPO" = "$MANIFEST_REPO" ] && [ "$SOURCE_REPO" = "$CONFIG_REPO" ] \
     || die "source, manifest, and config must belong to the same git repository"
-  COMMON_DIR=$(git_sanitized -C "$SOURCE_REPO" rev-parse --git-common-dir)
+
+  git_source() {
+    GIT_NO_LAZY_FETCH=1 git_sanitized -C "$SOURCE_REPO" "$@"
+  }
+
+  COMMON_DIR=$(git_source rev-parse --git-common-dir)
   case "$COMMON_DIR" in /*) ;; *) COMMON_DIR="$SOURCE_REPO/$COMMON_DIR" ;; esac
   COMMON_DIR=$(cd "$COMMON_DIR" && pwd -P)
+  SOURCE_GIT_DIR=$(git_source rev-parse --absolute-git-dir)
+  SOURCE_GIT_DIR=$(cd "$SOURCE_GIT_DIR" && pwd -P)
   [ ! -e "$COMMON_DIR/info/grafts" ] && [ ! -L "$COMMON_DIR/info/grafts" ] \
     || die "legacy Git grafts are forbidden"
-  [ -z "$(git_sanitized -C "$SOURCE_REPO" for-each-ref --format='%(refname)' refs/replace)" ] || die "Git replace refs are forbidden"
-  [ "$(git_sanitized -C "$SOURCE_REPO" rev-parse --is-shallow-repository)" = false ] || die "shallow source repositories are forbidden"
-  [ -z "$(git_sanitized -C "$SOURCE_REPO" status --porcelain --untracked-files=all)" ] || die "source repository is not clean"
-  BRANCH=$(git_sanitized -C "$SOURCE_REPO" symbolic-ref -q --short HEAD) || die "source repository must be on a branch"
+  [ ! -e "$COMMON_DIR/objects/info/alternates" ] \
+    && [ ! -L "$COMMON_DIR/objects/info/alternates" ] \
+    || die "Git object alternates are forbidden for provenance"
+  if [ "$SOURCE_GIT_DIR" != "$COMMON_DIR" ]; then
+    [ ! -e "$SOURCE_GIT_DIR/objects/info/alternates" ] \
+      && [ ! -L "$SOURCE_GIT_DIR/objects/info/alternates" ] \
+      || die "Git worktree object alternates are forbidden for provenance"
+  fi
+  [ -z "$(git_source for-each-ref --format='%(refname)' refs/replace)" ] || die "Git replace refs are forbidden"
+  [ "$(git_source rev-parse --is-shallow-repository)" = false ] || die "shallow source repositories are forbidden"
+  SOURCE_UNTRUSTED_CONFIG=$(git_source config --show-origin --get-regexp \
+    '^(extensions\.partialclone|remote\..*\.(promisor|partialclonefilter)|filter\..*\.(clean|smudge|process))$' \
+    2>/dev/null || true)
+  [ -z "$SOURCE_UNTRUSTED_CONFIG" ] \
+    || die "partial-clone, promisor, or conversion-filter config is forbidden for provenance"
+  SOURCE_REVISION=$(git_source rev-parse --verify HEAD)
+  SOURCE_GITLINK=$(git_source ls-files --stage | awk '$1 == "160000" {print "present"; exit}')
+  [ -z "$SOURCE_GITLINK" ] || die "Git submodules are forbidden for provenance"
+  git_source diff-index --cached --quiet --no-ext-diff --no-textconv \
+    --ignore-submodules=all "$SOURCE_REVISION" -- \
+    || die "source repository index differs from HEAD"
+  git_source ls-files --others --exclude-standard -z > "$WORK/source-untracked"
+  [ ! -s "$WORK/source-untracked" ] || die "source repository contains untracked files"
+  BRANCH=$(git_source symbolic-ref -q --short HEAD) || die "source repository must be on a branch"
 
   [[ "$PROVENANCE_REF" =~ ^refs/heads/[A-Za-z0-9._/-]+$ ]] \
     && git_sanitized check-ref-format "$PROVENANCE_REF" >/dev/null 2>&1 \
@@ -371,52 +400,132 @@ if [ "$REQUIRE_CLEAN_SOURCE" = true ]; then
   }
 
   REMOTE_TIP=$(query_provenance_tip)
-  SOURCE_REVISION=$(git_sanitized -C "$SOURCE_REPO" rev-parse --verify 'HEAD^{commit}')
   [ "$SOURCE_REVISION" = "$REMOTE_TIP" ] \
     || die "source HEAD is not equal to the provenance branch tip"
 
+  case "$SOURCE" in "$SOURCE_REPO"/*) SOURCE_REL=${SOURCE#"$SOURCE_REPO"/} ;; *) die "source is outside its repository" ;; esac
+  case "$MANIFEST" in "$SOURCE_REPO"/*) MANIFEST_REL=${MANIFEST#"$SOURCE_REPO"/} ;; *) die "manifest is outside its repository" ;; esac
+  case "$CONFIG" in "$SOURCE_REPO"/*) CONFIG_REL=${CONFIG#"$SOURCE_REPO"/} ;; *) die "config is outside its repository" ;; esac
+
+  # Fetch the remote commit and tree graph without the potentially large blob
+  # history. The remote config and manifest blobs are fetched on demand; local
+  # source blobs are accepted only when both their remote Git object IDs and
+  # the SHA-256 hashes from that remote manifest agree.
   TRUST_REPO="$WORK/provenance.git"
   EMPTY_TEMPLATE="$WORK/empty-git-template"
   mkdir "$EMPTY_TEMPLATE"
   git_sanitized -C "$PROVENANCE_CWD" init -q --bare --template="$EMPTY_TEMPLATE" "$TRUST_REPO"
+  git_provenance --git-dir "$TRUST_REPO" remote add provenance "$PROVENANCE_REMOTE"
+  git_sanitized --git-dir "$TRUST_REPO" config extensions.partialClone provenance
+  git_sanitized --git-dir "$TRUST_REPO" config remote.provenance.promisor true
+  git_sanitized --git-dir "$TRUST_REPO" config remote.provenance.partialclonefilter blob:none
   git_provenance --git-dir "$TRUST_REPO" fetch -q --no-tags --force \
-    "$PROVENANCE_REMOTE" "+$PROVENANCE_REF:refs/provenance/source"
+    --depth=1 --filter=blob:none provenance \
+    "+$PROVENANCE_REF:refs/provenance/source"
   FETCHED_REVISION=$(git_sanitized --git-dir "$TRUST_REPO" rev-parse --verify 'refs/provenance/source^{commit}')
   [ "$FETCHED_REVISION" = "$SOURCE_REVISION" ] \
     || die "provenance branch changed while the authoritative tree was fetched"
-  [ "$(git_sanitized --git-dir "$TRUST_REPO" rev-parse --is-shallow-repository)" = false ] \
-    || die "authoritative provenance fetch unexpectedly produced a shallow repository"
-  [ ! -s "$TRUST_REPO/info/grafts" ] || die "authoritative provenance repository contains grafts"
   [ -z "$(git_sanitized --git-dir "$TRUST_REPO" for-each-ref --format='%(refname)' refs/replace)" ] \
     || die "authoritative provenance repository contains replacement refs"
-  git_sanitized --git-dir "$TRUST_REPO" fsck --full --strict --no-reflogs "$FETCHED_REVISION" >/dev/null
+  GIT_NO_LAZY_FETCH=1 git_sanitized --git-dir "$TRUST_REPO" fsck --connectivity-only --strict \
+    --no-reflogs "$FETCHED_REVISION" >/dev/null
+
+  verify_source_worktree() {
+    local entry metadata mode oid stage path actual_oid link_target
+    git_source diff-index --cached --quiet --no-ext-diff --no-textconv \
+      --ignore-submodules=all "$SOURCE_REVISION" -- \
+      || die "source repository index differs from HEAD"
+    git_source ls-files --others --exclude-standard -z > "$WORK/source-untracked"
+    [ ! -s "$WORK/source-untracked" ] \
+      || die "source repository contains untracked files"
+    git_source ls-files --stage -z > "$WORK/source-index"
+    while IFS= read -r -d '' entry; do
+      metadata=${entry%%$'\t'*}
+      path=${entry#*$'\t'}
+      read -r mode oid stage <<< "$metadata"
+      [ "$stage" = 0 ] || die "source repository index contains unresolved entries"
+      case "$mode" in
+        100644|100755)
+          [ -f "$SOURCE_REPO/$path" ] && [ ! -L "$SOURCE_REPO/$path" ] \
+            || die "tracked working file is missing or not regular: $path"
+          actual_oid=$(GIT_NO_LAZY_FETCH=1 git_sanitized --git-dir "$TRUST_REPO" \
+            hash-object --stdin < "$SOURCE_REPO/$path")
+          ;;
+        120000)
+          [ -L "$SOURCE_REPO/$path" ] || die "tracked working symlink is missing: $path"
+          link_target=$(readlink "$SOURCE_REPO/$path")
+          actual_oid=$(printf '%s' "$link_target" \
+            | GIT_NO_LAZY_FETCH=1 git_sanitized --git-dir "$TRUST_REPO" hash-object --stdin)
+          ;;
+        160000) die "Git submodules are forbidden for provenance" ;;
+        *) die "source repository index contains an unsupported mode: $path" ;;
+      esac
+      [ "$actual_oid" = "$oid" ] || die "tracked working file differs from the index: $path"
+    done < "$WORK/source-index"
+  }
+
+  verify_source_worktree
 
   AUTHORITATIVE_ROOT="$WORK/authoritative"
   AUTHORITATIVE_SOURCE="$AUTHORITATIVE_ROOT/source"
   mkdir -p "$AUTHORITATIVE_SOURCE"
 
+  remote_blob_oid() {
+    local repository_path=$1 entry metadata mode type oid returned_path
+    entry=$(git_sanitized --git-dir "$TRUST_REPO" ls-tree "$SOURCE_REVISION" -- "$repository_path")
+    metadata=${entry%%$'\t'*}
+    returned_path=${entry#*$'\t'}
+    read -r mode type oid <<< "$metadata"
+    [ "$returned_path" = "$repository_path" ] \
+      || die "provenance commit lacks a regular file: $repository_path"
+    case "$mode:$type" in 100644:blob|100755:blob) ;; *) die "provenance commit lacks a regular file: $repository_path" ;; esac
+    printf '%s\n' "$oid"
+  }
+
+  require_promised_blob() {
+    local oid=$1 repository_path=$2
+    if GIT_NO_LAZY_FETCH=1 git_sanitized --git-dir "$TRUST_REPO" \
+      cat-file -e "$oid^{blob}" 2>/dev/null; then
+      die "provenance server did not honor blobless filtering: $repository_path"
+    fi
+  }
+
   materialize_authoritative_file() {
-    local working_file=$1 repository_path=$2 output=$3 mode
-    mode=$(git_sanitized --git-dir "$TRUST_REPO" ls-tree "$SOURCE_REVISION" -- "$repository_path" \
-      | awk 'NR == 1 {print $1}')
-    case "$mode" in 100644|100755) ;; *) die "provenance commit lacks a regular file: $repository_path" ;; esac
+    local working_file=$1 oid=$2 repository_path=$3 output=$4
     mkdir -p "$(dirname "$output")"
-    git_sanitized --git-dir "$TRUST_REPO" cat-file blob "$SOURCE_REVISION:$repository_path" > "$output"
+    GIT_NO_LAZY_FETCH=0 git_provenance --git-dir "$TRUST_REPO" cat-file blob "$oid" > "$output"
     cmp -s "$output" "$working_file" || die "working file differs from provenance commit: $repository_path"
   }
 
-  case "$SOURCE" in "$SOURCE_REPO"/*) SOURCE_REL=${SOURCE#"$SOURCE_REPO"/} ;; *) die "source is outside its repository" ;; esac
-  case "$MANIFEST" in "$SOURCE_REPO"/*) MANIFEST_REL=${MANIFEST#"$SOURCE_REPO"/} ;; *) die "manifest is outside its repository" ;; esac
-  case "$CONFIG" in "$SOURCE_REPO"/*) CONFIG_REL=${CONFIG#"$SOURCE_REPO"/} ;; *) die "config is outside its repository" ;; esac
-  materialize_authoritative_file "$CONFIG_SNAPSHOT" "$CONFIG_REL" "$AUTHORITATIVE_ROOT/config"
-  materialize_authoritative_file "$MANIFEST_SNAPSHOT" "$MANIFEST_REL" "$AUTHORITATIVE_ROOT/manifest"
+  AUTHORITATIVE_TREE="$WORK/authoritative-tree"
+  git_sanitized --git-dir "$TRUST_REPO" ls-tree -r -z "$SOURCE_REVISION" -- "$SOURCE_REL" \
+    > "$AUTHORITATIVE_TREE"
+  [ -s "$AUTHORITATIVE_TREE" ] || die "provenance source subtree is empty"
+
+  CONFIG_OID=$(remote_blob_oid "$CONFIG_REL")
+  MANIFEST_OID=$(remote_blob_oid "$MANIFEST_REL")
+  require_promised_blob "$CONFIG_OID" "$CONFIG_REL"
+  require_promised_blob "$MANIFEST_OID" "$MANIFEST_REL"
+  while IFS= read -r -d '' tree_entry; do
+    tree_metadata=${tree_entry%%$'\t'*}
+    repository_path=${tree_entry#*$'\t'}
+    read -r tree_mode tree_type tree_oid <<< "$tree_metadata"
+    case "$tree_mode:$tree_type" in
+      100644:blob|100755:blob) ;;
+      *) die "provenance source contains a non-regular Git entry: $repository_path" ;;
+    esac
+    require_promised_blob "$tree_oid" "$repository_path"
+  done < "$AUTHORITATIVE_TREE"
+
+  materialize_authoritative_file "$CONFIG_SNAPSHOT" "$CONFIG_OID" \
+    "$CONFIG_REL" "$AUTHORITATIVE_ROOT/config"
+  materialize_authoritative_file "$MANIFEST_SNAPSHOT" "$MANIFEST_OID" \
+    "$MANIFEST_REL" "$AUTHORITATIVE_ROOT/manifest"
   [ "$(sha256_file "$AUTHORITATIVE_ROOT/config")" = "$CONFIG_READ_HASH" ] \
     || die "config changed while it was being read"
   [ "$(sha256_file "$AUTHORITATIVE_ROOT/manifest")" = "$MANIFEST_READ_HASH" ] \
     || die "manifest changed while it was being read"
-  AUTHORITATIVE_TREE="$WORK/authoritative-tree"
-  git_sanitized --git-dir "$TRUST_REPO" ls-tree -r -z "$SOURCE_REVISION" -- "$SOURCE_REL" \
-    > "$AUTHORITATIVE_TREE"
+
   : > "$WORK/authoritative-source-paths"
   while IFS= read -r -d '' tree_entry; do
     tree_metadata=${tree_entry%%$'\t'*}
@@ -434,9 +543,14 @@ if [ "$REQUIRE_CLEAN_SOURCE" = true ]; then
     [ -f "$SOURCE/$path" ] && [ ! -L "$SOURCE/$path" ] \
       || die "working source lacks a provenance file: $repository_path"
     mkdir -p "$(dirname "$AUTHORITATIVE_SOURCE/$path")"
-    git_sanitized --git-dir "$TRUST_REPO" cat-file blob "$tree_oid" \
-      > "$AUTHORITATIVE_SOURCE/$path"
-    cmp -s "$AUTHORITATIVE_SOURCE/$path" "$SOURCE/$path" \
+    cp "$SOURCE/$path" "$AUTHORITATIVE_SOURCE/$path"
+    case "$tree_mode" in
+      100644) chmod 0644 "$AUTHORITATIVE_SOURCE/$path" ;;
+      100755) chmod 0755 "$AUTHORITATIVE_SOURCE/$path" ;;
+    esac
+    COPIED_OID=$(GIT_NO_LAZY_FETCH=1 git_sanitized --git-dir "$TRUST_REPO" \
+      hash-object --stdin < "$AUTHORITATIVE_SOURCE/$path")
+    [ "$COPIED_OID" = "$tree_oid" ] \
       || die "working source differs from provenance commit: $repository_path"
     printf '%s\n' "$path" >> "$WORK/authoritative-source-paths"
   done < "$AUTHORITATIVE_TREE"
@@ -445,6 +559,12 @@ if [ "$REQUIRE_CLEAN_SOURCE" = true ]; then
   mkdir "$VERIFY_AUTHORITATIVE"
   verify_tree "$AUTHORITATIVE_SOURCE" "$WORK/normalized.SHA256SUMS" "$ENTRYPOINT" "$VERIFY_AUTHORITATIVE"
   SOURCE=$AUTHORITATIVE_SOURCE
+
+  verify_source_worktree
+
+  VERIFIED_REMOTE_TIP=$(query_provenance_tip)
+  [ "$VERIFIED_REMOTE_TIP" = "$SOURCE_REVISION" ] \
+    || die "provenance branch changed while the authoritative tree was materialized"
 else
   if git -C "$SOURCE" rev-parse HEAD >/dev/null 2>&1; then
     SOURCE_REVISION=$(git -C "$SOURCE" rev-parse HEAD)

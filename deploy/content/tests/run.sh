@@ -94,6 +94,7 @@ init_pushed_repo() {
   git -C "$repo" config user.name 'Content Test'
   git -C "$repo" config user.email content-test@example.invalid
   git init -q --bare "$bare"
+  git --git-dir "$bare" config uploadpack.allowFilter true
   git -C "$repo" remote add origin "$bare"
 }
 
@@ -118,7 +119,7 @@ make_source() {
   printf '%s\n' "$label-image" > "$source_dir/assets/banner 中文 name.webp"
 }
 
-echo '1..24'
+echo '1..31'
 
 # 1. Default invocation is a read-only plan.
 CASE1="$TMP/case1"
@@ -548,7 +549,7 @@ rm "$REPO23/overlays/landing/remote-extra.txt"
 expect_failure bash "$PUBLISH" --config "$CONFIG23" --mount landing \
   --provenance-remote "$BARE23" --provenance-ref refs/heads/main \
   --source "$REPO23/overlays/landing" --manifest "$REPO23/overlays/SHA256SUMS"
-grep -q 'working source lacks a provenance file' "$TMP/expected-failure.out" \
+grep -q 'tracked working file is missing or not regular' "$TMP/expected-failure.out" \
   || fail 'authoritative extra-file fixture failed for the wrong reason'
 ok 'authoritative remote subtree defeats sparse or skip-worktree omissions'
 
@@ -581,5 +582,130 @@ expect_failure bash "$REMOTE_HELPER" upload-verify "$UPLOAD_SYMLINK24" \
 assert_file_text "$VICTIM24" unchanged
 bash "$REMOTE_HELPER" upload-clean "$UPLOAD_SYMLINK24"
 ok 'private upload directory rejects symlink pre-placement before lock acquisition'
+
+# 25. A persistent object-alternate file can redirect local object reads away
+# from the verified source repository and must fail before provenance use.
+CASE25="$TMP/case25"
+REPO25="$CASE25/private"
+BARE25="$CASE25/origin.git"
+mkdir -p "$CASE25"
+init_pushed_repo "$REPO25" "$BARE25"
+make_source "$REPO25/overlays/landing" provenance-storage
+bash "$GENERATE" "$REPO25/overlays/landing" "$REPO25/overlays/SHA256SUMS" >/dev/null
+REMOTE25="$CASE25/remote"
+mkdir -p "$REMOTE25/custom/public/assets/landing" "$REPO25/deploy"
+printf 'stable\n' > "$REMOTE25/custom/public/assets/landing/index.html"
+CONFIG25="$REPO25/deploy/production.env"
+write_config "$CONFIG25" "$REMOTE25" "$CASE25/backups" false true
+commit_and_push "$REPO25" 'strict provenance storage fixture'
+mkdir -p "$REPO25/.git/objects/info"
+: > "$REPO25/.git/objects/info/alternates"
+expect_failure bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS"
+grep -q 'Git object alternates are forbidden' "$TMP/expected-failure.out" \
+  || fail 'object-alternate fixture failed for the wrong reason'
+rm "$REPO25/.git/objects/info/alternates"
+ok 'strict provenance rejects persistent Git object alternates'
+
+# 26. Linked-worktree config is part of the repository config scope. A hidden
+# promisor there must not bypass the fail-closed source checkout policy.
+git -C "$REPO25" config extensions.worktreeConfig true
+git -C "$REPO25" config --worktree remote.hidden.promisor true
+expect_failure bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS"
+grep -q 'promisor, or conversion-filter config is forbidden' "$TMP/expected-failure.out" \
+  || fail 'worktree-promisor fixture failed for the wrong reason'
+git -C "$REPO25" config --worktree --unset remote.hidden.promisor
+ok 'strict provenance rejects linked-worktree promisor config'
+
+# 27. A provenance server that ignores blobless filtering would reintroduce a
+# full private-history download. Refuse it rather than silently degrading.
+git --git-dir "$BARE25" config uploadpack.allowFilter false
+expect_failure bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS"
+grep -q 'did not honor blobless filtering' "$TMP/expected-failure.out" \
+  || fail 'filter-refusal fixture failed for the wrong reason'
+ok 'strict provenance rejects servers that ignore blobless filtering'
+
+# 28. Repository-local fsmonitor config is not part of the remote provenance
+# anchor and must never execute during clean-source validation.
+git --git-dir "$BARE25" config uploadpack.allowFilter true
+FSMONITOR28="$CASE25/untrusted-fsmonitor.sh"
+FSMONITOR_MARKER28="$CASE25/fsmonitor-executed"
+printf '#!/bin/sh\n: > "%s"\nexit 1\n' "$FSMONITOR_MARKER28" > "$FSMONITOR28"
+chmod +x "$FSMONITOR28"
+git -C "$REPO25" config core.fsmonitor "$FSMONITOR28"
+bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS" \
+  >/dev/null
+[ ! -e "$FSMONITOR_MARKER28" ] || fail 'repository-local fsmonitor executable ran'
+git -C "$REPO25" config --unset core.fsmonitor
+ok 'strict provenance disables repository-local fsmonitor execution'
+
+# 29. Git blob hashes do not cover executable mode. Normalize the staged tree
+# from the remote tree mode even when core.fileMode hides a local inversion.
+git -C "$REPO25" config core.fileMode false
+chmod 0755 "$REPO25/overlays/landing/assets/site.css"
+[ -z "$(git -C "$REPO25" status --porcelain --untracked-files=all)" ] \
+  || fail 'mode-inversion fixture repository is unexpectedly dirty'
+bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS" \
+  --apply >/dev/null
+[ "$(file_mode "$REMOTE25/custom/public/assets/landing/assets/site.css")" = 644 ] \
+  || fail 'published file mode differs from remote tree mode'
+ok 'authoritative staging normalizes modes from the remote tree'
+
+# 30. Clean/process conversion filters from untracked local config are outside
+# the remote trust anchor and must be rejected before checkout verification.
+printf '*.css filter=pwn\n' > "$REPO25/.gitattributes"
+commit_and_push "$REPO25" 'tracked conversion-filter attribute fixture'
+FILTER30="$CASE25/untrusted-filter.sh"
+FILTER_MARKER30="$CASE25/filter-executed"
+printf '#!/bin/sh\n: > "%s"\ncat\n' "$FILTER_MARKER30" > "$FILTER30"
+chmod +x "$FILTER30"
+git -C "$REPO25" config filter.pwn.clean "$FILTER30"
+touch -t 200001010000 "$REPO25/overlays/landing/assets/site.css"
+expect_failure bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS"
+grep -q 'conversion-filter config is forbidden' "$TMP/expected-failure.out" \
+  || fail 'conversion-filter fixture failed for the wrong reason'
+[ ! -e "$FILTER_MARKER30" ] || fail 'repository-local conversion filter ran'
+git -C "$REPO25" config --unset filter.pwn.clean
+ok 'strict provenance rejects repository-local conversion filters before verification'
+
+# 31. Superproject status can recurse into a submodule and execute commands
+# from that submodule's separate config. Reject gitlinks before status and
+# force the status probe itself to ignore submodules.
+SUBREPO31="$CASE25/submodule-source"
+git init -q "$SUBREPO31"
+git -C "$SUBREPO31" checkout -q -b main
+git -C "$SUBREPO31" config user.name 'Content Test'
+git -C "$SUBREPO31" config user.email content-test@example.invalid
+printf '*.txt filter=pwn\n' > "$SUBREPO31/.gitattributes"
+printf 'tracked\n' > "$SUBREPO31/tracked.txt"
+git -C "$SUBREPO31" add .gitattributes tracked.txt
+git -C "$SUBREPO31" commit -q -m 'submodule fixture'
+git -C "$REPO25" -c protocol.file.allow=always submodule add -q \
+  "$SUBREPO31" vendor/untrusted
+commit_and_push "$REPO25" 'tracked submodule fixture'
+SUB_FILTER31="$CASE25/untrusted-submodule-filter.sh"
+SUB_FILTER_MARKER31="$CASE25/submodule-filter-executed"
+printf '#!/bin/sh\n: > "%s"\ncat\n' "$SUB_FILTER_MARKER31" > "$SUB_FILTER31"
+chmod +x "$SUB_FILTER31"
+git -C "$REPO25/vendor/untrusted" config filter.pwn.clean "$SUB_FILTER31"
+touch -t 200001010000 "$REPO25/vendor/untrusted/tracked.txt"
+expect_failure bash "$PUBLISH" --config "$CONFIG25" --mount landing \
+  --provenance-remote "$BARE25" --provenance-ref refs/heads/main \
+  --source "$REPO25/overlays/landing" --manifest "$REPO25/overlays/SHA256SUMS"
+grep -q 'Git submodules are forbidden' "$TMP/expected-failure.out" \
+  || fail 'submodule fixture failed for the wrong reason'
+[ ! -e "$SUB_FILTER_MARKER31" ] || fail 'submodule conversion filter ran'
+ok 'strict provenance rejects submodules before cleanliness evaluation'
 
 echo "All $PASS content publisher tests passed."
