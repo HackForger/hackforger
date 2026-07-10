@@ -491,6 +491,9 @@ class BoundaryCheckerTest(unittest.TestCase):
         self.write("deploy/example.md", "root=/" + "Users/alice\n")
         self.assertIn("PERSONAL_PATH", self.run_checker().stderr)
 
+        self.write("deploy/example.md", "root=/" + "users/alice/work\n")
+        self.assertIn("PERSONAL_PATH", self.run_checker().stderr)
+
     def test_internal_host_fails_but_locale_key_passes(self) -> None:
         host = "api.corp." + "internal"
         self.write("docs/host.md", f"host={host}\n")
@@ -498,7 +501,12 @@ class BoundaryCheckerTest(unittest.TestCase):
         self.assertIn("INTERNAL_HOST\tdocs/host.md", result.stderr)
 
         locale_key = "hackathon.error." + "internal"
-        self.write("options/locale/test.ini", f"{locale_key} = Generic error.\n")
+        short_locale_key = "desc." + "internal"
+        self.write(
+            "options/locale/test.ini",
+            f"{locale_key} = Generic error.\n"
+            f"{short_locale_key} = Internal\n",
+        )
         subprocess.run(
             ["git", "-C", str(self.root), "rm", "-f", "docs/host.md"],
             check=True,
@@ -537,6 +545,21 @@ class BoundaryCheckerTest(unittest.TestCase):
             stdout=subprocess.DEVNULL,
         )
         self.assertEqual(0, self.run_checker().returncode)
+
+    def test_internal_like_values_outside_locales_still_fail(self) -> None:
+        suffix = "internal"
+        self.write(
+            "docs/locale-keys.md",
+            f"desc.{suffix} = Internal\n"
+            f"bounty.error.{suffix} = Generic error.\n",
+        )
+        self.write("modules/example.go", f"return q.{suffix}.Load()\n")
+        result = self.run_checker()
+        self.assertIn("INTERNAL_HOST\tdocs/locale-keys.md", result.stderr)
+        self.assertIn("INTERNAL_HOST\tmodules/example.go", result.stderr)
+
+        self.write("docs/host.md", f"cert=/etc/db.{suffix}.pem\n")
+        self.assertIn("INTERNAL_HOST\tdocs/host.md", self.run_checker().stderr)
 
     def test_single_label_internal_host_and_sensitive_path_parts_fail(self) -> None:
         host = "db." + "internal"
