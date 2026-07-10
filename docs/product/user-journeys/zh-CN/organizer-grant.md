@@ -52,7 +52,7 @@
     "title": "DeFi Testing Framework",
     "description": "Open-source testing framework for DeFi smart contracts",
     "requested_amount": 1000,
-    "repo_url": "https://hackforger.inside.h2os.cloud/hacker1/defi-test-framework"
+    "repo_url": "https://hackforger.example.invalid/example-user/defi-test-framework"
   }
   ```
 - **预期结果**：
@@ -69,7 +69,7 @@
     "title": "NFT Metadata Standard Library",
     "description": "Standardized metadata handling for NFTs across chains",
     "requested_amount": 1500,
-    "repo_url": "https://hackforger.inside.h2os.cloud/hacker2/nft-metadata-lib"
+    "repo_url": "https://hackforger.example.invalid/example-user-2/nft-metadata-lib"
   }
   ```
 - **预期结果**：

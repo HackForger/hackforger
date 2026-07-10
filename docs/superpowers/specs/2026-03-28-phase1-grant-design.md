@@ -345,4 +345,5 @@ Full audience distribution tests deferred to post-merge audience resolution task
 
 ### E2E Manual Verification
 
-After implementation, execute manual E2E flow per `docs/tests/e2e/phase1-grant-e2e.md` and fill report.
+After implementation, execute the manual E2E flow stored in the corresponding
+private instance repository and fill its report.

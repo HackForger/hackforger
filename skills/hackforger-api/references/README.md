@@ -20,7 +20,10 @@ HackForger holds the principle that **every web-facing user operation must have 
 
 ## E2E policy
 
-E2E tests must use the web UI via `agent-browser` (see `docs/tests/e2e/`). The existence of API parity does **not** mean E2E should switch to API — the policies are independent:
+Instance-specific E2E suites and their runtime evidence belong in the
+corresponding access-controlled content repository. Those tests must use the
+web UI via `agent-browser`. The existence of API parity does **not** mean E2E
+should switch to API — the policies are independent:
 
 - **API parity** ensures developers/scripts/CI/bots can drive the platform.
 - **E2E web testing** ensures the UI itself works for real users.

@@ -438,7 +438,8 @@ All keys go under the `[hackforger]` section in both locale files.
 
 ## 8. E2E Testing
 
-A manual E2E test prompt and report template will be created in `docs/tests/e2e/` as part of the implementation plan. The E2E scenarios must cover:
+A manual E2E prompt and report template must be stored in the corresponding
+access-controlled instance repository. The E2E scenarios must cover:
 
 1. **Hackathon credits distribution**: Create hackathon with 3 tracks (one per mode), finalize, verify deposits
 2. **Manual fulfill with delivery**: Redeem option, admin fulfills with license key, user sees key on orders page

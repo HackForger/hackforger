@@ -423,7 +423,7 @@ Phase 4: Explore Submissions
 └── Verify: submissions browseable
 
 Phase 5: E2E
-├── Write E2E prompt: `docs/tests/e2e/unified-search-e2e-prompt.md`
+├── Write the E2E prompt in the private instance repository
 ├── Rebuild server
 ├── Execute search E2E with new grouped results
 ├── Test Explore Submissions page

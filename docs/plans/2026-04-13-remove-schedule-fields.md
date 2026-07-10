@@ -478,4 +478,5 @@ Test on local instance (`http://localhost:3000`) using agent-browser:
 4. **Create a track** — verify milestones are created from Phase data (check the track repo's milestones)
 5. **Screenshot** each step and save to `tests/screenshots/`
 
-Write E2E report to `docs/tests/e2e/reports/issue-51-remove-schedule-report.md`.
+Store the E2E report and screenshots in the corresponding access-controlled
+instance repository, not in the public source tree.

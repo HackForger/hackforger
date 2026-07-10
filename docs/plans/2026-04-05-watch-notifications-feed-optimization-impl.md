@@ -644,7 +644,8 @@ Test 4: Activity Isolation
 5. Screenshot: hacker2's feed without hacker1's registration event
 ```
 
-Save report to `docs/tests/e2e/reports/2026-04-05-watch-feed-e2e-report.md`.
+Store the report in the corresponding access-controlled instance repository,
+not in the public source tree.
 
 ---
 

@@ -1,6 +1,6 @@
 # HackForger System Guide
 
-**HackForger** is the underlying system engine of the Synnovator platform. Built on Forgejo, it provides complete Git collaboration capabilities plus extension modules designed for co-creation activities. This page is a capability index — find the feature you need, then follow the link to go deeper.
+**HackForger** is a business-neutral Forgejo distribution for collaborative programs. It combines Git collaboration with extension modules for events, bounties, grants, credits, feeds, and related workflows. This page is a capability index — find the feature you need, then follow the link to go deeper.
 
 ## Core Git Collaboration Capabilities
 
@@ -20,7 +20,7 @@ If you are familiar with GitHub, the workflows here are nearly identical. For de
 
 ## HackForger Platform Extension Modules
 
-These are the modules HackForger adds on top of Forgejo to power Synnovator's co-creation activities:
+These are the reusable collaboration modules HackForger adds on top of Forgejo:
 
 | Module | Description | Access Path |
 |--------|-------------|-------------|
@@ -40,6 +40,6 @@ These are the modules HackForger adds on top of Forgejo to power Synnovator's co
 
 ## Need Help?
 
-* Platform feature questions — Read the "Platform Guide (Synnovator)" section on this page
+* Platform feature questions — Read the "Platform Guide" section on this page
 * Git / repository questions — Refer to [Forgejo Docs](https://forgejo.org/docs/latest/)
 * Found a bug — Open an issue in the [HackForger GitHub repository](https://github.com/HackForger/hackforger/issues)

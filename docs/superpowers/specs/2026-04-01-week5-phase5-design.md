@@ -450,11 +450,11 @@ Update `.mcp.json` to remove non-functional `forgejo-mcp` entry.
 
 ### 8.1 Guide Updates
 
-Update `docs/tests/e2e/e2e-testing-guide.md` with:
+Update the access-controlled instance E2E guide with:
 
 **Mandatory rules section:**
 1. Web UI testing is mandatory — unit tests and API tests cannot substitute for web interface operations
-2. Key verification checkpoints must include `agent-browser screenshot` — saved to `docs/tests/e2e/screenshots/` and referenced in reports as evidence
+2. Key verification checkpoints must include `agent-browser screenshot` — saved in the private instance evidence directory and referenced in reports
 3. API calls only for auxiliary setup — core flow verification must go through the browser
 
 **Test accounts alignment** with PRD role names.
@@ -463,7 +463,7 @@ Update `docs/tests/e2e/e2e-testing-guide.md` with:
 
 ### 8.2 E2E Prompts
 
-New E2E prompt files in `docs/tests/e2e/`:
+New E2E prompt files in the corresponding private instance repository:
 - `week5-search-assistant-e2e.md` — ⌘K modal open/search/scope/close
 - `week5-webhook-e2e.md` — Configure webhook, trigger event, verify delivery
 - `week5-full-journey-e2e.md` — End-to-end user journey validation (all 6 journeys via Web)

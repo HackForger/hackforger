@@ -5,7 +5,7 @@
 - `admin` has deposited 600 Credits to `organizer`'s account for bounty rewards
 - hacker1, hacker2, platform-bot exist
 
-> **v0.1 集成场景：** 在实际使用中，Bounty 常在 Hackathon Hacking 阶段内创建 — 参赛者在赛道 Repo 上发起 Issue 并挂载 Bounty 寻求协作。详见 `docs/tests/e2e/tasks/user-journey-full-cycle.md` Phase 4。
+> **v0.1 集成场景：** 在实际使用中，Bounty 常在 Hackathon Hacking 阶段内创建 — 参赛者在赛道 Repo 上发起 Issue 并挂载 Bounty 寻求协作。
 
 ### Step 2.0: Admin deposits Credits to organizer
 

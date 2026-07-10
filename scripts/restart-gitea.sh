@@ -5,11 +5,11 @@
 # the main repo at $BINARY. It refuses to kill anything else on port 3000.
 #
 # Usage:  bash scripts/restart-gitea.sh
-# Runs from anywhere — always cds to the main repo.
+# Runs from anywhere — resolves the repository from this script's location.
 
 set -euo pipefail
 
-REPO="/Users/h2oslabs/Workspace/hackforger"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BINARY="$REPO/gitea"
 
 cd "$REPO"

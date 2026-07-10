@@ -1,6 +1,6 @@
 # PostgreSQL migration pitfalls (READ before writing new HackForger migrations)
 
-HackForger 默认 backing store 自 2026-04-30 起切换为 **PostgreSQL** 用于生产，dev 仍可用 SQLite。
+HackForger 支持 **PostgreSQL** 和 SQLite；所有 migration 都必须在两个 dialect 上验证。
 
 历史上多数 HackForger migrations 是在 SQLite 下开发测试的，存在 **PG 不兼容的 SQL 写法**，在 PG 下表现为：
 
@@ -11,7 +11,7 @@ HackForger 默认 backing store 自 2026-04-30 起切换为 **PostgreSQL** 用�
 
 ---
 
-## 已发现的具体 PG 不兼容问题（2026-05-01 audit）
+## 已发现的具体 PG 不兼容问题
 
 ### Pitfall 1：Backtick identifier quoting
 
@@ -63,7 +63,7 @@ PG 对 BOOLEAN 列严格区分 `TRUE`/`FALSE`，不接受 `0`/`1`；SQLite 把 b
 - XORM 对**函数内 anonymous struct**（每次 migration 调用都重新定义类型）在 PG dialect 下的元信息缓存有问题
 - 或者 BOOLEAN 列的 default + struct 字段有冲突
 
-**未根因**——临时 workaround：见 `RESTORE.md` 的「Post-migrate manual seed」章节，重建 PG 后跑手工 SQL 补 seed。
+**未根因**——不要用实例专用手工 SQL 代替源码修复；应补跨 dialect 测试并实现幂等初始化。
 
 ---
 
@@ -117,15 +117,14 @@ hasCol, err := x.IsColumnExist("my_table", "my_col")
 
 ---
 
-## 历史背景 / 为什么之前没发现
+## 为什么 SQLite-only 测试不够
 
-HackForger 历来用 SQLite 开发 + 内部测试。首次迁到 PG 是 2026-04-30 prod-init clean-slate 的一部分（详见 `docs/superpowers/specs/2026-04-30-prod-init-clean-slate-design.md`）。
+只在 SQLite 上开发会掩盖 identifier quoting、BOOLEAN 和 PRAGMA 等差异。
+此外，migration ledger 中的“完成”记录不等于 seed 数据确实存在。测试必须同时覆盖：
 
-迁完才发现：
-- `phase_type` 11 行 seed 没了 → manage UI 显示空，admin 创建 phase 失败
-- `hackforger_setting.reputation.{weights,tiers}` 2 行 seed 没了 → reputation 模块靠 runtime fallback 维持功能，但 admin UI 无法编辑权重
-
-两者都通过手工 SQL 补回（见 `RESTORE.md`）。本文档为未来 PG 重建 / 测试 DB 初始化的人提个醒，避免重蹈覆辙。
+- 从已有 migration 历史升级；
+- PostgreSQL 和 SQLite 的全新空数据库初始化；
+- 初始化后的必要 seed 行与约束，而不只是 schema 是否存在。
 
 ---
 
@@ -166,16 +165,16 @@ if len(inDBMigrationIDs) == 0 && freshDB {
 
 本文档下面列出的 fix（v14g backtick → builder.Eq 等）**只能影响"已经有部分 migration 历史的 DB 升级"路径**——即从某版已有 v14a..v14k 但缺 v14g 的 DB upgrade 上来。
 
-**对 fresh PG / fresh SQLite，源码 fix 无效。** 真正的 fix 路径只有两种：
-1. **手工 seed**（`RESTORE.md` 的 Post-migrate manual seed 节）—— 当前生产用的
-2. **加 post-`SyncAllTables` 初始化 hook**（Forgejo 上游层面的改动，工作量大；目前不做）
+**对 fresh PG / fresh SQLite，只修被跳过的旧 migration 无效。** 正确修复应把必要 seed 放进
+post-`SyncAllTables` 的幂等初始化流程，或采用同等可测试、可重复执行的初始化机制。
+手工 SQL 只能用于一次性诊断，不能成为产品初始化契约。
 
 源码 fix 的价值是 **代码质量 / 上游正确性 / 防止未来 freshDB 行为改变后再踩**，不是实际解决 fresh DB 的 seed 问题。
 
 ---
 
-## 相关
+## 相关源码
 
-- `RESTORE.md` 的「Post-migrate manual seed」节（`.claude/worktrees/dev/data-snapshot/RESTORE.md`）
-- Spec: `docs/superpowers/specs/2026-04-30-prod-init-clean-slate-design.md`
-- Plan: `docs/superpowers/plans/2026-04-30-prod-init-clean-slate.md`
+- `models/forgejo_migrations/migrate.go`
+- `models/forgejo_migrations/v14b_hackforger-phase-tables.go`
+- `models/forgejo_migrations/v14g_hackforger-phase2-tables.go`

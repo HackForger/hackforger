@@ -21,7 +21,7 @@ making any API call:
    `$FORGEJO_URL` — confirm or override?") before proceeding.
 2. If `$FORGEJO_URL` is **not** set, ask the user which HackForger instance
    they want to target. Examples you can offer to help them answer:
-   - `https://www.synnovator.com` (public production)
+   - `https://hackforger.example.invalid` (example deployment)
    - `http://localhost:3000` (local dev)
    - or their own deployment URL
 3. Export `FORGEJO_URL` for the session before issuing any curl call.

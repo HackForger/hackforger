@@ -176,6 +176,7 @@ docs/tests/e2e/*.pdf
 .claude/projects/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+/.remember/
 
 # E2E test screenshots (temporary artifacts, hosted on GitHub Releases if needed)
 tests/screenshots/
