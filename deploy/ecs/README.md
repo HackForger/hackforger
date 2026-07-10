@@ -50,11 +50,11 @@ That's it. The script does:
 1. **Preflight** — `preflight.sh` refuses to ship commits without admin-signed
    e2e reports (see `docs/notes/gitflow.md`).
 2. **Build** — `build-linux.sh` cross-compiles via docker.
-3. **Rsync custom/** — `custom/templates/` and `custom/public/` to the box.
-   This is **load-bearing**: locale `.ini` files are baked into the binary
-   via bindata, but template overrides and landing-page assets live on the
-   filesystem. **Skipping this step silently breaks any PR that only
-   touches templates or assets** — we hit this on the first cloud deploy.
+3. **Rsync custom overrides** — `custom/templates/` and non-landing files
+   present under `custom/public/` go to the box. This is **load-bearing** for template
+   and public overrides, but the externally managed `assets/landing/` subtree
+   is excluded and protected from `--delete`; this script does not publish or
+   remove landing pages.
 4. **scp + atomic install** — binary lands at `/opt/hackforger/gitea`.
 5. **Restart gitea** + record HEAD SHA in `/var/lib/hackforger/.last-deploy`.
 6. **Smoke tests** — public `/api/v1/version`, navbar locale string, HTTPS 200.
@@ -71,8 +71,10 @@ discipline.
 Forgejo's `custom/` directory is the override layer. Anything you drop into
 `custom/templates/<path>` overrides the bindata-embedded template at the
 same path; same for `custom/public/`. The build doesn't see these files
-because they're in the runtime filesystem on the target host. So every
-deploy needs to push them too.
+because they're in the runtime filesystem on the target host. So every deploy
+needs to push the non-landing overrides too. The ignored `assets/landing/` subtree
+is the exception: `redeploy.sh` deliberately preserves it and it must be
+managed through its separate, non-destructive workflow.
 
 If a future PR moves all template overrides under `templates/` (and gets
 them into bindata), this step can drop out of `redeploy.sh`. Until then it
