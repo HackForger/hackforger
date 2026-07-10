@@ -35,7 +35,7 @@ will ask you which instance to target if `FORGEJO_URL` is unset:
 ```bash
 export FORGEJO_TOKEN=<personal-access-token>
 # Pick the instance that matches your deployment, e.g.:
-export FORGEJO_URL=https://www.synnovator.com   # public production (example)
+export FORGEJO_URL=https://hackforger.example.invalid   # example deployment
 # or http://localhost:3000 for local dev, or your own self-hosted URL
 ```
 

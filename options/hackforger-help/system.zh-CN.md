@@ -1,6 +1,6 @@
 # HackForger 使用指南
 
-**HackForger** 是 Synnovator 平台的底层系统引擎，基于 Forgejo 构建，提供完整的 Git 协作能力，并加入了面向协创活动的扩展模块。本页是能力清单 —— 找到你需要的功能，按链接深入。
+**HackForger** 是面向协作项目的业务中立 Forgejo 发行版，提供完整的 Git 协作能力，并加入活动、悬赏、资助、积分、动态等可复用扩展模块。本页是能力清单 —— 找到你需要的功能，按链接深入。
 
 ## Git 协作基础能力
 
@@ -20,7 +20,7 @@
 
 ## HackForger 平台扩展模块
 
-这些是 HackForger 在 Forgejo 之外新增的模块，用于支撑 Synnovator 的协创活动：
+这些是 HackForger 在 Forgejo 之外新增的通用协作模块：
 
 | 模块 | 说明 | 访问路径 |
 |------|------|---------|
@@ -40,6 +40,6 @@
 
 ## 需要帮助？
 
-* 平台功能问题 —— 阅读本页"Synnovator 平台玩法"区
+* 平台功能问题 —— 阅读本页“平台玩法”区
 * Git / 仓库问题 —— 参考 [Forgejo Docs](https://forgejo.org/docs/latest/)
 * 发现 bug —— 在 [HackForger GitHub 仓库](https://github.com/HackForger/hackforger/issues) 提 issue

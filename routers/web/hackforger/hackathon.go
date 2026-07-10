@@ -42,11 +42,11 @@ const (
 	tplExplore          = "hackforger/explore"
 	tplExploreHackathon = "hackforger/hackathon/explore"
 	tplNew              = "hackforger/hackathon/new"
-	tplView        = "hackforger/hackathon/view"
-	tplSubmit      = "hackforger/hackathon/submit"
-	tplManage      = "hackforger/hackathon/manage"
-	tplJudge       = "hackforger/hackathon/judge"
-	tplLeaderboard = "hackforger/hackathon/leaderboard"
+	tplView             = "hackforger/hackathon/view"
+	tplSubmit           = "hackforger/hackathon/submit"
+	tplManage           = "hackforger/hackathon/manage"
+	tplJudge            = "hackforger/hackathon/judge"
+	tplLeaderboard      = "hackforger/hackathon/leaderboard"
 )
 
 func ExploreHackathons(ctx *context.Context) {
@@ -163,12 +163,12 @@ func NewHackathonPost(ctx *context.Context) {
 		maxTeamSize = 5
 	}
 	h := &hackforger_model.Hackathon{
-		OwnerID:           ctx.Doer.ID,
-		Name:              ctx.FormString("name"),
-		Slug:              ctx.FormString("slug"),
-		Description:       ctx.FormString("description"),
-		PrizeSummary:      ctx.FormString("prize_summary"),
-		MaxTeamSize:       maxTeamSize,
+		OwnerID:      ctx.Doer.ID,
+		Name:         ctx.FormString("name"),
+		Slug:         ctx.FormString("slug"),
+		Description:  ctx.FormString("description"),
+		PrizeSummary: ctx.FormString("prize_summary"),
+		MaxTeamSize:  maxTeamSize,
 	}
 	if err := hackforger_service.CreateHackathon(ctx, ctx.Doer, h); err != nil {
 		ctx.Data["Title"] = ctx.Tr("hackforger.hackathon.create")
@@ -282,8 +282,8 @@ func ViewHackathon(ctx *context.Context) {
 		isJudge, _ := hackforger_model.IsJudgeForAnyTrack(ctx, h.ID, ctx.Doer.ID)
 		ctx.Data["IsJudge"] = isJudge
 
-		// regression: must NOT re-add OwnerID/Collaborate filters here — see
-		// docs/superpowers/specs/2026-05-03-hackathon-org-repo-registration-fix.md
+		// Regression guard: do not re-add OwnerID/Collaborate filters here;
+		// writable access also includes repositories granted through org teams.
 		repos, err := hackforger_service.ListUserWritableRepos(ctx, ctx.Doer)
 		if err != nil {
 			log.Warn("ListUserWritableRepos: %v", err)
@@ -378,9 +378,7 @@ func RegisterPost(ctx *context.Context) {
 	// Load repo + verify user has Write+ access (covers owner, org-team grant,
 	// collaborator) — replaces the older inline `IsOrganizationMember` (read-
 	// level) check, which was too loose: a read-only org member could
-	// previously register but couldn't actually push to the repo. See
-	// docs/superpowers/specs/2026-05-03-hackathon-org-repo-registration-fix.md
-	// §4.4 + §7 for the intentional behavior tightening.
+	// previously register but couldn't actually push to the repo.
 	repo, err := hackforger_service.UserCanRegisterRepo(ctx, ctx.Doer, repoID)
 	if err != nil {
 		if hackforger_service.IsErrRepoAccessDenied(err) || repo_model.IsErrRepoNotExist(err) {
@@ -493,8 +491,8 @@ func SubmitForm(ctx *context.Context) {
 	ctx.Data["Tracks"] = tracks
 
 	// Load user's repos for the project repo selector
-	// regression: must NOT re-add OwnerID/Collaborate filters here — see
-	// docs/superpowers/specs/2026-05-03-hackathon-org-repo-registration-fix.md
+	// Regression guard: do not re-add OwnerID/Collaborate filters here;
+	// writable access also includes repositories granted through org teams.
 	repos, err := hackforger_service.ListUserWritableRepos(ctx, ctx.Doer)
 	if err != nil {
 		log.Warn("ListUserWritableRepos: %v", err)
@@ -1194,7 +1192,7 @@ func JudgePage(ctx *context.Context) {
 	}
 
 	var tracks []trackInfo
-	submissions := make(map[string][]subInfo)  // trackID as string key for JSON
+	submissions := make(map[string][]subInfo) // trackID as string key for JSON
 	rubrics := make(map[string][]criteriaInfo)
 
 	seen := make(map[int64]bool)
@@ -1334,9 +1332,8 @@ func Leaderboard(ctx *context.Context) {
 
 	// Visibility (#65): the leaderboard exists only for organizers, judges, or
 	// after the hackathon is Finished. Contestants and anonymous users get a
-	// hard 404 in non-Finished states — Cynthialime explicitly wants the page
-	// (and the concept of a leaderboard) to be invisible until the result-
-	// announcement phase, not just suppress the score column.
+	// hard 404 in non-Finished states so the page remains undiscoverable until
+	// the result-announcement phase, rather than merely hiding score columns.
 	isOrganizer := false
 	isJudge := false
 	if ctx.Doer != nil {

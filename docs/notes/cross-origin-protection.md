@@ -17,7 +17,7 @@ Forgejo (Go 1.26+) uses Go's built-in `net/http.CrossOriginProtection` for CSRF 
 
 When Forgejo runs behind a reverse proxy:
 
-- Browser sends `Origin: https://hackforger.inside.h2os.cloud` (the public URL)
+- Browser sends `Origin: https://hackforger.example.invalid` (an example public URL)
 - The `Host` header may or may not match, depending on proxy configuration
 - If `Sec-Fetch-Site` is `same-origin`, everything works
 - If the browser omits `Sec-Fetch-Site` (older browser, non-standard client), Go falls back to `Origin` vs `Host` comparison
@@ -44,13 +44,13 @@ var crossOriginProtection = func() *http.CrossOriginProtection {
 }()
 ```
 
-This ensures that requests with `Origin: https://hackforger.inside.h2os.cloud` are accepted even when the `Host` header differs (e.g., `localhost:3000` from the proxy).
+This ensures that requests with `Origin: https://hackforger.example.invalid` are accepted even when the `Host` header differs (e.g., `localhost:3000` from the proxy).
 
 ### Why Not Hardcode?
 
 The origin is derived from `setting.AppURL` (which reads `[server] ROOT_URL` from `app.ini`). This means:
 - Different deployments automatically use the correct origin
-- If accessed via IP (e.g., `http://192.168.1.100:3000`), only the configured `ROOT_URL` origin is trusted — other origins are rejected, which is the correct security behavior
+- If accessed via a documentation IP (e.g., `http://192.0.2.10:3000`), only the configured `ROOT_URL` origin is trusted — other origins are rejected, which is the correct security behavior
 
 ## What NOT To Do
 
@@ -63,7 +63,7 @@ The origin is derived from `setting.AppURL` (which reads `[server] ROOT_URL` fro
 
 ## Proxy-Specific Notes
 
-### Caddy (our setup)
+### Caddy example
 - Preserves `Host` header by default — no extra config needed
 - The `AddTrustedOrigin` fix handles edge cases
 

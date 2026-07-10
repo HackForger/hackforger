@@ -1,6 +1,9 @@
 # E2E user stories → API mapping
 
-Audit of every step in `docs/tests/e2e/tasks/full-cycle/00-08-*.md` cross-referenced against `/api/v1/hackforger/*` (and Forgejo standard endpoints where the operation is generic).
+Generic full-cycle user journeys cross-referenced against
+`/api/v1/hackforger/*` (and Forgejo standard endpoints where the operation is
+generic). Concrete instance fixtures and runtime evidence stay in the matching
+private content repository.
 
 **Coverage status:**
 - ✅ — equivalent API endpoint exists and works

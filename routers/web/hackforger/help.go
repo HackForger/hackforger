@@ -47,7 +47,7 @@ func renderHelpSection(ctx *context.Context, section string) (template.HTML, err
 	return rendered, nil
 }
 
-// HelpPage renders the in-app help center — platform (Synnovator) + system (HackForger).
+// HelpPage renders the business-neutral platform and system help sections.
 func HelpPage(ctx *context.Context) {
 	platformHTML, err := renderHelpSection(ctx, "platform")
 	if err != nil {
@@ -60,7 +60,7 @@ func HelpPage(ctx *context.Context) {
 		return
 	}
 	ctx.Data["Title"] = ctx.Tr("hackforger.help.title")
-	ctx.Data["SynnovatorHTML"] = platformHTML
+	ctx.Data["PlatformHTML"] = platformHTML
 	ctx.Data["HackforgerHTML"] = systemHTML
 	ctx.HTML(http.StatusOK, tplHelp)
 }
