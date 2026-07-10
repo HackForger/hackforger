@@ -213,7 +213,7 @@ IPV6_EXEMPT_HASHES = {
 }
 PERSONAL_PATH_EXEMPT_HASHES = {
     # Whole-file hashes pin reviewed upstream API routes, templates, fixtures,
-    # and examples whose lowercase `/users/...` text is not a local home path.
+    # and examples whose lowercase API user-route text is not a local home path.
     "contrib/launchd/io.gitea.web.plist": "724667b726d366ae48c8c626f1870bf143249df66bb1fa7f9f8ab4d0e43f2fbc",
     "docs/product/user-journeys/hacker-social.md": "16c7bb7518269a8bbb68b528bac2f99c18680b5e4de0af9e9f0efbbc09c29db2",
     "docs/product/user-journeys/platform-bot.md": "2381402fae472190b6dd9e2af56654724cedfb08a10ef797bdf58db079430921",
