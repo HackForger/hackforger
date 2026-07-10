@@ -89,13 +89,6 @@ All new code lives in `*/hackforger/` directories, minimizing changes to upstrea
 - Internal HackForger instance: https://hackforger.inside.h2os.cloud
 - API base path: https://hackforger.inside.h2os.cloud/api/v1/hackforger/
 
-## Static Page Management(landing/custom pages)
-- **Landing pages are NOT tracked in git**: `custom/public/assets/landing/` is in `.gitignore` and not in the repository
-- **Deployment**: landing files are synced to server via `rsync` in `deploy/ecs/redeploy.sh`, NOT via git pull
-- **Source of truth**: landing files live on the Mac dev machine at `custom/public/assets/landing/`, and on the production server at `/var/lib/hackforger/custom/public/assets/landing/`
-- **Editing**: modify files locally on the Mac, then `rsync` to server — do NOT `git add` or commit them
-- **Reference**: `docs/notes/landing-date-driven-buttons.md` documents the date-driven button UX pattern used on landing pages
-
 ## CI/CD
 - Primary CI: GitHub Actions (`.github/workflows/`)
 - Self-hosted instance CI: Forgejo Actions (`.forgejo/workflows/`) -- kept for self-deployed HackForger instances
