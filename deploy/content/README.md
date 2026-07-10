@@ -51,7 +51,8 @@ production defaults.
 - every source file, the manifest, and config are tracked regular blobs in `HEAD`;
 - every working file is byte-for-byte equal to its `HEAD` blob;
 - the repository is clean, non-shallow, on a branch, and has no graft or
-  replacement refs;
+  replacement refs, object alternates, partial-clone metadata, or promisor
+  remotes, conversion-filter commands, or Git submodules;
 - raw `HEAD` equals the branch tip returned by an actual
   `git ls-remote --exit-code` query against explicit command-line trust
   anchors; and
@@ -66,15 +67,24 @@ absolute, canonical bare repository path.
 
 Raw Git commands run with replacement-object processing, environment-provided
 repository overrides, global/system config, remote helpers, and the file
-protocol disabled for SSH provenance. The publisher queries the branch, fetches
-it into a fresh bare repository, enumerates the complete source subtree, and
-materializes source, manifest, and config directly from that fetched commit.
-Only regular executable or non-executable blobs are accepted. The complete
-remote subtree must exactly match the manifest and the local working input, so
-sparse checkout or `skip-worktree` cannot hide an extra remote file. The deploy
-archive is built from the authoritative materialized source rather than the
-working tree, eliminating a source-tree packaging race. The remote branch tip
-is queried again under the deployment lock immediately before activation.
+protocol disabled for SSH provenance. The publisher queries the explicit
+remote branch tip, requires the local `HEAD` content-addressed commit to equal
+that exact tip, then fetches the remote commit and tree graph with a blobless
+filter. It fetches the remote config and manifest blobs on demand, fully checks
+the fetched commit/tree connectivity, and copies each working source file once
+into an isolated authoritative tree. It hashes each copy in the fetched
+repository's Git object format and requires that object ID to match the remote
+tree. The resulting tree must also match the SHA-256 hashes from the remotely
+fetched manifest. This avoids downloading
+unrelated private history and large source blobs during every release while
+preserving the remote pushed-commit, tree, and manifest trust anchors. Only
+regular executable or non-executable blobs are accepted. The complete remote
+subtree must exactly match the manifest and the local working input, so sparse
+checkout or `skip-worktree` cannot hide an extra file. The deploy archive is
+built from the authoritative materialized source rather than the working tree,
+eliminating a source-tree packaging race. The remote branch tip is queried
+again after materialization and under the deployment lock immediately before
+activation.
 
 SSH transport always requires this protection. Local transport may disable it
 only for disposable fixture testing. `ALLOW_INITIAL_INSTALL=false` prevents an
