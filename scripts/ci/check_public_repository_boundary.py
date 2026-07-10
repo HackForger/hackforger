@@ -132,9 +132,16 @@ SAFE_CREDENTIAL_VALUES = {"...", "example", "redacted", "null", "none", "~", "tr
 INTERNAL_HOST_KEY_SUFFIXES = (".error." + "internal", ".desc." + "internal")
 INTERNAL_HOST_EXEMPT_HASHES = {
     # Whole-file hashes pin reviewed upstream validation and migration fixtures.
+    "cmd/hook.go": "5e8eb64b7c9152a8034bbcf3b3b275e41e824aa869b0d1d951d59a00d2538248",
+    "docs/plans/2026-04-13-fix-error-notification-patterns-design.md": "a8e5a84cfaaf5a994e3cf8b1b870169bb9f96f17f79f7f879f8e987b3e609602",
+    "modules/lfs/content_store.go": "7d10477091c994718a74a45956e1fd5ca0d3f4f6a0fae6a6a9e2b69271eb5beb",
+    "modules/queue/base_levelqueue.go": "bcf3c9978cbfebb239b21bf833f0fd1f5ce5b0d31e251c3a62e76cc2649d535b",
+    "modules/queue/base_levelqueue_unique.go": "33c39c5f63dcb3c09d25b7e2dc1c67e5f46b643e04d354fdb5d0f008bc021b9d",
     "modules/validation/validurl_test.go": "7fab3acd97e7aaa106dce1d50db14a118aefb0ea820d3b30a776284e6d6b86e8",
     "modules/validation/validurllist_test.go": "21a8ca92f218a1c0fd77a7a44beaae23f24b61a78322251c77a4704182369308",
+    "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fafter=Y3Vyc29yOnYyOpLPAAABgogj3SDOT44Tug%253D%253D&direction=asc&per_page=45&sort=created&state=all": "b3c26edc670c72fbe22f0cd3147f2451c760a685b2bbb9b15686ef973208007b",
     "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fdirection=asc&per_page=45&sort=created&state=all": "9c238830ad460cf30ed021675a75b9421999664fd641d5fdd6eb95eb4fd6d258",
+    "web_src/js/components/DashboardRepoList.vue": "f7a6035f6022721297457c350d78b6273375d330926bf3739ac529242d82be97",
 }
 CREDENTIAL_SCAN_SUFFIXES = {
     ".bash",
@@ -185,6 +192,7 @@ IP_EXEMPT_HASHES = {
     "modules/packages/nuget/metadata_test.go": "d37296dd02d592e26896ff844a028e69b4dcb91bdd2cd9cf2b947efdac02696d",
     "modules/validation/helpers_test.go": "65a25558ba440106d9444cca1fd74d13b65f17f4f27c96e7edaccd0291ed69c3",
     "options/license/xinetd": "7b3cf46961d23cf845ac7c52075693b6ca31389e1534c655333b4b6fe0459bd4",
+    "options/license/Community-Spec-1.0": "3291598ecec867f166a20e7538e173b05fbe0af9d739a6cabfb27121d93fb96e",
     "routers/web/auth/oauth.go": "1b953ee4f1d350ffc5bf8a1e656df8470317088f47573dabe4cafcb73164b14f",
     "services/migrations/migrate_test.go": "db0eeb80a68dd4d3e5d8d6d8a2c3620429eff11b8978257902f27beef9717902",
     "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fafter=Y3Vyc29yOnYyOpLPAAABaaHKpHDOGUReFQ%253D%253D&direction=asc&per_page=45&sort=created&state=all": "b1bc91158aac4ac5071eb155b6f098661acf1e3cca5c8f51d0b739659a32e31f",
@@ -204,8 +212,53 @@ IPV6_EXEMPT_HASHES = {
     "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fafter=Y3Vyc29yOnYyOpLPAAABgogj3SDOT44Tug%253D%253D&direction=asc&per_page=45&sort=created&state=all": "b3c26edc670c72fbe22f0cd3147f2451c760a685b2bbb9b15686ef973208007b",
 }
 PERSONAL_PATH_EXEMPT_HASHES = {
-    # Whole-file hash pins a generic upstream launchd example.
+    # Whole-file hashes pin reviewed upstream API routes, templates, fixtures,
+    # and examples whose lowercase `/users/...` text is not a local home path.
     "contrib/launchd/io.gitea.web.plist": "724667b726d366ae48c8c626f1870bf143249df66bb1fa7f9f8ab4d0e43f2fbc",
+    "docs/product/user-journeys/hacker-social.md": "16c7bb7518269a8bbb68b528bac2f99c18680b5e4de0af9e9f0efbbc09c29db2",
+    "docs/product/user-journeys/platform-bot.md": "2381402fae472190b6dd9e2af56654724cedfb08a10ef797bdf58db079430921",
+    "docs/product/user-journeys/zh-CN/hacker-social.md": "a3128ceea3a9f6acd5ed1cd320b07f3bda1a1e43f9f19ecd7e42abf4bde77392",
+    "docs/product/user-journeys/zh-CN/platform-bot.md": "2a870a84ecb7cc80bc2885be5684099dab98820f3e4a0afcb944fd8348a2f7f4",
+    "docs/product/user-stories/agent.md": "6e842750b080a4928f0e62bea52ff7fb34772e629edc6e0de9e228d1110ad8fb",
+    "docs/product/user-stories/zh-CN/agent.md": "209f820e022541f6950a6eef76b26f474d94c0fae862404b8e26fb46ae3278d0",
+    "modules/forgefed/actor_test.go": "15495f9c5653464b3255ff9eb9828396a8f53a4dd6e7d2bb9738320229be6e2f",
+    "routers/api/v1/api.go": "47304c9b5b0e597e9b32716992096bdc4769978a10dcad2bd6cab4e9c971620a",
+    "routers/api/v1/user/user.go": "f4075c1a4dadd4e6957cc87435fd8db15a62c9f1fdba4d8c1953b2f2ed4c3a6d",
+    "routers/web/admin/users_test.go": "59a7a20296f1ef68b9061107507d0ba63c8e99d46a849c2ee939d7d8b9dda31f",
+    "routers/web/home.go": "944fef027d5639be379b952d4782f1dcdc03af23d65bd2d9de4b407c46b328d9",
+    "routers/web/web.go": "a24878ac59795172e9a509912d062c57fbcaddc7458a7a37fa029f2be9fa0b06",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo": "6cb69cea3a7d40a41fe885dbf819d4482f5cba87561a66713fdd4721f1a7dd53",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fissues%2F2%2Fcomments%3Fdirection=asc&per_page=100&sort=created": "7e19872c3b0085ca6f5e379a96124bfe3fd2c06c3c16a28859e29ebca7456076",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fissues%3Fdirection=asc&per_page=2&sort=created&state=all": "b3ce59319b08701e2c72d6e7728dbff79059fd861c814cc05a0b79b28389db5c",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fmilestones%3Fpage=1&per_page=100&state=all": "9805e08c9d7a656b84b0f0c1d78ae626828eb47c07b5b6cd0a9a6d2dc836ea5d",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fpulls%2F3%2Freviews%2F3096999684%2Fcomments%3Fper_page=100": "abff155de932540d3cb721aa7376f76dd8f7899eb9b48458f34c2e21ca5712bf",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fpulls%2F3%2Freviews%2F3097007243%2Fcomments%3Fper_page=100": "6ffd4d017fbf39e11d8a2616cce20a9c7d52c2d2df0621f1c3cc79dc2125f043",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fpulls%2F3%2Freviews%3Fper_page=100": "c2b2301bf30206396f34871644d26580007e9c7f405440ce4449e2a9d80696e4",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Fpulls%3Fdirection=asc&page=1&per_page=2&sort=created&state=all": "205c716af938afca1de1e32ce331e7830f0641caceef88798f5379bb352e2a79",
+    "services/migrations/testdata/github/full_download/GET_%2Frepos%2Fforgejo%2Ftest_repo%2Freleases%3Fpage=1&per_page=100": "f2fc17f3d7645a1f9469dcf3be3ec22cb26e252ce096b293613757f802c44917",
+    "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic": "195b902edbc1dd13a3a43abedcb9e4f58e753707fb3a7ff1b1a70dcd8b95d5f8",
+    "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fafter=Y3Vyc29yOnYyOpLPAAABaaHKpHDOGUReFQ%253D%253D&direction=asc&per_page=45&sort=created&state=all": "b1bc91158aac4ac5071eb155b6f098661acf1e3cca5c8f51d0b739659a32e31f",
+    "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fafter=Y3Vyc29yOnYyOpLPAAABgogj3SDOT44Tug%253D%253D&direction=asc&per_page=45&sort=created&state=all": "b3c26edc670c72fbe22f0cd3147f2451c760a685b2bbb9b15686ef973208007b",
+    "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fafter=Y3Vyc29yOnYyOpLPAAABmqckTzDO2bC8uw%253D%253D&direction=asc&per_page=45&sort=created&state=all": "0fcaf56a4e9329c2d570b5aa17cc9418a0e43b1df604857774176780eee92f90",
+    "services/migrations/testdata/github/pagination/GET_%2Frepos%2Fnigoroll%2Flibvmod-dynamic%2Fissues%3Fdirection=asc&per_page=45&sort=created&state=all": "9c238830ad460cf30ed021675a75b9421999664fd641d5fdd6eb95eb4fd6d258",
+    "skills/hackforger-api/SKILL.md": "878400f8a26ea12e61bce7ec299d106a5e31609e8792fa23e956b28981c3912a",
+    "templates/admin/user/list.tmpl": "4bb9ad9fa86b8ea034004ef268c8b3e81243c77aba9babe2a287aae98d8f3bf3",
+    "templates/swagger/v1_json.tmpl": "3992e58cbf39f4637ea0db4b4b930d5efc68c48598afa7da7a50f7108c9464a7",
+    "tests/integration/admin_user_test.go": "1ed34a87a8f582bc674ca40e4e39e07fe9de4887b94d6d331fdf234d67724a31",
+    "tests/integration/api_admin_org_test.go": "51eeb89f85623971e72bfd9397515c2f39685dc669c0f2534879db23b20dcfff",
+    "tests/integration/api_admin_test.go": "da793b5245bfe5b1d9911b19787d12261e3ba6888e85e04d963e5fe208dc247e",
+    "tests/integration/api_gpg_keys_test.go": "7e72274659496e87572622786f1e4337527fbabedf39e029e816fe4c09668ddc",
+    "tests/integration/api_packages_conan_test.go": "f87c4d52d5488c66b67e843ce57345ab1eb983d3cc2b0e8f13ba1248936b0be6",
+    "tests/integration/api_quota_management_test.go": "e418a9e510def7f85007487a0d09c0769871c15e230d556e5920216f60e08176",
+    "tests/integration/api_token_test.go": "edf2d177785022e00924c551c5132104b1a96a3c2d5fb5169479537eaed34e4c",
+    "tests/integration/api_user_org_perm_test.go": "ba6b709da8b5ec85a7ad62c10654c773655e01595a59918fa7dc02d8da5de0de",
+    "tests/integration/api_user_search_test.go": "8911f681144cc566a77eb919e644271559af3adca389f632a3b0eeee5e14e8d4",
+    "tests/integration/hackforger_reputation_test.go": "7877f0db63a3cbbc052389beb4389cbd288bad90dd2fba9f7de46df473270080",
+    "tests/integration/oauth_test.go": "d21faa6ad7407232bc77c670ac4a46e03ff1615d64f5c9692c0c27ca8e2c57a7",
+    "tests/integration/setting_test.go": "8ecd19332837d85ef045eb6830077af5efc6b99a8ebb6f93940bfe8ab6f0a80a",
+    "tests/integration/user_profile_attributes_test.go": "22f1a98ae6688a7458a1c43d0bb96fd9e391f07ca33cbff5a8077b74d6910ead",
+    "tests/integration/user_redirect_test.go": "b0b5b38d8d4d1434e14bf9d1f11bfbd2c89dfe7f99a92ad8df72ed3a7ed180bd",
+    "tests/integration/user_test.go": "b9359a1d7e0baf6b9b753307033221b55c903ef4372f9be43ca2e9602f9fea6c",
 }
 SECRET_MATERIAL_EXEMPT_HASHES = {
     # Whole-file hashes pin reviewed upstream cryptography fixtures. Editing a
@@ -465,7 +518,7 @@ def locale_internal_key_context(path: str, text: str, start: int, end: int) -> b
         return False
     value = text[start:end]
     if not re.fullmatch(
-        r"(?i)[a-z0-9_.-]+\.(?:error|desc)\.internal", value
+        r"(?i)(?:[a-z0-9_.-]+\.)?(?:error|desc)\.internal", value
     ):
         return False
     line_start = text.rfind("\n", 0, start) + 1
