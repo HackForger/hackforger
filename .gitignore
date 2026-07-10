@@ -101,6 +101,8 @@ cpu.out
 /tests/**/*.git/**/*.sample
 /node_modules
 /.venv
+__pycache__/
+*.py[cod]
 /yarn.lock
 /yarn-error.log
 /npm-debug.log*
@@ -153,8 +155,11 @@ prime/
 /man
 tests/integration/api_activitypub_person_inbox_useractivity_test.go
 
-# Agent Setup runtime (gitignored)
-.agents/
+# Agent runtime is local; canonical project skills are tracked through symlinks.
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/hackforger-development
 
 # User-local launcher overrides
 claude.local.sh
@@ -165,10 +170,12 @@ claude.local.sh
 # Local environment / secret files (PG creds, admin password, etc.)
 /.env
 /.env.local
+/CLAUDE.local.md
 docs/tests/e2e/*.pdf
 .claude/*.local.md
-# Project-wide guard-rail hooks ARE committed (override the .local.md ignore)
-!.claude/hookify.protect-*.local.md
+.claude/projects/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # E2E test screenshots (temporary artifacts, hosted on GitHub Releases if needed)
 tests/screenshots/

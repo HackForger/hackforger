@@ -1,0 +1,10 @@
+# Public example only. Keep real instance values in the corresponding private
+# business repository and pass that file with --config.
+TRANSPORT=ssh
+DEPLOY_TARGET=deploy@example-host
+PUBLIC_BASE_URL=https://code.example.com
+REMOTE_ROOT=/srv/hackforger
+LOCAL_BACKUP_ROOT=/absolute/local/path/to/hackforger-content-backups
+SMOKE_ASSET=assets/site.css
+ALLOW_INITIAL_INSTALL=false
+REQUIRE_CLEAN_SOURCE=true

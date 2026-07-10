@@ -1,0 +1,261 @@
+name: Public repository boundary
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: ['**']
+    tags: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-boundary-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trusted-pr-boundary:
+    if: github.event_name == 'pull_request_target'
+    name: Trusted public-boundary policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Mark candidate boundary status pending
+        id: pending_status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+            -f state=pending \
+            -f context='Public repository boundary' \
+            -f description='Trusted default-branch policy is scanning this commit' \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      # The policy always comes from the protected default branch. The target
+      # base is checked out separately and is used only as the opaque-file
+      # baseline. Candidate code is data and is never executed.
+      - name: Check out trusted default-branch policy
+        id: policy_checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.repository.default_branch }}
+          path: policy
+          persist-credentials: false
+
+      - name: Check out target base baseline
+        id: baseline_checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: baseline
+          persist-credentials: false
+
+      - name: Check out untrusted candidate as data
+        id: candidate_checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Ensure target base exists in candidate history
+        id: candidate_base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          UPSTREAM_REPOSITORY: ${{ github.repository }}
+        run: |
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$UPSTREAM_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+          if ! git -C candidate cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            GIT_TERMINAL_PROMPT=0 git \
+              -c credential.helper= \
+              -c protocol.version=2 \
+              -c protocol.file.allow=never \
+              -c protocol.ext.allow=never \
+              -C candidate fetch --no-tags --depth=1 \
+              "https://github.com/$UPSTREAM_REPOSITORY.git" \
+              "$BASE_SHA:refs/boundary/base"
+          fi
+          resolved=$(git -C candidate rev-parse --verify "$BASE_SHA^{commit}")
+          [ "$resolved" = "$BASE_SHA" ]
+
+      - name: Test trusted boundary policy
+        id: policy_tests
+        run: >-
+          python3 -m unittest discover
+          -s policy/scripts/ci
+          -p 'test_*.py'
+
+      - name: Require guard files to match trusted policy
+        id: guard_integrity
+        run: >-
+          python3 policy/scripts/ci/check_boundary_guard_integrity.py
+          --trusted-root policy
+          --candidate-root candidate
+
+      - name: Scan complete candidate tree with trusted policy
+        id: candidate_scan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python3 policy/scripts/ci/check_public_repository_boundary.py \
+            --root candidate \
+            --policy policy/scripts/ci/private-content-markers.txt \
+            --baseline-root baseline \
+            --history-base-ref "$BASE_SHA" \
+            --history-head-ref "$HEAD_SHA" \
+            --ref-name "refs/heads/$HEAD_REF"
+
+      - name: Publish candidate boundary status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          STATUS_STATE: ${{ steps.pending_status.outcome == 'success' && steps.policy_checkout.outcome == 'success' && steps.baseline_checkout.outcome == 'success' && steps.candidate_checkout.outcome == 'success' && steps.candidate_base.outcome == 'success' && steps.policy_tests.outcome == 'success' && steps.guard_integrity.outcome == 'success' && steps.candidate_scan.outcome == 'success' && 'success' || 'failure' }}
+        run: |
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          current_head=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)
+          current_base=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .base.sha)
+          if [ "$current_head" != "$HEAD_SHA" ] || [ "$current_base" != "$BASE_SHA" ]; then
+            echo 'Skipping final status from a stale pull-request event.'
+            exit 0
+          fi
+          if [ "$STATUS_STATE" = success ]; then
+            description='Trusted public repository boundary passed'
+          else
+            description='Trusted public repository boundary failed'
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+            -f state="$STATUS_STATE" \
+            -f context='Public repository boundary' \
+            -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  pushed-tree-boundary:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !github.event.deleted)
+    name: Public repository boundary (advisory push scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out trusted default-branch policy
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.repository.default_branch }}
+          path: policy
+          persist-credentials: false
+
+      - name: Check out pushed tree as data
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Test trusted boundary policy
+        run: >-
+          python3 -m unittest discover
+          -s policy/scripts/ci
+          -p 'test_*.py'
+
+      - name: Require guard files to match trusted policy
+        run: >-
+          python3 policy/scripts/ci/check_boundary_guard_integrity.py
+          --trusted-root policy
+          --candidate-root candidate
+
+      - name: Resolve the exact pushed history
+        id: pushed_history
+        env:
+          AFTER_SHA: ${{ github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PUSHED_REF: ${{ github.ref }}
+          UPSTREAM_REPOSITORY: ${{ github.repository }}
+        run: |
+          [[ "$AFTER_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PUSHED_REF" =~ ^refs/(heads|tags)/[A-Za-z0-9._/-]+$ ]]
+          [[ "$UPSTREAM_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+
+          fetch_exact() {
+            local oid=$1
+            local destination=$2
+            if ! git -C candidate cat-file -e "$oid" 2>/dev/null; then
+              GIT_TERMINAL_PROMPT=0 git \
+                -c credential.helper= \
+                -c protocol.version=2 \
+                -c protocol.file.allow=never \
+                -c protocol.ext.allow=never \
+                -C candidate fetch --no-tags --depth=1 \
+                "https://github.com/$UPSTREAM_REPOSITORY.git" \
+                "$oid:$destination"
+            fi
+          }
+
+          if [[ "$PUSHED_REF" == refs/tags/* ]]; then
+            GIT_TERMINAL_PROMPT=0 git \
+              -c credential.helper= \
+              -c protocol.version=2 \
+              -c protocol.file.allow=never \
+              -c protocol.ext.allow=never \
+              -C candidate fetch --no-tags --depth=1 \
+              "https://github.com/$UPSTREAM_REPOSITORY.git" \
+              "+$PUSHED_REF:refs/boundary/pushed-tag"
+            pushed_object=$(git -C candidate rev-parse --verify refs/boundary/pushed-tag)
+          else
+            fetch_exact "$AFTER_SHA" refs/boundary/pushed
+            pushed_object=$AFTER_SHA
+          fi
+          object_type=$(git -C candidate cat-file -t "$pushed_object")
+          [ "$object_type" = commit ] || {
+            echo 'Annotated tags and non-commit refs require dedicated security review.' >&2
+            exit 1
+          }
+          candidate_commit=$(git -C candidate rev-parse --verify "$pushed_object^{commit}")
+          [ "$candidate_commit" = "$AFTER_SHA" ]
+
+          if [[ "$BEFORE_SHA" =~ ^0{40}$ ]] || [ -z "$BEFORE_SHA" ]; then
+            baseline_commit=$(git -C policy rev-parse --verify HEAD)
+          else
+            [[ "$BEFORE_SHA" =~ ^[0-9a-f]{40}$ ]]
+            baseline_commit=$BEFORE_SHA
+          fi
+          fetch_exact "$baseline_commit" refs/boundary/baseline
+          resolved_baseline=$(git -C candidate rev-parse --verify "$baseline_commit^{commit}")
+          [ "$resolved_baseline" = "$baseline_commit" ]
+
+          echo "history_base=$baseline_commit" >> "$GITHUB_OUTPUT"
+          echo "history_head=$candidate_commit" >> "$GITHUB_OUTPUT"
+
+      - name: Scan pushed tree against trusted default branch
+        env:
+          HISTORY_BASE: ${{ steps.pushed_history.outputs.history_base }}
+          HISTORY_HEAD: ${{ steps.pushed_history.outputs.history_head }}
+          PUSHED_REF: ${{ github.ref }}
+        run: |
+          python3 policy/scripts/ci/check_public_repository_boundary.py \
+            --root candidate \
+            --policy policy/scripts/ci/private-content-markers.txt \
+            --baseline-ref "$HISTORY_BASE" \
+            --history-base-ref "$HISTORY_BASE" \
+            --history-head-ref "$HISTORY_HEAD" \
+            --ref-name "$PUSHED_REF"

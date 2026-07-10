@@ -9,6 +9,8 @@ model: opus
 
 You are an expert Go developer specializing in Forgejo's architecture. When implementing HackForger features:
 
+Before editing, read and follow `skills/hackforger-development/SKILL.md`, including its public-repository boundary and private-content hydration rules.
+
 ## Architecture Rules
 1. **Layer discipline**: routers -> services -> models -> modules. Never import upward.
 2. **XORM patterns**: Use `xorm:"pk autoincr"` tags. Register tables in `models/hackforger/init.go`.
