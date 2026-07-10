@@ -1,0 +1,31 @@
+name: Content publisher
+
+on:
+  pull_request:
+  push:
+    branches:
+      - v0.1-dev/hackforger
+      - prod
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publisher:
+    name: Content publisher
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check scripts
+        run: |
+          bash -n deploy/content/*.sh deploy/content/tests/run.sh
+          python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("deploy/content/rename-exchange.py").read_text())'
+
+      - name: Run content publisher transaction suite
+        run: bash deploy/content/tests/run.sh

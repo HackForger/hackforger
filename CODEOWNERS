@@ -51,3 +51,28 @@ modules/structs/.* @Cyborus
 routers/api/v1/.* @Cyborus
 routers/api/forgejo/.* @Cyborus
 tests/integration/api_.* @Cyborus
+
+# HackForger public repository boundary.
+/AGENTS.md @HackForger/developer
+/CLAUDE.md @HackForger/developer
+/CODEOWNERS @HackForger/developer
+/SECURITY.md @HackForger/developer
+/.env* @HackForger/developer
+/.gitattributes @HackForger/developer
+/.gitignore @HackForger/developer
+/.gitmodules @HackForger/developer
+/.agents/skills/ @HackForger/developer
+/.claude/ @HackForger/developer
+/.github/ @HackForger/developer
+/custom/ @HackForger/developer
+/deploy/ @HackForger/developer
+/docs/ @HackForger/developer
+/options/hackforger-help/ @HackForger/developer
+/routers/web/hackforger/ @gusted @HackForger/developer
+/scripts/check-public-repository-boundary.sh @HackForger/developer
+/scripts/install-public-boundary-hook.sh @HackForger/developer
+/scripts/pre-push-public-boundary.sh @HackForger/developer
+/scripts/ci/ @HackForger/developer
+/services/hackforger/ @HackForger/developer
+/skills/ @HackForger/developer
+/templates/hackforger/ @beowulf @gusted @HackForger/developer
