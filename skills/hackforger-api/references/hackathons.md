@@ -113,7 +113,7 @@ These configure the *schedule* the cron uses. Editing a phase reschedules the go
 
 ```jsonc
 // 1. POST /hackforger/hackathons — create hackathon
-{"slug":"opc-2026-shuzhi-w1", "name":"【初赛W1】数智OPC加速赛", "org_id":1, "max_team_size":10, "description":"..."}
+{"slug":"example-hackathon-w1", "name":"Example Hackathon W1", "org_id":1, "max_team_size":10, "description":"..."}
 // org_id is REQUIRED by binding but the service overwrites it — pass any non-zero
 // (admin user's id=1 is safe). Service auto-creates a dedicated org with the slug as name.
 

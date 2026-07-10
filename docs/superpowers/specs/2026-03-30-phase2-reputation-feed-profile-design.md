@@ -619,4 +619,5 @@ Both `options/locale/locale_en-US.ini` and `options/locale/locale_zh-CN.ini` und
 - Admin config save + recalculate
 
 ### E2E Test (Manual)
-Covered by separate E2E prompt document (see `docs/tests/e2e/` after implementation).
+Covered by a separate E2E prompt document in the corresponding private
+instance repository.

@@ -8,6 +8,7 @@ body:
       value: |
         > 提需求前先想想：是 **现有功能不好用**（→ 用 Bug 模板更合适），还是 **完全新功能**（→ 用这个模板）？
         > 如果是想让 HackForger 多支持一种使用场景，欢迎在下面描述清楚。
+        > 本仓库公开且业务中立；请用脱敏示例，不要提交客户内容、内部拓扑、真实账号或凭据。
 
   - type: textarea
     id: problem
@@ -47,3 +48,11 @@ body:
         - "只是建议 — 觉得这样会更好"
     validations:
       required: true
+
+  - type: checkboxes
+    id: public-boundary
+    attributes:
+      label: 公开信息确认
+      options:
+        - label: 我已确认本需求使用中立示例，不含凭据、内部地址、真实生产账号或客户私有内容。
+          required: true

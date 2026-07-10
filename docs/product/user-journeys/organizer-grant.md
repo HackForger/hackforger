@@ -5,7 +5,7 @@
 - `admin` deposits 2000 Credits to `organizer` for the grant round
 - hacker1 (950 Credits), hacker2 (400 Credits) exist
 
-> **v0.1 集成场景：** Grant Round 可在 Hackathon 进行期间创建，用于额外资助特定赛道的参赛者。详见 `docs/tests/e2e/tasks/user-journey-full-cycle.md` Phase 5。
+> **v0.1 集成场景：** Grant Round 可在 Hackathon 进行期间创建，用于额外资助特定赛道的参赛者。
 
 ### Step 3.0: Admin deposits Credits to organizer for grant round
 
@@ -54,7 +54,7 @@
     "title": "DeFi Testing Framework",
     "description": "Open-source testing framework for DeFi smart contracts",
     "requested_amount": 1000,
-    "repo_url": "https://hackforger.inside.h2os.cloud/hacker1/defi-test-framework"
+    "repo_url": "https://hackforger.example.invalid/example-user/defi-test-framework"
   }
   ```
 - **Expected Result**:
@@ -71,7 +71,7 @@
     "title": "NFT Metadata Standard Library",
     "description": "Standardized metadata handling for NFTs across chains",
     "requested_amount": 1500,
-    "repo_url": "https://hackforger.inside.h2os.cloud/hacker2/nft-metadata-lib"
+    "repo_url": "https://hackforger.example.invalid/example-user-2/nft-metadata-lib"
   }
   ```
 - **Expected Result**:

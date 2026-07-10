@@ -671,7 +671,8 @@ The `hackathon_judge` table adds a `TrackID` column. The `hackathon_judge_score`
 
 ### E2E Manual Testing
 
-See `docs/tests/e2e/phase2-judge-e2e-prompt.md` for the full E2E test prompt and report template.
+Keep the full E2E prompt and report template in the corresponding private
+instance repository.
 
 Test flow: create hackathon → add criteria → create tracks → configure track criteria weights → add judges per track → register → submit → judge scores all criteria → preview finalize → confirm finalize → verify leaderboard
 

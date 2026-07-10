@@ -31,8 +31,8 @@ import (
 	"forgejo.org/routers/web/devtest"
 	"forgejo.org/routers/web/events"
 	"forgejo.org/routers/web/explore"
-	hackforger_web "forgejo.org/routers/web/hackforger"
 	"forgejo.org/routers/web/feed"
+	hackforger_web "forgejo.org/routers/web/hackforger"
 	"forgejo.org/routers/web/healthcheck"
 	"forgejo.org/routers/web/misc"
 	"forgejo.org/routers/web/moderation"
@@ -141,7 +141,7 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 var crossOriginProtection = func() *http.CrossOriginProtection {
 	cop := http.NewCrossOriginProtection()
 	// Extract origin (scheme + host) from ROOT_URL configured in app.ini.
-	// e.g., "https://hackforger.inside.h2os.cloud/" → "https://hackforger.inside.h2os.cloud"
+	// e.g., "https://hackforger.example.invalid/" → "https://hackforger.example.invalid"
 	if appURL := strings.TrimRight(setting.AppURL, "/"); appURL != "" {
 		if err := cop.AddTrustedOrigin(appURL); err != nil {
 			log.Error("CrossOriginProtection: failed to add trusted origin %q: %v", appURL, err)
@@ -1899,10 +1899,9 @@ func registerRoutes(m *web.Route) {
 	}
 
 	if !setting.IsProd {
-		// HackForger #49: gate /devtest behind site-admin. Per Cynthialime, the
-		// devtest pages should not be visible to ordinary contestants. Original
-		// gate was IsProd alone, which leaves them open in any non-prod build —
-		// which is what the HackForger inside instance runs.
+		// HackForger #49: gate /devtest behind site-admin. Development pages
+		// must not be visible to ordinary users. An IsProd-only gate leaves them
+		// open in every non-production deployment.
 		m.Group("/devtest", func() {
 			m.Any("", devtest.List)
 			m.Any("/fetch-action-test", devtest.FetchActionTest)

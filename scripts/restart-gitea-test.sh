@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-REPO="/Users/h2oslabs/Workspace/hackforger"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BINARY="$REPO/gitea"
 CUSTOM_PATH="/tmp/hackforger-test-custom"
 WORK_PATH="/tmp/hackforger-test-data"

@@ -6,12 +6,23 @@
 package hackforger
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	hackforger_model "forgejo.org/models/hackforger"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestTrackRepoContributingTemplateIsBusinessNeutral(t *testing.T) {
+	rendered := fmt.Sprintf(trackRepoContributingTemplate, "Example Track", "Example Event", "Example Event")
+
+	assert.NotContains(t, strings.ToLower(rendered), "synno"+"vator")
+	assert.NotContains(t, rendered, "%!")
+	assert.Contains(t, rendered, "Example Track")
+	assert.Equal(t, 2, strings.Count(rendered, "Example Event"))
+}
 
 func TestPhasesToMilestones_SkipsPhasesWithoutEndTime(t *testing.T) {
 	regType := &hackforger_model.PhaseType{Key: "registration"}

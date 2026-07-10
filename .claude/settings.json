@@ -4,9 +4,7 @@
       "Bash(bash scripts/restart-gitea.sh)",
       "Bash(bash scripts/restart-gitea.sh *)",
       "Bash(./scripts/restart-gitea.sh)",
-      "Bash(./scripts/restart-gitea.sh *)",
-      "Bash(/Users/h2oslabs/Workspace/hackforger/scripts/restart-gitea.sh)",
-      "Bash(/Users/h2oslabs/Workspace/hackforger/scripts/restart-gitea.sh *)"
+      "Bash(./scripts/restart-gitea.sh *)"
     ]
   },
   "hooks": {
@@ -17,14 +15,6 @@
           {
             "type": "command",
             "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE '\\btea\\s+(issue|pr|repo|release|login)'; then echo 'BLOCKED: Please use `gh` instead of `tea`. tea is the Forgejo/Codeberg CLI; we develop on GitHub. Equivalent: gh issue / gh pr / gh repo.' >&2; exit 2; fi"
-          },
-          {
-            "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'codeberg\\.org/(Synnovator|HackForge)'; then echo 'BLOCKED: The project is hosted on GitHub, not Codeberg. Correct address: github.com/HackForger/hackforger' >&2; exit 2; fi"
-          },
-          {
-            "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'hackforge\\.inside\\.h2os\\.cloud'; then echo 'BLOCKED: The internal instance address is hackforger.inside.h2os.cloud (with r). Please update the URL.' >&2; exit 2; fi"
           }
         ]
       },

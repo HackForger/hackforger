@@ -1,4 +1,4 @@
-# SynNovator Web Platform User Manual
+# HackForger Web Platform User Manual
 
 > The English version of this manual is being updated to match the new Chinese manual ([issue #106](https://github.com/HackForger/hackforger/issues/106)). For now, please refer to the Chinese version at the language switcher (zh-CN) for the most up-to-date guidance.
 

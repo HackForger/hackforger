@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/HackForger/hackforger/discussions
     about: 不确定是 bug 还是需求？想先聊聊？欢迎到 Discussions。
   - name: 🚨 安全漏洞
-    url: mailto:security@h2os.cloud
-    about: 安全问题请直接邮件联系，不要在公开 issue 里发。
+    url: https://github.com/HackForger/hackforger/security/advisories/new
+    about: 安全问题请使用私密安全公告，不要在公开 issue 里发。

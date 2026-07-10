@@ -434,11 +434,11 @@ Execute test-plan-draft §3.2:
 
 ### 7.4 Manual E2E Prompt
 
-Produce `docs/tests/e2e/p1-bounty-e2e-prompt.md` following P0 format:
+Produce an instance-private E2E prompt following the P0 format:
 - Prerequisites (P0 infrastructure ready, users/orgs/repos from P0 E2E)
 - Step-by-step operations (create Bounty → apply → claim → PR → merge → complete → credits)
 - Feed verification checkpoints at each step
-- Report template at `docs/tests/e2e/p1-bounty-e2e-report.md`
+- Store the report template with the prompt in the private instance repository
 
 ---
 
