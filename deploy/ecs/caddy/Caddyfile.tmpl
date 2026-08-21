@@ -8,6 +8,32 @@
 www.synnovator.com {
     encode gzip zstd
 
+    # 雪窦山 AIGC 品牌出海赛事落地页（静态文件）
+    redir /xuedoushan /xuedoushan/ 301
+    handle_path /xuedoushan/* {
+        root * /var/lib/hackforger/custom/public/xuedoushan
+        file_server
+    }
+
+    # 2026-08-21: block crawler-minted repo archives. Baidu's render bot
+    # (fixed Chrome/83 UA) and Meta's meta-externalagent ignore robots.txt
+    # (which already disallows /*/*/archive/ and /*.bundle$) and mint a fresh
+    # .bundle archive for every commit sha they crawl — 34G in two weeks under
+    # data/repo-archive plus the git-bundle CPU cost. 403 only on archive
+    # paths for these two UAs; page crawling is unaffected, legit users on
+    # other UAs can still download archives. Each matcher ANDs path+UA;
+    # two matchers give UA-OR.
+    @archivebot_baidu {
+        path */archive/*
+        header User-Agent *Chrome/83.0.4103.106*
+    }
+    @archivebot_meta {
+        path */archive/*
+        header User-Agent *meta-externalagent*
+    }
+    respond @archivebot_baidu 403
+    respond @archivebot_meta 403
+
     # Forward to gitea on loopback. Gitea sees the original Host and X-Forwarded-*.
     reverse_proxy 127.0.0.1:3000
 
